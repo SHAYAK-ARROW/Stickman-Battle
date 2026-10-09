@@ -1,0 +1,33 @@
+<html>
+<head>
+<title>Stickman Battle</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+
+<body>
+
+<div><h1>Stick Man Battle</h1><br>
+<h2>Made by Arrows Devolopment Hub</h2>
+</div>
+
+<div style="display: flex; gap:20px; justify-content: center;">
+<canvas id="gui_screen" width="800" height="600" style="border:2px solid #000000; background-color: #000000;"></canvas>
+
+
+<div id="code_eddior">
+    <textarea id="ide" rows=" 40" cols="70"></textarea>
+    <button onclick="run()">Run</button>
+</div>
+
+</div>
+<script>
+    const MY_PLAYER_ID = {{ player_id }};//achj eta jinja bole ai kichu bolo thik bujhlam nna but jeta bujhlam seta holo mu player id er jagay ekta varivale tar value hobe python e thaka oi varable er man eta mone rakhte hobe aro bujhte hobe ami bujhini 
+</script>
+<script src="/static/game.js"></script>
+
+</body >
+
+
+
+
+</html>
