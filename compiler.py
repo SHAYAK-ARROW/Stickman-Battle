@@ -3,7 +3,7 @@ def compiler(code,current_player):
     safe_env = {
         # Character & Body body
         "move": current_player.move,
-        "set_p": current_player.set_p,
+        "run": current_player.run_to,
         "jump": current_player.jump,
         "bend": current_player.bend,
         
@@ -29,7 +29,7 @@ def compiler(code,current_player):
 
     try:
         # Etao ami jani na eta ekrta spcila sytax jeta code take run kroa u  eval use korni kaorn multylie sting acvhe 
-        exec(code, {"__builtins__": None}, safe_env)
+        exec(code, safe_env)
         print("Code executed successfully!")
     except Exception as e:
         print("Error ocuard:", e)

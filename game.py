@@ -33,11 +33,16 @@ def join_game():
 @socketio.on('run_code')# templet er name hobe run code okleta title er jono just caption oi caption thakle or nocher function triger hobe 
 def code_handeler(data): 
     print("Player ID:", data['player_id'], " | Code:", data['code'])
-    compiler.compiler(code=data['code'],current_player=data['player_id'])
+    compiler.compiler(code=data['code'],current_player= player1 if data['player_id']==1 else player2 )
     
 
 def game_loop():
     while True:
+        
+        player1.update()
+        player2.update()
+        #debug [pprint]
+        print(f"Player1 X: {player1.x}, Target: {player1.target_x}")
         # ami alda kroe dict banalam karon amr bojhar subodhar jono 
         data_to_send={
             'player1': {
@@ -53,10 +58,14 @@ def game_loop():
 
         }
         socketio.emit('update_game_gui',data_to_send)# dat gui kle paytha no holo front end ke 
-        time.sleep(1/60)#    60 FPS
+        socketio.sleep(1/60)#    60 FPS
 
 if __name__ == '__main__':
-    game_thread = threading.Thread(target=game_loop,daemon=True)# gui ta sub thred back end main thred e gui freje hoe samlano soja hobe ete 
+    #game_thread = threading.Thread(target=game_loop,daemon=True)# gui ta sub thred back end main thred e gui freje hoe samlano soja hobe ete 
  #demon true kaorn server bondo korle jeno sob kichu abr ager oboshay fire jay 
-    game_thread.start()
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+    #game_thread.start()
+    socketio.start_background_task(game_loop)
+
+
+  
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True,use_reloader=False)

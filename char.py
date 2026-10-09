@@ -1,22 +1,54 @@
 class Character:
-    def __init__(self, name,x=0,y=0):
+    def __init__(self, name,x=0,y=0,direction=1):
         self.name = name
         self.heart = 5
         self.x=x
         self.y=y
-        self.direction=1
+        self.direction=direction
+        self.target_x=x
+        self.target_y=y
+    def update(self):
+    #ekhan  dekdek naoya hoche etrghet x ar y te pocheche kina pochole  thamche nahole ktu emiye niye jache 
+        if self.x!=self.target_x:
+            if self.x>self.target_x:
+                self.x -= 2
+            elif self.x<self.target_x:
+                self.x += 2
+        if self.y!=self.target_y:
+            if self.y>self.target_y:
+                self.y -= 2
+            elif self.y<self.target_y:
+                self.y+= 2
+                
+        
+        if self.x < 20:
+            self.x = 20
+            self.target_x = 20
+        elif self.x > 780:
+            self.x = 780
+            self.target_x = 780
+            
+        if self.y < 20:          # roof
+            self.y = 20
+            self.target_y = 20
+        elif self.y > 470:       # mati 
+            self.y = 470
+            self.target_y = 470
     
-    def move(self, dx, dy):
+    #1 step amra 10 pixel dhorchi 
+    def move(self,direction=1):
+        self.target_x += (10 * direction * self.direction)
         ...
     
     
-    def set_p(self, x, y):
+    def run_to(self, step):
+        self.target_x += (10 * step * self.direction)
         ...
 
 
 class Body(Character):
     def __init__(self,name,x,y,direction=1):
-        super().__init__(name=name,x=x,y=y)
+        super().__init__(name=name,x=x,y=y,direction=direction)
         #ekhane amder ekta kotha ache amra ekta class banabop dujon player er jono ebar tara to screner  dui diye thakbe sei jono apto eta korchi anba fix value dichi na ekmon krote hobe  char er x y k0tahy ache dehe bosa te hoibe 
         self.right_hand_x = x+40
         self.right_hand_y = y
@@ -41,7 +73,7 @@ class Body(Character):
         #ekaneneo problem 1 
         self.right_hand_x += dx
         self.right_hand_y += dy
-
+#dekho ekhane amr shuhdu variable ta set kro edilam kothay jete heb ekte egolam na eabr dekho ebar game lop theke jokhon update kom hobe se dekhe terget er bortoman obosthan differ korche tokhon se chage kore debe  
     def move_left_hand(self, dx, dy):
         # Move the left hand by dx and dy
         #ekaneneo problem 1
