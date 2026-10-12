@@ -1,0 +1,19 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Logs
+*.log
+
+# Private Backlog / Feature notes
+features.md
+
+# Operating System Files
+.DS_Store
+Thumbs.db
