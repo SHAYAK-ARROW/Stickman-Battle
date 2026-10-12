@@ -2,9 +2,11 @@ from flask import Flask,render_template
 from flask_socketio import SocketIO
 from char import Body
 import compiler
+from engine import GameEngine
 
 import time 
 import threading
+
 
 
 
@@ -14,6 +16,10 @@ socketio=SocketIO(app)#ekta socketio banalam eta mainly web server er sathe clie
 
 player1 = Body(name="Fighter1",x=200, y=300, direction=1)
 player2 = Body(name="Fighter2",x=600, y=300, direction=-1)
+
+# engine baniye palyer dhokano holo
+engine = GameEngine()
+engine.add_player(player1, player2)
 
 @app.route('/')
 def lobby_menu():
@@ -39,8 +45,9 @@ def code_handeler(data):
 def game_loop():
     while True:
         
-        player1.update()
-        player2.update()
+        # engine ek update r daito dilam 
+        engine.update()
+        
         #debug [pprint]
         print(f"Player1 X: {player1.x}, Target: {player1.target_x}")
         # ami alda kroe dict banalam karon amr bojhar subodhar jono 
@@ -48,12 +55,16 @@ def game_loop():
             'player1': {
                 'x': player1.x,
                 'y': player1.y,
-                'direction': player1.direction
+                'direction': player1.direction,
+                'sword_angle': player1.sword.sword_angle,
+                'shield_angle':player1.shield.shield_angel
             },
             'player2': {
                 'x': player2.x,
                 'y': player2.y,
-                'direction': player2.direction
+                'direction': player2.direction,
+                'sword_angle': player2.sword.sword_angle,
+                'shield_angle':player2.shield.shield_angel
             }
 
         }

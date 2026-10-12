@@ -10,12 +10,12 @@
 <h2>Made by Arrows Devolopment Hub</h2>
 </div>
 
-<div style="display: flex; gap:20px; justify-content: center;">
-<canvas id="gui_screen" width="800" height="600" style="border:2px solid #000000; background-color: #000000;"></canvas>
+<div style="display: flex; gap:20px; justify-content: center; flex-wrap: wrap;">
+<canvas id="gui_screen" width="800" height="600" style="border:2px solid #000000; background-color: #000000; max-width: 100%; height: auto;"></canvas>
 
 
-<div id="code_eddior">
-    <textarea id="ide" rows=" 40" cols="70"></textarea>
+<div id="code_eddior" style="max-width: 100%;">
+    <textarea id="ide" rows=" 40" cols="70" style="max-width: 100%;"></textarea>
     <button onclick="run()">Run</button>
 </div>
 
