@@ -22,68 +22,66 @@
 <div id="code_eddior" style="max-width: 100%;">
     <textarea id="ide" rows=" 40" cols="70" style="max-width: 100%;"></textarea><br>
     <button onclick="run()">Run</button>
-    <button onclick="toggle_commands_modal()" style="margin-left: 10px; cursor: pointer; padding: 5px 10px;">📖 Commands List</button>
-    <button id="restart_btn" onclick="request_restart()" style="display: none; background-color: #4CAF50; color: white; padding: 5px 10px; cursor: pointer; margin-left: 10px;">Play Again / Rematch</button>
-</div>
-
-<!-- Commands / Help Popup Modal -->
-<div id="commands_modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e1e1e; color: #fff; border: 2px solid #555; border-radius: 8px; padding: 20px; max-width: 520px; width: 90%; max-height: 80vh; overflow-y: auto; z-index: 10000; box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 12px;">
-        <h3 style="margin: 0;">📜 Available Commands List</h3>
-        <button onclick="toggle_commands_modal()" style="background: #e74c3c; color: white; border: none; padding: 4px 10px; cursor: pointer; border-radius: 4px; font-weight: bold;">✖ Close</button>
+    <button onclick="toggle_commands_modal()">Commands List</button>
+    <button id="restart_btn" onclick="request_restart()" style="display: none;">Play Again / Rematch</button>
+    
+    <!-- Commands List Plain HTML -->
+    <div id="commands_modal" style="display: none; border: 1px solid black; padding: 10px; margin-top: 10px;">
+        <h3>Available Commands List</h3>
+        <button onclick="toggle_commands_modal()">Close</button><br><br>
+        <table border="1">
+            <tr>
+                <th>Command</th>
+                <th>Description</th>
+                <th>Example</th>
+            </tr>
+            <tr>
+                <td>move(step)</td>
+                <td>Samne hete jabe</td>
+                <td>move(2)</td>
+            </tr>
+            <tr>
+                <td>run(step)</td>
+                <td>Samne doure jabe</td>
+                <td>run(3)</td>
+            </tr>
+            <tr>
+                <td>jump(power)</td>
+                <td>Sojashuji upore laf marbe</td>
+                <td>jump(5)</td>
+            </tr>
+            <tr>
+                <td>long_jump(step, power)</td>
+                <td>Samne er dike laf marbe</td>
+                <td>long_jump(3, 5)</td>
+            </tr>
+            <tr>
+                <td>project(angle, power)</td>
+                <td>Kono kon kore lafano (Math)</td>
+                <td>project(45, 5)</td>
+            </tr>
+            <tr>
+                <td>flip()</td>
+                <td>Ulto dike mukh ghurano</td>
+                <td>flip()</td>
+            </tr>
+            <tr>
+                <td>attack()</td>
+                <td>Toloyar diye kop mara</td>
+                <td>attack()</td>
+            </tr>
+            <tr>
+                <td>block()</td>
+                <td>Dhal diye attack thekano</td>
+                <td>block()</td>
+            </tr>
+            <tr>
+                <td>range(n)</td>
+                <td>For loop er jono</td>
+                <td>for i in range(5):</td>
+            </tr>
+        </table>
     </div>
-    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
-        <tr style="border-bottom: 1px solid #555; color: #aaa;">
-            <th style="padding: 6px;">Command</th>
-            <th style="padding: 6px;">Description</th>
-            <th style="padding: 6px;">Example</th>
-        </tr>
-        <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 6px; color: #4CAF50;"><b>move(step)</b></td>
-            <td style="padding: 6px;">Samne hete jabe</td>
-            <td style="padding: 6px;"><code>move(2)</code></td>
-        </tr>
-        <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 6px; color: #4CAF50;"><b>run(step)</b></td>
-            <td style="padding: 6px;">Samne doure jabe</td>
-            <td style="padding: 6px;"><code>run(3)</code></td>
-        </tr>
-        <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 6px; color: #4CAF50;"><b>jump(power)</b></td>
-            <td style="padding: 6px;">Sojashuji upore laf marbe</td>
-            <td style="padding: 6px;"><code>jump(5)</code></td>
-        </tr>
-        <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 6px; color: #4CAF50;"><b>long_jump(step, power)</b></td>
-            <td style="padding: 6px;">Samne er dike laf marbe</td>
-            <td style="padding: 6px;"><code>long_jump(3, 5)</code></td>
-        </tr>
-        <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 6px; color: #4CAF50;"><b>project(angle, power)</b></td>
-            <td style="padding: 6px;">Kono kon kore lafano (Math)</td>
-            <td style="padding: 6px;"><code>project(45, 5)</code></td>
-        </tr>
-        <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 6px; color: #4CAF50;"><b>flip()</b></td>
-            <td style="padding: 6px;">Ulto dike mukh ghurano</td>
-            <td style="padding: 6px;"><code>flip()</code></td>
-        </tr>
-        <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 6px; color: #4CAF50;"><b>attack()</b></td>
-            <td style="padding: 6px;">Toloyar diye kop mara</td>
-            <td style="padding: 6px;"><code>attack()</code></td>
-        </tr>
-        <tr style="border-bottom: 1px solid #333;">
-            <td style="padding: 6px; color: #4CAF50;"><b>block()</b></td>
-            <td style="padding: 6px;">Dhal diye attack thekano</td>
-            <td style="padding: 6px;"><code>block()</code></td>
-        </tr>
-        <tr>
-            <td style="padding: 6px; color: #4CAF50;"><b>range(n)</b></td>
-            <td style="padding: 6px;">For loop er jono</td>
-            <td style="padding: 6px;"><code>for i in range(5):</code></td>
-        </tr>
-    </table>
 </div>
 
 </div>
