@@ -7,7 +7,7 @@ class Character:
         self.direction=direction
         self.target_x=x
         self.target_y=y
-     
+        self.action_queue = []
     
     #1 step amra 10 pixel dhorchi 
     def move(self,direction=1):
@@ -152,10 +152,10 @@ class Sword:
         pass
         
     def attack(self):
-        # 15 degree pichone nibe (Windup)
+        # mathar pichone 40 degree tulbe (Windup)
         if self.attack_state == 0:
             self.attack_state = 1
-            self.target_angle = -15
+            self.target_angle = -40
 
 
 def collision(obj1, obj2):

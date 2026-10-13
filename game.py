@@ -61,9 +61,13 @@ def reset_match():
     player1.target_x = 200
     player1.y = 300
     player1.target_y = 470
+    player1.speed_x = 4
     player1.jump_pixel = 0
     player1.direction = 1
-    player1.action_queue.clear()
+    if hasattr(player1, 'action_queue') and player1.action_queue:
+        player1.action_queue.clear()
+    else:
+        player1.action_queue = []
     if hasattr(player1, 'sword'):
         player1.sword.attack_state = 0
         player1.sword.sword_angle = 0
@@ -79,9 +83,13 @@ def reset_match():
     player2.target_x = 600
     player2.y = 300
     player2.target_y = 470
+    player2.speed_x = 4
     player2.jump_pixel = 0
     player2.direction = -1
-    player2.action_queue.clear()
+    if hasattr(player2, 'action_queue') and player2.action_queue:
+        player2.action_queue.clear()
+    else:
+        player2.action_queue = []
     if hasattr(player2, 'sword'):
         player2.sword.attack_state = 0
         player2.sword.sword_angle = 0
