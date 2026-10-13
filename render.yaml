@@ -7,7 +7,7 @@ services:
     env: python # python backend  tai 
     plan: free # binni poisa me kar raha hu
     buildCommand: pip install -r requirements.txt # dorkari lib download kora
-    startCommand: gunicorn --worker-class eventlet -w 1 game:app #server chalu kroa 
+    startCommand: gunicorn --worker-class gthread --threads 100 -w 1 game:app #server chalu kroa 
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0 # pythoner version bole dichi amar pc te 12 th tai th i roi lo 

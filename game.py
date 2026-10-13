@@ -19,7 +19,7 @@ import threading
 
 
 app=Flask(__name__)#ekta flask app banalam eta mainly web server
-socketio=SocketIO(app)#ekta socketio banalam eta mainly web server er sathe client er communication er jono mane ekta conctoin feet korlam 
+socketio=SocketIO(app, cors_allowed_origins="*")#ekta socketio banalam eta mainly web server er sathe client er communication er jono mane ekta conctoin feet korlam
 
 player1 = Body(name="Fighter1",x=200, y=300, direction=1)
 player2 = Body(name="Fighter2",x=600, y=300, direction=-1)
