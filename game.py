@@ -1,3 +1,10 @@
+# eventlet monkey patch jate gunicorn o socketio smooth chole
+try:
+    import eventlet
+    eventlet.monkey_patch()
+except Exception:
+    pass
+#eta ai er kora ami kichu jani na 
 from flask import Flask,render_template
 from flask_socketio import SocketIO
 from char import Body
@@ -137,15 +144,10 @@ def game_loop():
         socketio.emit('update_game_gui',data_to_send)# dat gui kle paytha no holo front end ke 
         socketio.sleep(1/60)#    60 FPS
 
+# gunicorn o local python - dujaygay e background loop chalu kora
+socketio.start_background_task(game_loop)
+
 if __name__ == '__main__':
-    #game_thread = threading.Thread(target=game_loop,daemon=True)# gui ta sub thred back end main thred e gui freje hoe samlano soja hobe ete 
- #demon true kaorn server bondo korle jeno sob kichu abr ager oboshay fire jay 
-    #game_thread.start()
-    socketio.start_background_task(game_loop)
-
-
-  # eta local sost e chilo but render e fix port number dey na
-   # socketio.run(app, host="0.0.0.0", port=5000, debug=True,use_reloader=False)
-    #render er jono  dinamic port number 
+    # render er jono dinamic port number 
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port, debug=True, use_reloader=False)

@@ -123,3 +123,5 @@ This project is pre-configured for **Render**:
 - [ ] **Tactical Sensory Functions**: `get_enemy_distance()`, `is_enemy_attacking()`, and `get_my_health()`.
 - [ ] **Trigonometric Spell Casts**: Mathematical wave attacks ($\sin$, $\cos$, $\tan$).
 - [ ] **Advanced Skeleton**: Articulated knees, elbows, and ninja movement physics.
+
+<!-- ei readme ai er lekha pore mai nije likhe nebo  -->
