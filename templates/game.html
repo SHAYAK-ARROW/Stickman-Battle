@@ -22,67 +22,67 @@
 <div id="code_eddior" style="max-width: 100%;">
     <textarea id="ide" rows=" 40" cols="70" style="max-width: 100%;"></textarea><br>
     <button onclick="run()">Run</button>
-    <button onclick="toggle_commands_modal()">Commands List</button>
+    <button onclick="open_commands_dialog()">Commands List</button>
     <button id="restart_btn" onclick="request_restart()" style="display: none;">Play Again / Rematch</button>
-    
-    <!-- Commands List Plain HTML -->
-    <div id="commands_modal" style="display: none; border: 1px solid black; padding: 10px; margin-top: 10px;">
-        <h3>Available Commands List</h3>
-        <button onclick="toggle_commands_modal()">Close</button><br><br>
-        <table border="1">
-            <tr>
-                <th>Command</th>
-                <th>Description</th>
-                <th>Example</th>
-            </tr>
-            <tr>
-                <td>move(step)</td>
-                <td>Samne hete jabe</td>
-                <td>move(2)</td>
-            </tr>
-            <tr>
-                <td>run(step)</td>
-                <td>Samne doure jabe</td>
-                <td>run(3)</td>
-            </tr>
-            <tr>
-                <td>jump(power)</td>
-                <td>Sojashuji upore laf marbe</td>
-                <td>jump(5)</td>
-            </tr>
-            <tr>
-                <td>long_jump(step, power)</td>
-                <td>Samne er dike laf marbe</td>
-                <td>long_jump(3, 5)</td>
-            </tr>
-            <tr>
-                <td>project(angle, power)</td>
-                <td>Kono kon kore lafano (Math)</td>
-                <td>project(45, 5)</td>
-            </tr>
-            <tr>
-                <td>flip()</td>
-                <td>Ulto dike mukh ghurano</td>
-                <td>flip()</td>
-            </tr>
-            <tr>
-                <td>attack()</td>
-                <td>Toloyar diye kop mara</td>
-                <td>attack()</td>
-            </tr>
-            <tr>
-                <td>block()</td>
-                <td>Dhal diye attack thekano</td>
-                <td>block()</td>
-            </tr>
-            <tr>
-                <td>range(n)</td>
-                <td>For loop er jono</td>
-                <td>for i in range(5):</td>
-            </tr>
-        </table>
-    </div>
 </div>
+
+<!-- HTML5 Native Popup Dialog (No CSS) -->
+<dialog id="commands_dialog">
+    <h3>Available Commands List</h3>
+    <button onclick="close_commands_dialog()">Close</button><br><br>
+    <table border="1">
+        <tr>
+            <th>Command</th>
+            <th>Description</th>
+            <th>Example</th>
+        </tr>
+        <tr>
+            <td>move(step)</td>
+            <td>Samne hete jabe</td>
+            <td>move(2)</td>
+        </tr>
+        <tr>
+            <td>run(step)</td>
+            <td>Samne doure jabe</td>
+            <td>run(3)</td>
+        </tr>
+        <tr>
+            <td>jump(power)</td>
+            <td>Sojashuji upore laf marbe</td>
+            <td>jump(5)</td>
+        </tr>
+        <tr>
+            <td>long_jump(step, power)</td>
+            <td>Samne er dike laf marbe</td>
+            <td>long_jump(3, 5)</td>
+        </tr>
+        <tr>
+            <td>project(angle, power)</td>
+            <td>Kono kon kore lafano (Math)</td>
+            <td>project(45, 5)</td>
+        </tr>
+        <tr>
+            <td>flip()</td>
+            <td>Ulto dike mukh ghurano</td>
+            <td>flip()</td>
+        </tr>
+        <tr>
+            <td>attack()</td>
+            <td>Toloyar diye kop mara</td>
+            <td>attack()</td>
+        </tr>
+        <tr>
+            <td>block()</td>
+            <td>Dhal diye attack thekano</td>
+            <td>block()</td>
+        </tr>
+        <tr>
+            <td>range(n)</td>
+            <td>For loop er jono</td>
+            <td>for i in range(5):</td>
+        </tr>
+    </table>
+</dialog>
 
 </div>
 <script>
@@ -105,14 +105,13 @@ if (MY_PLAYER_ID === 2) {
     document.getElementById('wait_screen').style.display = 'none';
 }
 
-// commands list pop up open ba bondho korar function
-function toggle_commands_modal() {
-    const modal = document.getElementById('commands_modal');
-    if (modal.style.display === 'none' || modal.style.display === '') {
-        modal.style.display = 'block';
-    } else {
-        modal.style.display = 'none';
-    }
+// commands dialog pop up open ba bondho korar native function
+function open_commands_dialog() {
+    document.getElementById('commands_dialog').showModal();
+}
+
+function close_commands_dialog() {
+    document.getElementById('commands_dialog').close();
 }
 </script>
 <script src="/static/game.js"></script>
