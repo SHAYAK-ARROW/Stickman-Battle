@@ -19,7 +19,7 @@ import threading
 
 
 app=Flask(__name__)#ekta flask app banalam eta mainly web server
-socketio=SocketIO(app, cors_allowed_origins="*")#ekta socketio banalam eta mainly web server er sathe client er communication er jono mane ekta conctoin feet korlam
+socketio=SocketIO(app, async_mode='threading', cors_allowed_origins="*")#ekta socketio banalam eta mainly web server er sathe client er communication er jono mane ekta conctoin feet korlam
 
 player1 = Body(name="Fighter1",x=200, y=300, direction=1)
 player2 = Body(name="Fighter2",x=600, y=300, direction=-1)
@@ -113,39 +113,52 @@ def handle_restart_game():
     reset_match()
     socketio.emit('game_restarted')
 
+bg_thread = None
+bg_lock = threading.Lock()
+
 def game_loop():
     while True:
-        
-        # engine ek update r daito dilam 
-        engine.update()
-        
-        #debug [pprint]
-        print(f"Player1 X: {player1.x}, Target: {player1.target_x}")
-        # ami alda kroe dict banalam karon amr bojhar subodhar jono 
-        data_to_send={
-            'player1': {
-                'x': player1.x,
-                'y': player1.y,
-                'direction': player1.direction,
-                'sword_angle': player1.sword.sword_angle,
-                'shield_angle':player1.shield.shield_angel,
-                'heart': player1.heart # pl1 er koyta heart baki ache
-            },
-            'player2': {
-                'x': player2.x,
-                'y': player2.y,
-                'direction': player2.direction,
-                'sword_angle': player2.sword.sword_angle,
-                'shield_angle':player2.shield.shield_angel,
-                'heart': player2.heart # pl2 er koyta heart baki ache
-            }
+        try:
+            # engine ek update r daito dilam 
+            engine.update()
+            
+            # ami alda kroe dict banalam karon amr bojhar subodhar jono 
+            data_to_send={
+                'player1': {
+                    'x': player1.x,
+                    'y': player1.y,
+                    'direction': player1.direction,
+                    'sword_angle': player1.sword.sword_angle,
+                    'shield_angle':player1.shield.shield_angel,
+                    'heart': player1.heart # pl1 er koyta heart baki ache
+                },
+                'player2': {
+                    'x': player2.x,
+                    'y': player2.y,
+                    'direction': player2.direction,
+                    'sword_angle': player2.sword.sword_angle,
+                    'shield_angle':player2.shield.shield_angel,
+                    'heart': player2.heart # pl2 er koyta heart baki ache
+                }
 
-        }
-        socketio.emit('update_game_gui',data_to_send)# dat gui kle paytha no holo front end ke 
+            }
+            socketio.emit('update_game_gui',data_to_send)# dat gui kle paytha no holo front end ke 
+        except Exception:
+            pass
         socketio.sleep(1/60)#    60 FPS
 
+def ensure_game_loop():
+    global bg_thread
+    with bg_lock:
+        if bg_thread is None:
+            bg_thread = socketio.start_background_task(game_loop)
+
+@socketio.on('connect')
+def handle_connect():
+    ensure_game_loop()
+
 # gunicorn o local python - dujaygay e background loop chalu kora
-socketio.start_background_task(game_loop)
+ensure_game_loop()
 
 if __name__ == '__main__':
     # render er jono dinamic port number 
