@@ -1,9 +1,18 @@
 // ami js jani na ai bujhiye diche tai korchi vnaila js
 const socket = io(); // Connect to the server using Socket.IO
+// eta muloto  serbver ke jana che ami ke pl1 na bna opl2 
+socket.emit('player_joined', { player_id: MY_PLAYER_ID });
 const canvas = document.getElementById('gui_screen');// eta diye canvas ta khuje bar kora hoche
 const ctx = canvas.getContext('2d');// canvas ta je 2d hobe seta thikm roe dichi 
 //HAT PA GULO AI BOLE DIYECHE AMI SYTAX JANI BUYTT BUJHI KORE CHI KINTU JAGA MOTON BOSANO TA AI 
-
+//match start holei pop up ortyhat waiting pop up lukiye felbo  displsy naone korchi 
+socket.on('match_start', () => {
+    console.log("Match started!");
+    const waitScreen = document.getElementById('wait_screen');
+    if (waitScreen) {
+        waitScreen.style.display = 'none'; // ukiyedhichi 
+    }
+});
 function draw_on_camvas(data) {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas before drawing
     
@@ -20,6 +29,14 @@ function draw_on_camvas(data) {
         let x = player.x;
         let y = player.y;
         let dir = player.direction; // 1 (Right) or -1 (Left)
+        
+        // mathar opore koyta heart ache dekhanor jono
+        if (player.heart !== undefined) {
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            let heart_text = player.heart > 0 ? "❤️".repeat(player.heart) : "💀 DEAD";
+            ctx.fillText(heart_text, x, y - 30);
+        }
         
         // Matha (Head)
         ctx.fillStyle = color;
@@ -92,6 +109,26 @@ function draw_on_camvas(data) {
     // Dujon player k aa ki
     draw_player(data.player1, "red");
     draw_player(data.player2, "blue");
+
+    // keu jite gele ba game over hole boro kore winner dekhano
+    ctx.textAlign = "center";
+    ctx.font = "bold 36px Arial";
+    let is_game_over = false;
+    if (data.player1 && data.player1.heart <= 0) {
+        ctx.fillStyle = "blue";
+        ctx.fillText("PLAYER 2 WINS! 🏆", canvas.width / 2, 250);
+        is_game_over = true;
+    } else if (data.player2 && data.player2.heart <= 0) {
+        ctx.fillStyle = "red";
+        ctx.fillText("PLAYER 1 WINS! 🏆", canvas.width / 2, 250);
+        is_game_over = true;
+    }
+
+    // game over hole rematch button dekhabo
+    const restartBtn = document.getElementById('restart_btn');
+    if (restartBtn) {
+        restartBtn.style.display = is_game_over ? 'inline-block' : 'none';
+    }
 }
 
 
@@ -106,5 +143,18 @@ socket.emit("run_code",data);
 
 }
 
+// restart button e click korle server ke bolbo
+function request_restart() {
+    socket.emit('restart_game');
+}
+
+// server theke game reset er signal pele
+socket.on('game_restarted', () => {
+    console.log("Game restarted!");
+    const restartBtn = document.getElementById('restart_btn');
+    if (restartBtn) {
+        restartBtn.style.display = 'none';
+    }
+});
 
 socket.on('update_game_gui',draw_on_camvas);// oi tag julto data jokhoni pabe ei ta triger hobe draw_on_camvas function ta call hobe and oi data ke draw_on_camvas function e pathabe

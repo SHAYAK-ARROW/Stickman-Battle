@@ -3,7 +3,7 @@ from flask_socketio import SocketIO
 from char import Body
 import compiler
 from engine import GameEngine
-
+import os
 import time 
 import threading
 
@@ -19,6 +19,7 @@ player2 = Body(name="Fighter2",x=600, y=300, direction=-1)
 
 # engine baniye palyer dhokano holo
 engine = GameEngine()
+connected_players=set()#sey nilam jate repet na hoy 
 engine.add_player(player1, player2)
 
 @app.route('/')
@@ -40,7 +41,62 @@ def join_game():
 def code_handeler(data): 
     print("Player ID:", data['player_id'], " | Code:", data['code'])
     compiler.compiler(code=data['code'],current_player= player1 if data['player_id']==1 else player2 )
+    # eta hllo joiner fucntion 
+@socketio.on('player_joined')
+def handle_player_join(data):
+    player_id = data.get('player_id')
+    connected_players.add(player_id)
+    print(f"Player {player_id} joined! Connected: {connected_players}")
     
+    # dujonei game e ready  game start match start korchi oi set ta ei joni  chilo 
+    if 1 in connected_players and 2 in connected_players:
+        print("Both players are in! Starting match...")
+        socketio.emit('match_start')
+
+# game sesh hole abar reset korar function
+def reset_match():
+    # player1 ke ager jaygay firiye deoya
+    player1.heart = 5
+    player1.x = 200
+    player1.target_x = 200
+    player1.y = 300
+    player1.target_y = 470
+    player1.jump_pixel = 0
+    player1.direction = 1
+    player1.action_queue.clear()
+    if hasattr(player1, 'sword'):
+        player1.sword.attack_state = 0
+        player1.sword.sword_angle = 0
+        player1.sword.target_angle = 0
+        player1.sword.has_hit = False
+    if hasattr(player1, 'shield'):
+        player1.shield.shield_angel = 45
+        player1.shield.block_timer = 0
+
+    # player2 ke ager jaygay firiye deoya
+    player2.heart = 5
+    player2.x = 600
+    player2.target_x = 600
+    player2.y = 300
+    player2.target_y = 470
+    player2.jump_pixel = 0
+    player2.direction = -1
+    player2.action_queue.clear()
+    if hasattr(player2, 'sword'):
+        player2.sword.attack_state = 0
+        player2.sword.sword_angle = 0
+        player2.sword.target_angle = 0
+        player2.sword.has_hit = False
+    if hasattr(player2, 'shield'):
+        player2.shield.shield_angel = 45
+        player2.shield.block_timer = 0
+
+# frontend theke restart button e chap dile eta cholbe
+@socketio.on('restart_game')
+def handle_restart_game():
+    print("Match rematch/restart hocche...")
+    reset_match()
+    socketio.emit('game_restarted')
 
 def game_loop():
     while True:
@@ -57,14 +113,16 @@ def game_loop():
                 'y': player1.y,
                 'direction': player1.direction,
                 'sword_angle': player1.sword.sword_angle,
-                'shield_angle':player1.shield.shield_angel
+                'shield_angle':player1.shield.shield_angel,
+                'heart': player1.heart # pl1 er koyta heart baki ache
             },
             'player2': {
                 'x': player2.x,
                 'y': player2.y,
                 'direction': player2.direction,
                 'sword_angle': player2.sword.sword_angle,
-                'shield_angle':player2.shield.shield_angel
+                'shield_angle':player2.shield.shield_angel,
+                'heart': player2.heart # pl2 er koyta heart baki ache
             }
 
         }
@@ -78,5 +136,8 @@ if __name__ == '__main__':
     socketio.start_background_task(game_loop)
 
 
-  
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True,use_reloader=False)
+  # eta local sost e chilo but render e fix port number dey na
+   # socketio.run(app, host="0.0.0.0", port=5000, debug=True,use_reloader=False)
+    #render er jono  dinamic port number 
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port, debug=True, use_reloader=False)

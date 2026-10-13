@@ -1,0 +1,14 @@
+# to bapar ta holo normaly to github cont kore  render dash braod e e giye 
+# new web serveci ntheke start coamnd diye korte i partam but amar pochon do na ar pre  moneo thakbe na k kroe chi to .yml 
+#defineing a serveice
+services:
+  - type: web   #web servece chose krochi 
+    name: stickman-battle # name dichi stick man battle 
+    env: python # python backend  tai 
+    plan: free # binni poisa me kar raha hu
+    buildCommand: pip install -r requirements.txt # dorkari lib download kora
+    startCommand: gunicorn --worker-class eventlet -w 1 game:app #server chalu kroa 
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0 # pythoner version bole dichi amar pc te 12 th tai th i roi lo 
+

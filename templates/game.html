@@ -9,19 +9,42 @@
 <div><h1>Stick Man Battle</h1><br>
 <h2>Made by Arrows Devolopment Hub</h2>
 </div>
+<div id="wait_screen">
+    <h2>Waiting for Player 2 to join...</h2>
+    <p>Player 2 Link: <b id="p2_link"></b></p>
+    <button onclick="copy_link()">Copy Link</button>
+</div>
 
 <div style="display: flex; gap:20px; justify-content: center; flex-wrap: wrap;">
 <canvas id="gui_screen" width="800" height="600" style="border:2px solid #000000; background-color: #000000; max-width: 100%; height: auto;"></canvas>
 
 
 <div id="code_eddior" style="max-width: 100%;">
-    <textarea id="ide" rows=" 40" cols="70" style="max-width: 100%;"></textarea>
+    <textarea id="ide" rows=" 40" cols="70" style="max-width: 100%;"></textarea><br>
     <button onclick="run()">Run</button>
+    <button id="restart_btn" onclick="request_restart()" style="display: none; background-color: #4CAF50; color: white; padding: 5px 10px; cursor: pointer; margin-left: 10px;">Play Again / Rematch</button>
 </div>
 
 </div>
 <script>
     const MY_PLAYER_ID = {{ player_id }};//achj eta jinja bole ai kichu bolo thik bujhlam nna but jeta bujhlam seta holo mu player id er jagay ekta varivale tar value hobe python e thaka oi varable er man eta mone rakhte hobe aro bujhte hobe ami bujhini 
+
+// ekta variable rakhlam pl2 e rjono no etay pl2 e rlink thakbe 
+const p2_url = window.location.origin + "/player2";
+
+// স্কscren e leah ta dekhalam,,, 
+document.getElementById('p2_link').innerText = p2_url;
+
+// copy link buton e click korle clip baord  e copy er functiom 
+function copy_link() {
+    navigator.clipboard.writeText(p2_url);
+    alert("Link copied!");
+}
+
+// pl2 dhukle wait er drkar nei
+if (MY_PLAYER_ID === 2) {
+    document.getElementById('wait_screen').style.display = 'none';
+}
 </script>
 <script src="/static/game.js"></script>
 
