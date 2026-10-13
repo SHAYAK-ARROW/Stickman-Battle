@@ -1,10 +1,3 @@
-# eventlet monkey patch jate gunicorn o socketio smooth chole
-try:
-    import eventlet
-    eventlet.monkey_patch()
-except Exception:
-    pass
-#eta ai er kora ami kichu jani na 
 from flask import Flask,render_template
 from flask_socketio import SocketIO
 from char import Body
@@ -163,4 +156,4 @@ ensure_game_loop()
 if __name__ == '__main__':
     # render er jono dinamic port number 
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=True, use_reloader=False)
+    socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False)
