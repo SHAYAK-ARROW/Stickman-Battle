@@ -4,8 +4,8 @@
   "manager": "Shayak",
   "manager_email": "shayaksadhukhan402@gmail.com",
   "status": "Under Development",
-  "version": "1.0.0",
-  "release_type": "v1.0 Basic",
+  "version": "2.0.0",
+  "release_type": "v2.0 Combat & Arena Update",
   "description": "A real-time 1v1 multiplayer combat game where players write Python code to battle."
 }
 

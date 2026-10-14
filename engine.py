@@ -11,8 +11,22 @@ class   GameEngine:
     def update(self):
     
         for player in self.players:
+            # Player mara gele tar queue clear kore debe
+            if player.heart <= 0:
+                if hasattr(player, 'action_queue') and player.action_queue:
+                    player.action_queue.clear()
             
-        
+            # Action Queue Processor: jodi player kono kaj na korche (idle ache), tobe queue theke next action execute hobe
+            is_moving = (player.x != player.target_x)
+            is_airborne = (player.y < 470 or player.jump_pixel != 0)
+            is_attacking = (hasattr(player, 'sword') and player.sword.attack_state != 0)
+            is_blocking = (hasattr(player, 'shield') and player.shield.block_timer > 0)
+            
+            is_busy = is_moving or is_airborne or is_attacking or is_blocking
+            
+            if not is_busy and hasattr(player, 'action_queue') and player.action_queue:
+                player.execute_next_action()
+
             if player.x != player.target_x:
                 speed = getattr(player, 'speed_x', 2)
                 if abs(player.x - player.target_x) <= speed:

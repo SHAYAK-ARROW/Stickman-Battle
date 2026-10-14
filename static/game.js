@@ -17,11 +17,23 @@ socket.on('match_start', () => {
     if (waitScreen) {
         waitScreen.style.display = 'none'; // ukiyedhichi 
     }
+    // match shuru hoyeche tai run button khule dilam
+    const runBtn = document.getElementById('run_btn');
+    if (runBtn) {
+        runBtn.disabled = false;
+        runBtn.innerText = "Run";
+    }
 });
 
 // player 2 jodi tab kete beriye jay tahole player 1 er screen e abar waiting screen chalu korbo
 socket.on('player_left', (data) => {
     console.log("Player left:", data.player_id);
+    // match bondho hoyeche tai run button lock korlam
+    const runBtn = document.getElementById('run_btn');
+    if (runBtn) {
+        runBtn.disabled = true;
+        runBtn.innerText = "Run (Waiting for Player...)";
+    }
     // ami jodi player 1 hoi ar player 2 jodi chole jay tobe abar wait screen dekhabo
     if (MY_PLAYER_ID === 1 && data.player_id === 2) {
         const waitScreen = document.getElementById('wait_screen');
@@ -75,41 +87,44 @@ function draw_on_camvas(data) {
         ctx.moveTo(x, y + 80);
         ctx.lineTo(x + 20, y + 130);
         
-        // Fighting Stance a Hat (Arms)
-        // Pichoner Hat (Back Hand) - Ektu niche
-        let back_hand_x = x + (20 * dir);
-        let back_hand_y = y + 55;
-        ctx.moveTo(x, y + 40); // Kadh (Shoulder)
-        ctx.lineTo(back_hand_x, back_hand_y);
+        let is_blocking = player.is_blocking || false;
         
-        // Samner Hat (Front Hand) - Ektu upore
-        let front_hand_x = x + (35 * dir);
-        let front_hand_y = y + 45;
+        // Fighting Stance a Hat (Dynamic Arms for v2)
+        let sword_hand_x, sword_hand_y;
+        let shield_hand_x, shield_hand_y;
+
+        if (is_blocking) {
+            // Block korar somoy dhaler hat samne chole asbe guard korar jono
+            shield_hand_x = x + (40 * dir);
+            shield_hand_y = y + 42;
+            
+            // toloyarer hat pichone bhitore dhuke jabe jate dhaler pichone safe thake
+            sword_hand_x = x + (15 * dir);
+            sword_hand_y = y + 55;
+        } else {
+            // Normal obosthay toloyar samne thakbe
+            sword_hand_x = x + (35 * dir);
+            sword_hand_y = y + 45;
+            
+            // dhal pichone thakbe
+            shield_hand_x = x + (20 * dir);
+            shield_hand_y = y + 55;
+        }
+
+        // Dhaler hat (Arm to shield)
+        ctx.moveTo(x, y + 40); // Kadh (Shoulder)
+        ctx.lineTo(shield_hand_x, shield_hand_y);
+        
+        // Toloyarer hat (Arm to sword)
         ctx.moveTo(x, y + 40); // Kadh
-        ctx.lineTo(front_hand_x, front_hand_y);
+        ctx.lineTo(sword_hand_x, sword_hand_y);
         
         ctx.stroke(); // Shorir aaka sesh
         
-        // --- SHIELD (Pichoner hate) ---
-        ctx.save();
-        ctx.translate(back_hand_x, back_hand_y);//tranmslet ta buihlam na canmvasd er ak relet kichu apto tukei kaj chalachi 
-        if (player.shield_angle !== undefined) {// angel anujai shild ghure jabe //undefief  mane none 
-        let rad = (player.shield_angle * dir) * (Math.PI / 180);
-       ctx.rotate(rad);
-}
-
-        ctx.strokeStyle = "yellow"; // Shield yellow kora holo
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.moveTo(-5 * dir, -20); // Shield er opor
-        ctx.lineTo(-5 * dir, 25);  // Shield er nich
-        ctx.stroke();
-        ctx.restore();
-        
-        // --- SWORD (Samner hate) ---
+        // --- SWORD ---
         if (player.sword_angle !== undefined) {
             ctx.save();
-            ctx.translate(front_hand_x, front_hand_y);
+            ctx.translate(sword_hand_x, sword_hand_y);
             // Default 45 degree tilt + animation angle
             let rad = ((player.sword_angle + 45) * dir) * (Math.PI / 180);
             ctx.rotate(rad);
@@ -122,6 +137,22 @@ function draw_on_camvas(data) {
             ctx.stroke();
             ctx.restore();
         }
+
+        // --- SHIELD (Dhal toloyarer pore draw hobe jate block korle dhal samne thake) ---
+        ctx.save();
+        ctx.translate(shield_hand_x, shield_hand_y);
+        if (player.shield_angle !== undefined) {
+            let rad = (player.shield_angle * dir) * (Math.PI / 180);
+            ctx.rotate(rad);
+        }
+
+        ctx.strokeStyle = "yellow"; // Shield yellow kora holo
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(-5 * dir, -22); // Shield er opor
+        ctx.lineTo(-5 * dir, 25);  // Shield er nich
+        ctx.stroke();
+        ctx.restore();
     }
 
     // Dujon player k aa ki
@@ -151,14 +182,18 @@ function draw_on_camvas(data) {
 
 
 
-function run(){
-let code=document.getElementById("ide").value;// html e je  ide tag ewr text era ache jeta code eddiotr hisebe use hobe seta etar bhitor ki lekha ache ta bar korchi 
-data={
-        "code":code,
+function run() {
+    const runBtn = document.getElementById("run_btn");
+    if (runBtn && runBtn.disabled) {
+        alert("Dujon player ready na thakle code run kora jabe na!");
+        return;
+    }
+    let code = document.getElementById("ide").value;// html e je ide tag ewr text era ache jeta code eddiotr hisebe use hobe seta etar bhitor ki lekha ache ta bar korchi 
+    data = {
+        "code": code,
         "player_id": MY_PLAYER_ID
-};
-socket.emit("run_code",data);
-
+    };
+    socket.emit("run_code", data);
 }
 
 // restart button e click korle server ke bolbo

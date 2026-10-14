@@ -9,26 +9,26 @@ class Character:
         self.target_y=y
         self.action_queue = []
     
-    #1 step amra 10 pixel dhorchi 
-    def move(self,direction=1):
-        self.target_x += (10 * direction * self.direction)
-        ...
+    # 1 step amra 10 pixel dhorchi - command gulo action queue te append hocche
+    def move(self, step=1):
+        # Action queue te move pathano holo (1 step = 10 pixel)
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('move', step))
     
-    
-    def run_to(self, step):
-        self.target_x += (10 * step * self.direction)
+    def run_to(self, step=1):
+        # Action queue te run pathano holo (druto dauranor jonno)
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('run', step))
 
-        ...
     def flip(self):
-        if self.direction==1:
-            self.direction=-1
-        elif self.direction==-1:
-            self.direction=1
+        # Action queue te flip pathano holo (mukh ghoranor jonno)
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('flip',))
 
 class Body(Character):
     def __init__(self,name,x,y,direction=1):
         super().__init__(name=name,x=x,y=y,direction=direction)
-        #ekhane amder ekta kotha ache amra ekta class banabop dujon player er jono ebar tara to screner  dui diye thakbe sei jono apto eta korchi anba fix value dichi na ekmon krote hobe  char er x y k0tahy ache dehe bosa te hoibe 
+        # ekhane amder ekta kotha ache amra ekta class banabop dujon player er jono
         self.right_hand_x = x+40
         self.right_hand_y = y
         self.left_hand_x = x+40
@@ -36,84 +36,112 @@ class Body(Character):
         self.jump_pixel=0
         self.bend_angle=0
         self.sword  = Sword(length=50, angle=0)
-    
         self.shield = Shield(length=40)
        
     def set_right_hand(self, x, y):
-      #n ekhane amder dekhte hoibe right_hantx y theke x,y te jaoyar somoy colisiyion kina 
-      #xy use debe 
-      ...
-      
-      #problem 1====  #EI JAGAY SORA SORI SELF DIYE OI VARIVALE VA;LUE CHGE KROE DITEI PARTAM BUT SE KLHTRE SPEED E HAT NORLE COLLISIN HOE NA 
-    # ekhane e kta jhamela ache seta holo jodi nijer sathe dhaka khay amto v1 er jono amder nijer satha dhaka ta upekha kra hobe 
-    def set_left_hand(self, x, y):
-        # see problm 1
         ...
+      
+    def set_left_hand(self, x, y):
+        ...
+
     def move_right_hand(self, dx, dy):
-        # Move the right hand by dx and dy
-        #ekaneneo problem 1 
         self.right_hand_x += dx
         self.right_hand_y += dy
-#dekho ekhane amr shuhdu variable ta set kro edilam kothay jete heb ekte egolam na eabr dekho ebar game lop theke jokhon update kom hobe se dekhe terget er bortoman obosthan differ korche tokhon se chage kore debe  
+
     def move_left_hand(self, dx, dy):
-        # Move the left hand by dx and dy
-        #ekaneneo problem 1
         self.left_hand_x += dx
         self.left_hand_y += dy
 
-    def bend(self, angle):
-        # Bend the character's body
+    def bend(self, angle=0):
+        # Action queue te bend pathano holo
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('bend', angle))
 
-        ...
-    def jump(self, power):
-        pixel=power*5
-        self.jump_pixel=-pixel
-        # default move will use fixed speed
+    def jump(self, power=5):
+        # Action queue te jump command pathano holo
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('jump', power))
 
-    def long_jump(self, step, power):
-        # Synchronize jump and horizontal move
-        v_y = power * 5
-        self.jump_pixel = -v_y
-        
-        # Calculate time in air (gravity is +1 per frame, so 2 * v_y frames total)
-        air_time = 2 * v_y
-        
-        # Calculate total distance to move horizontally
-        distance = step * 10
-        self.target_x += (distance * self.direction)
-        
-        # Adjust horizontal speed so it finishes exactly when landing
-        if air_time > 0:
-            self.speed_x = abs(distance / air_time)
-        else:
-            self.speed_x = 2
+    def long_jump(self, step=2, power=5):
+        # Action queue te long_jump command pathano holo
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('long_jump', step, power))
             
-    def project(self, angle, power):
-        import math
-        # Angle logic for jump
-        rad = math.radians(angle)
-        # Assuming maximum power ~ 10 -> initial velocity max ~ 50
-        v = power * 5
-        v_y = v * math.sin(rad)
-        v_x = v * math.cos(rad)
-        
-        self.jump_pixel = -v_y
-        air_time = 2 * v_y
-        distance = v_x * air_time
-        
-        self.target_x += (distance * self.direction)
-        
-        if air_time > 0:
-            self.speed_x = abs(distance / air_time)
-        else:
-            self.speed_x = 2
+    def project(self, angle=45, power=5):
+        # Action queue te project command pathano holo
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('project', angle, power))
 
     def attack(self):
-        if self.shield.block_timer>0:
-            self.sword.attack_queued=True
-        elif self.sword.attack_state==0:
-            self.sword.attack_state=1
-            self.sword.target_angle=-15
+        # Action queue te attack command pathano holo
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('attack',))
+
+    def block(self):
+        # Action queue te block command pathano holo
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('block',))
+
+    def execute_next_action(self):
+        # Action Queue theke porer command ber kore execute kora
+        if not self.action_queue:
+            return
+            
+        action = self.action_queue.pop(0)
+        action_type = action[0]
+        
+        if action_type == 'move':
+            step = action[1]
+            self.speed_x = 2
+            self.target_x += (10 * step * self.direction)
+        elif action_type == 'run':
+            step = action[1]
+            self.speed_x = 4  # run korle speed beshi (4px/frame)
+            self.target_x += (10 * step * self.direction)
+        elif action_type == 'flip':
+            if self.direction == 1:
+                self.direction = -1
+            elif self.direction == -1:
+                self.direction = 1
+        elif action_type == 'jump':
+            power = action[1]
+            pixel = power * 5
+            self.jump_pixel = -pixel
+        elif action_type == 'long_jump':
+            step, power = action[1], action[2]
+            v_y = power * 5
+            self.jump_pixel = -v_y
+            air_time = 2 * v_y
+            distance = step * 10
+            self.target_x += (distance * self.direction)
+            if air_time > 0:
+                self.speed_x = abs(distance / air_time)
+            else:
+                self.speed_x = 2
+        elif action_type == 'project':
+            import math
+            angle, power = action[1], action[2]
+            rad = math.radians(angle)
+            v = power * 5
+            v_y = v * math.sin(rad)
+            v_x = v * math.cos(rad)
+            self.jump_pixel = -v_y
+            air_time = 2 * v_y
+            distance = v_x * air_time
+            self.target_x += (distance * self.direction)
+            if air_time > 0:
+                self.speed_x = abs(distance / air_time)
+            else:
+                self.speed_x = 2
+        elif action_type == 'attack':
+            # Shield block cholakale attack queue hobe, nahole direct -40 deg windup shuru hobe
+            if hasattr(self, 'shield') and self.shield.block_timer > 0:
+                self.sword.attack_queued = True
+            elif hasattr(self, 'sword') and self.sword.attack_state == 0:
+                self.sword.attack()
+        elif action_type == 'block':
+            if hasattr(self, 'shield'):
+                self.shield.block()
         
 
         
@@ -140,7 +168,8 @@ class Sword:
         self.sword_angle = angle
         self.target_angle = angle
         self.attack_state = 0 # 0=idle, 1=windup, 2=slash, 3=return
-        self.attack_queued=False
+        self.attack_queued = False
+        self.has_hit = False
         
     def set_sword(self, length, angle):
         #problem 1

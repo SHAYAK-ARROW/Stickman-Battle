@@ -21,6 +21,7 @@ player2 = Body(name="Fighter2",x=600, y=300, direction=-1)
 engine = GameEngine()
 connected_players=set()#sey nilam jate repet na hoy 
 sid_to_player = {} # socket id er sathe player track korar jono
+is_match_active = False # dujon player game e na asha porjonto kew move korte parbena
 engine.add_player(player1, player2)
 
 @app.route('/')
@@ -40,11 +41,17 @@ def join_game():
 
 @socketio.on('run_code')# templet er name hobe run code okleta title er jono just caption oi caption thakle or nocher function triger hobe 
 def code_handeler(data): 
+    # dujon player game e na asha porjonto code run bondho rakhlam
+    if not is_match_active:
+        print("Dujon player ready nei! Code run kora jabe na.")
+        return
     print("Player ID:", data['player_id'], " | Code:", data['code'])
     compiler.compiler(code=data['code'],current_player= player1 if data['player_id']==1 else player2 )
+
     # eta holo player join korar function
 @socketio.on('player_joined')
 def handle_player_join(data):
+    global is_match_active
     player_id = data.get('player_id')
     if player_id:
         # kon connection theke kon player elo seta sid diye mone rakhchi
@@ -52,14 +59,16 @@ def handle_player_join(data):
         connected_players.add(player_id)
         print(f"Player {player_id} joined! Connected: {connected_players}")
         
-        # dujonei game e ready  game start match start korchi oi set ta ei joni  chilo 
+        # dujonei game e ready hole match start korbo
         if 1 in connected_players and 2 in connected_players:
+            is_match_active = True
             print("Both players are in! Starting match...")
             socketio.emit('match_start')
 
 # keu jodi game theke beriye jay ba browser tab kete dey tobe eta cholbe
 @socketio.on('disconnect')
 def handle_disconnect():
+    global is_match_active
     sid = request.sid
     # connection id ta amader list e ache kina dekhi
     if sid in sid_to_player:
@@ -67,6 +76,8 @@ def handle_disconnect():
         # jodi oi player er r kono tab open na thake tobe take game theke fele debo
         if player_id not in sid_to_player.values():
             connected_players.discard(player_id) # set theke player delete korlam
+            is_match_active = False # match freeze/pause kore dilam
+            reset_match() # player der abar ager jaigay reset kore dilam
             print(f"Player {player_id} left! Connected: {connected_players}")
             # baki thaka player ke bole dichi je player 2 chole geche
             socketio.emit('player_left', {'player_id': player_id})
@@ -141,6 +152,7 @@ def game_loop():
                     'direction': player1.direction,
                     'sword_angle': player1.sword.sword_angle,
                     'shield_angle':player1.shield.shield_angel,
+                    'is_blocking': player1.shield.block_timer > 0,
                     'heart': player1.heart # pl1 er koyta heart baki ache
                 },
                 'player2': {
@@ -149,6 +161,7 @@ def game_loop():
                     'direction': player2.direction,
                     'sword_angle': player2.sword.sword_angle,
                     'shield_angle':player2.shield.shield_angel,
+                    'is_blocking': player2.shield.block_timer > 0,
                     'heart': player2.heart # pl2 er koyta heart baki ache
                 }
 

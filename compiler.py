@@ -1,7 +1,37 @@
 def compiler(code,current_player):
+    # Notun code run korar shathe shathe ager pending action queue clear kora holo
+    if hasattr(current_player, 'action_queue'):
+        current_player.action_queue.clear()
+
     code=code.lower()
+    
+    # Safe sandboxed builtins - os, sys, eval, exec, __import__, open shob block thakbe security r jonno
+    safe_builtins = {
+        "range": range,
+        "len": len,
+        "print": print,
+        "min": min,
+        "max": max,
+        "abs": abs,
+        "round": round,
+        "int": int,
+        "float": float,
+        "str": str,
+        "bool": bool,
+        "list": list,
+        "dict": dict,
+        "True": True,
+        "False": False,
+        "None": None,
+        # code.lower() use kora hoyeche tai lowercase boolean o support korche
+        "true": True,
+        "false": False,
+        "none": None,
+    }
+
     safe_env = {
-        # Character & Body body
+        "__builtins__": safe_builtins,
+        # Character & Body methods
         "move": current_player.move,
         "run": current_player.run_to,
         "jump": current_player.jump,
@@ -19,19 +49,18 @@ def compiler(code,current_player):
         "swing": current_player.sword.swing,
         "attack": current_player.attack,
         
-        # shild
+        # shield (Body.block use kora hocche jate queue te step-by-step execute hoy)
         "set_shield": current_player.shield.set_shield,
-        "block": current_player.shield.block,
-         #laf deoyar jono       
-         "project": current_player.project,
-         "long_jump": current_player.long_jump
+        "block": current_player.block,
+        
+        # laf deoyar jono       
+        "project": current_player.project,
+        "long_jump": current_player.long_jump
     }
-    # builtin method ditye jekono sytax je smoik bhabe chage kroa jay dtiled jani na ei module ta bujhi o ni tobe jani eta usw er bhasa ke  sohoj bhasa jekhane opp er ullkhe thakbe na 
-    # cheg kroe dichi jate user ke beshi khatte na hoy jeno ete asol pythoner if else loops use korte parbo mul udehso jeta cpde kore python sekha 
 
     try:
-        # Etao ami jani na eta ekrta spcila sytax jeta code take run kroa u  eval use korni kaorn multylie sting acvhe 
+        # Sandboxed environment e code run kora hocche (kono malicious code kaj korbena)
         exec(code, safe_env)
-        print("Code executed successfully!")
+        print("Code executed successfully! Actions queued.")
     except Exception as e:
-        print("Error ocuard:", e)
+        print("Error occurred during code execution:", e)
