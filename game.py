@@ -1,4 +1,4 @@
-from flask import Flask,render_template
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO
 from char import Body
 import compiler
@@ -20,6 +20,7 @@ player2 = Body(name="Fighter2",x=600, y=300, direction=-1)
 # engine baniye palyer dhokano holo
 engine = GameEngine()
 connected_players=set()#sey nilam jate repet na hoy 
+sid_to_player = {} # socket id er sathe player track korar jono
 engine.add_player(player1, player2)
 
 @app.route('/')
@@ -45,13 +46,26 @@ def code_handeler(data):
 @socketio.on('player_joined')
 def handle_player_join(data):
     player_id = data.get('player_id')
-    connected_players.add(player_id)
-    print(f"Player {player_id} joined! Connected: {connected_players}")
-    
-    # dujonei game e ready  game start match start korchi oi set ta ei joni  chilo 
-    if 1 in connected_players and 2 in connected_players:
-        print("Both players are in! Starting match...")
-        socketio.emit('match_start')
+    if player_id:
+        sid_to_player[request.sid] = player_id
+        connected_players.add(player_id)
+        print(f"Player {player_id} joined! Connected: {connected_players}")
+        
+        # dujonei game e ready  game start match start korchi oi set ta ei joni  chilo 
+        if 1 in connected_players and 2 in connected_players:
+            print("Both players are in! Starting match...")
+            socketio.emit('match_start')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    sid = request.sid
+    if sid in sid_to_player:
+        player_id = sid_to_player.pop(sid)
+        # jodi oi player_id er r kono active tab/socket na thake tobe discard korbo
+        if player_id not in sid_to_player.values():
+            connected_players.discard(player_id)
+            print(f"Player {player_id} left! Connected: {connected_players}")
+            socketio.emit('player_left', {'player_id': player_id})
 
 # game sesh hole abar reset korar function
 def reset_match():

@@ -18,6 +18,17 @@ socket.on('match_start', () => {
         waitScreen.style.display = 'none'; // ukiyedhichi 
     }
 });
+
+// player 2 beriye gele player 1-er screen-e abar wait screen dekhabe
+socket.on('player_left', (data) => {
+    console.log("Player left:", data.player_id);
+    if (MY_PLAYER_ID === 1 && data.player_id === 2) {
+        const waitScreen = document.getElementById('wait_screen');
+        if (waitScreen) {
+            waitScreen.style.display = 'block';
+        }
+    }
+});
 function draw_on_camvas(data) {
     if (!data || !data.player1 || !data.player2) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas before drawing
