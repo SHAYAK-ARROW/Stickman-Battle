@@ -42,11 +42,12 @@ def join_game():
 def code_handeler(data): 
     print("Player ID:", data['player_id'], " | Code:", data['code'])
     compiler.compiler(code=data['code'],current_player= player1 if data['player_id']==1 else player2 )
-    # eta hllo joiner fucntion 
+    # eta holo player join korar function
 @socketio.on('player_joined')
 def handle_player_join(data):
     player_id = data.get('player_id')
     if player_id:
+        # kon connection theke kon player elo seta sid diye mone rakhchi
         sid_to_player[request.sid] = player_id
         connected_players.add(player_id)
         print(f"Player {player_id} joined! Connected: {connected_players}")
@@ -56,15 +57,18 @@ def handle_player_join(data):
             print("Both players are in! Starting match...")
             socketio.emit('match_start')
 
+# keu jodi game theke beriye jay ba browser tab kete dey tobe eta cholbe
 @socketio.on('disconnect')
 def handle_disconnect():
     sid = request.sid
+    # connection id ta amader list e ache kina dekhi
     if sid in sid_to_player:
-        player_id = sid_to_player.pop(sid)
-        # jodi oi player_id er r kono active tab/socket na thake tobe discard korbo
+        player_id = sid_to_player.pop(sid) # socket list theke id ber kore nilam
+        # jodi oi player er r kono tab open na thake tobe take game theke fele debo
         if player_id not in sid_to_player.values():
-            connected_players.discard(player_id)
+            connected_players.discard(player_id) # set theke player delete korlam
             print(f"Player {player_id} left! Connected: {connected_players}")
+            # baki thaka player ke bole dichi je player 2 chole geche
             socketio.emit('player_left', {'player_id': player_id})
 
 # game sesh hole abar reset korar function

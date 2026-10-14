@@ -19,13 +19,14 @@ socket.on('match_start', () => {
     }
 });
 
-// player 2 beriye gele player 1-er screen-e abar wait screen dekhabe
+// player 2 jodi tab kete beriye jay tahole player 1 er screen e abar waiting screen chalu korbo
 socket.on('player_left', (data) => {
     console.log("Player left:", data.player_id);
+    // ami jodi player 1 hoi ar player 2 jodi chole jay tobe abar wait screen dekhabo
     if (MY_PLAYER_ID === 1 && data.player_id === 2) {
         const waitScreen = document.getElementById('wait_screen');
         if (waitScreen) {
-            waitScreen.style.display = 'block';
+            waitScreen.style.display = 'block'; // waiting pop up abar samne anlam
         }
     }
 });
