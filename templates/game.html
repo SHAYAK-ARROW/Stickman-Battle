@@ -7,7 +7,7 @@
 <body>
 
 <div><h1>Stick Man Battle</h1><br>
-<h2>Made by Arrows Devolopment Hub</h2>
+<h2>Made by Arrows Development Hub</h2>
 </div>
 <div id="wait_screen">
     <h2>Waiting for Player 2 to join...</h2>
@@ -87,17 +87,19 @@
 </div>
 <script>
     const MY_PLAYER_ID = {{ player_id }};//achj eta jinja bole ai kichu bolo thik bujhlam nna but jeta bujhlam seta holo mu player id er jagay ekta varivale tar value hobe python e thaka oi varable er man eta mone rakhte hobe aro bujhte hobe ami bujhini 
+    const ROOM_ID = "{{ room_id if room_id is defined and room_id else 'default' }}";
 
-// ekta variable rakhlam pl2 e rjono no etay pl2 e rlink thakbe 
-const p2_url = window.location.origin + "/player2";
+// ekta variable rakhlam pl2 e rjono no etay room er link thakbe 
+const p2_url = ROOM_ID !== 'default' ? window.location.href : (window.location.origin + "/player2");
 
-// স্কscren e leah ta dekhalam,,, 
-document.getElementById('p2_link').innerText = p2_url;
+// scren e link dekhalam
+const linkElem = document.getElementById('p2_link');
+if (linkElem) linkElem.innerText = p2_url;
 
 // copy link buton e click korle clip baord  e copy er functiom 
 function copy_link() {
     navigator.clipboard.writeText(p2_url);
-    alert("Link copied!");
+    alert("Room Link copied! Bondhuke share koro: " + p2_url);
 }
 
 // pl2 dhukle wait er drkar nei

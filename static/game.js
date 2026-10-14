@@ -2,9 +2,12 @@
 const socket = io(); // Connect to the server using Socket.IO
 
 socket.on('connect', () => {
-    console.log("Connected to server!");
-    // server ke janachhi ami ke (pl1 na pl2)
-    socket.emit('player_joined', { player_id: MY_PLAYER_ID });
+    console.log("Connected to server! Room:", typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default');
+    // server ke janachhi ami ke (pl1 na pl2) ebong kon room e achi
+    socket.emit('player_joined', { 
+        player_id: MY_PLAYER_ID,
+        room_id: typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default'
+    });
 });
 
 const canvas = document.getElementById('gui_screen');// eta diye canvas ta khuje bar kora hoche
@@ -191,14 +194,17 @@ function run() {
     let code = document.getElementById("ide").value;// html e je ide tag ewr text era ache jeta code eddiotr hisebe use hobe seta etar bhitor ki lekha ache ta bar korchi 
     data = {
         "code": code,
-        "player_id": MY_PLAYER_ID
+        "player_id": MY_PLAYER_ID,
+        "room_id": typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default'
     };
     socket.emit("run_code", data);
 }
 
 // restart button e click korle server ke bolbo
 function request_restart() {
-    socket.emit('restart_game');
+    socket.emit('restart_game', {
+        "room_id": typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default'
+    });
 }
 
 // server theke game reset er signal pele

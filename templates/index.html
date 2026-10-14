@@ -10,13 +10,17 @@
 <body>
 <div>
 <h1>Stick Man Battle</h1><br>
-<h2>Made by Arrows Devolopment Hub</h2>
-
+<h2>Made by Arrows Development Hub</h2>
 </div>
 <div>
     <center>
-<button onclick="start_game()">Start Game</button><center>
-    </div>
+        <button onclick="start_game()" style="font-size: 18px; padding: 10px 20px; cursor: pointer;">Create New Battle Room</button>
+        <br><br>
+        <p>— OR Join an Existing Room —</p>
+        <input type="text" id="room_input" placeholder="Enter Room Code (e.g. room_a1b2c3)" style="padding: 8px; width: 250px;">
+        <button onclick="join_custom_room()" style="padding: 8px 15px; cursor: pointer;">Join Room</button>
+    </center>
+</div>
 
 
 <script src="static/main.js"></Script>
