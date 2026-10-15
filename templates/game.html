@@ -90,7 +90,7 @@
     const ROOM_ID = "{{ room_id if room_id is defined and room_id else 'default' }}";
 
 // ekta variable rakhlam pl2 e rjono no etay room er link thakbe 
-const p2_url = ROOM_ID !== 'default' ? window.location.href : (window.location.origin + "/player2");
+const p2_url = ROOM_ID !== 'default' ? (window.location.origin + "/room/" + ROOM_ID + "?player=2") : (window.location.origin + "/player2");
 
 // scren e link dekhalam
 const linkElem = document.getElementById('p2_link');

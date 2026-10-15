@@ -176,10 +176,16 @@ function draw_on_camvas(data) {
         is_game_over = true;
     }
 
-    // game over hole rematch button dekhabo
+    // game over hole rematch button dekhabo ebong run button freeze korbo
     const restartBtn = document.getElementById('restart_btn');
     if (restartBtn) {
         restartBtn.style.display = is_game_over ? 'inline-block' : 'none';
+    }
+
+    const runBtn = document.getElementById('run_btn');
+    if (runBtn && is_game_over) {
+        runBtn.disabled = true;
+        runBtn.innerText = "Match Over (Play Again to Rematch)";
     }
 }
 
@@ -188,7 +194,7 @@ function draw_on_camvas(data) {
 function run() {
     const runBtn = document.getElementById("run_btn");
     if (runBtn && runBtn.disabled) {
-        alert("Dujon player ready na thakle code run kora jabe na!");
+        alert("Match sesh ba player ready na thakle code run kora jabe na! Rematch koro.");
         return;
     }
     let code = document.getElementById("ide").value;// html e je ide tag ewr text era ache jeta code eddiotr hisebe use hobe seta etar bhitor ki lekha ache ta bar korchi 
@@ -213,6 +219,12 @@ socket.on('game_restarted', () => {
     const restartBtn = document.getElementById('restart_btn');
     if (restartBtn) {
         restartBtn.style.display = 'none';
+    }
+    // rematch shuru hoyeche tai run button abar chalu korlam
+    const runBtn = document.getElementById('run_btn');
+    if (runBtn) {
+        runBtn.disabled = false;
+        runBtn.innerText = "Run";
     }
 });
 

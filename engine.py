@@ -9,14 +9,17 @@ class   GameEngine:
             self.players.append(player)
 
     def update(self):
+        # Match game over kina check (keu mara geche kina)
+        is_game_over = any(player.heart <= 0 for player in self.players)
     
         for player in self.players:
-            # Player mara gele tar queue clear kore debe
-            if player.heart <= 0:
+            # Game over hole shob player er queue clear kora ebong walking stop kora
+            if is_game_over:
                 if hasattr(player, 'action_queue') and player.action_queue:
                     player.action_queue.clear()
+                player.target_x = player.x
             
-            # Action Queue Processor: jodi player kono kaj na korche (idle ache), tobe queue theke next action execute hobe
+            # Action Queue Processor: jodi match active thake ebong player idle thake, tobe queue theke next action execute hobe
             is_moving = (player.x != player.target_x)
             is_airborne = (player.y < 470 or player.jump_pixel != 0)
             is_attacking = (hasattr(player, 'sword') and player.sword.attack_state != 0)
@@ -24,7 +27,7 @@ class   GameEngine:
             
             is_busy = is_moving or is_airborne or is_attacking or is_blocking
             
-            if not is_busy and hasattr(player, 'action_queue') and player.action_queue:
+            if not is_game_over and not is_busy and hasattr(player, 'action_queue') and player.action_queue:
                 player.execute_next_action()
 
             if player.x != player.target_x:
@@ -107,8 +110,8 @@ class   GameEngine:
                             player.sword.attack_state = 1
                             player.sword.target_angle = -40
         
-        #colison 
-        if len(self.players)>=2:
+        # colison ebong damage shudhu tokhon hobe jokhon match game over na
+        if not is_game_over and len(self.players)>=2:
             p1=self.players[0]
             p2=self.players[1]
             dx=abs(p1.x-p2.x)#distanse bar korchi 

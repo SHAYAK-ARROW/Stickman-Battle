@@ -95,8 +95,12 @@ def join_game():
 @app.route('/room/<room_id>')#<> eta holon onke ta f string er  moto jet aurl e vaiable er man bosai 
 def join_room_game(room_id):
     room = get_or_create_room(room_id)
-    # prothom jon ashle Player 1, tarporer jon ashle Player 2
-    assigned_player = 1 if 1 not in room.connected_players else 2
+    # url e ?player=2 deya thakle shetai nebo, nahole prothom jon ashle Player 1, tarporer jon Player 2
+    req_player = request.args.get('player')
+    if req_player in ['1', '2']:
+        assigned_player = int(req_player)
+    else:
+        assigned_player = 1 if 1 not in room.connected_players else 2
     return render_template('game.html', room_id=room_id, player_id=assigned_player)
 
 
@@ -109,6 +113,12 @@ def code_handeler(data):
     if not room.is_match_active:
         print(f"Room [{room_id}] -> Dujon player ready nei! Code run kora jabe na.")
         return
+        
+    # Match game over kina check kora (keu mara geche kina)
+    if room.player1.heart <= 0 or room.player2.heart <= 0:
+        print(f"Room [{room_id}] -> Match game over hoye geche! Play Again chara notun code run hobena.")
+        return
+        
     print(f"Room [{room_id}] -> Player {data['player_id']} Code Run!")
     
     # oi room er player1 naki player2 seta thik kore compiler ke dilam
