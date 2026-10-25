@@ -38,8 +38,11 @@
     <div style="display: flex; border: 2px solid #333; background: #1e1e1e; border-radius: 6px; overflow: hidden; width: 560px; max-width: 100%; height: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
         <!-- Line Numbers Column -->
         <div id="line_numbers" style="width: 44px; background: #181818; color: #858585; text-align: right; padding: 10px 8px 10px 0; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 20px; user-select: none; border-right: 1px solid #333; overflow: hidden; box-sizing: border-box;">1</div>
-        <!-- Code Editor Textarea -->
-        <textarea id="ide" spellcheck="false" style="flex: 1; border: none; outline: none; background: #1e1e1e; color: #d4d4d4; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 20px; padding: 10px; resize: none; overflow-y: auto; white-space: pre; tab-size: 4; box-sizing: border-box; background-image: repeating-linear-gradient(to right, transparent 0px, transparent calc(4ch - 1px), rgba(255, 255, 255, 0.05) calc(4ch - 1px), rgba(255, 255, 255, 0.05) 4ch);"></textarea>
+        <!-- Editor Content Area with VS Code style Indent Guides Backdrop -->
+        <div style="position: relative; flex: 1; height: 100%; overflow: hidden; background: #1e1e1e;">
+            <div id="indent_guides" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 20px; padding: 10px; margin: 0; box-sizing: border-box; white-space: pre;"></div>
+            <textarea id="ide" spellcheck="false" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; outline: none; background: transparent; color: #d4d4d4; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 20px; padding: 10px; margin: 0; resize: none; overflow: auto; white-space: pre; tab-size: 4; box-sizing: border-box; caret-color: #fff;"></textarea>
+        </div>
     </div>
     <div style="margin-top: 10px; display: flex; gap: 8px;">
         <button id="run_btn" onclick="run()" disabled>Run (Waiting for Player...)</button>

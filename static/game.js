@@ -291,9 +291,10 @@ socket.on('game_restarted', () => {
 socket.on('update_game_gui',draw_on_camvas);// oi tag julto data jokhoni pabe ei ta triger hobe draw_on_camvas function ta call hobe and oi data ke draw_on_camvas function e pathabe
 
 
-// --- VS Code Style Code Editor (Line Numbers, Tab & Auto-Indent) ---
+// --- VS Code Style Code Editor (Line Numbers, Dynamic Indent Guides & Auto-Indent) ---
 const ide = document.getElementById("ide");
 const lineNumbers = document.getElementById("line_numbers");
+const indentGuides = document.getElementById("indent_guides");
 
 function updateLineNumbers() {
     if (!ide || !lineNumbers) return;
@@ -305,13 +306,75 @@ function updateLineNumbers() {
     lineNumbers.innerHTML = numbers;
 }
 
+function updateIndentGuides() {
+    if (!ide || !indentGuides) return;
+    const lines = ide.value.split("\n");
+    const indents = [];
+    
+    // 1. Calculate indent level for each line (4 spaces = 1 level)
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trim().length === 0) {
+            indents.push(-1); // Empty line
+        } else {
+            let leadingSpaces = 0;
+            for (let c = 0; c < line.length; c++) {
+                if (line[c] === ' ') leadingSpaces += 1;
+                else if (line[c] === '\t') leadingSpaces += 4;
+                else break;
+            }
+            indents.push(Math.floor(leadingSpaces / 4));
+        }
+    }
+    
+    // 2. Interpolate empty lines inside indented blocks (VS Code behavior)
+    for (let i = 0; i < indents.length; i++) {
+        if (indents[i] === -1) {
+            let prevIndent = 0;
+            for (let p = i - 1; p >= 0; p--) {
+                if (indents[p] !== -1) { prevIndent = indents[p]; break; }
+            }
+            let nextIndent = 0;
+            for (let n = i + 1; n < indents.length; n++) {
+                if (indents[n] !== -1) { nextIndent = indents[n]; break; }
+            }
+            indents[i] = Math.min(prevIndent, nextIndent);
+        }
+    }
+    
+    // 3. Render guide lines ONLY where indent exists (no stripes across empty space)
+    let html = "";
+    for (let i = 0; i < lines.length; i++) {
+        const lvl = indents[i];
+        if (lvl > 0) {
+            let spans = "";
+            for (let j = 0; j < lvl; j++) {
+                spans += '<span style="display:inline-block; width:4ch; height:20px; box-sizing:border-box; border-right:1px solid rgba(255, 255, 255, 0.15); vertical-align:top;"></span>';
+            }
+            html += `<div style="height:20px; line-height:20px; white-space:pre;">${spans}</div>`;
+        } else {
+            html += '<div style="height:20px; line-height:20px; white-space:pre;"></div>';
+        }
+    }
+    indentGuides.innerHTML = html;
+}
+
 function syncEditorScroll() {
-    if (!ide || !lineNumbers) return;
-    lineNumbers.scrollTop = ide.scrollTop;
+    if (!ide) return;
+    if (lineNumbers) lineNumbers.scrollTop = ide.scrollTop;
+    if (indentGuides) {
+        indentGuides.scrollTop = ide.scrollTop;
+        indentGuides.scrollLeft = ide.scrollLeft;
+    }
+}
+
+function updateEditorUI() {
+    updateLineNumbers();
+    updateIndentGuides();
 }
 
 if (ide) {
-    ide.addEventListener("input", updateLineNumbers);
+    ide.addEventListener("input", updateEditorUI);
     ide.addEventListener("scroll", syncEditorScroll);
 
     ide.addEventListener("keydown", function(e) {
@@ -323,7 +386,7 @@ if (ide) {
             e.preventDefault();
             this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
             this.selectionStart = this.selectionEnd = start + 4;
-            updateLineNumbers();
+            updateEditorUI();
         }
         // 2. Enter Key Handler (Auto-indentation, extra 4 spaces on ':')
         else if (e.key === "Enter") {
@@ -345,7 +408,7 @@ if (ide) {
 
             this.value = textBefore + "\n" + indent + textAfter;
             this.selectionStart = this.selectionEnd = start + 1 + indent.length;
-            updateLineNumbers();
+            updateEditorUI();
 
             // cursor scroll er sathe align rakha
             this.dispatchEvent(new Event("scroll"));
@@ -358,13 +421,13 @@ if (ide) {
                 e.preventDefault();
                 this.value = this.value.substring(0, start - 4) + this.value.substring(start);
                 this.selectionStart = this.selectionEnd = start - 4;
-                updateLineNumbers();
+                updateEditorUI();
             }
         }
     });
 
-    // Initial line numbers on page load
-    updateLineNumbers();
+    // Initial line numbers and indent guides on page load
+    updateEditorUI();
 }
 
 
