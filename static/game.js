@@ -156,6 +156,66 @@ function draw_on_camvas(data) {
         ctx.lineTo(-5 * dir, 25);  // Shield er nich
         ctx.stroke();
         ctx.restore();
+
+        // --- SPEECH BUBBLE (print message render) ---
+        if (player.speech && player.speech.trim() !== "") {
+            ctx.save();
+            ctx.font = "bold 13px 'Consolas', 'Courier New', monospace";
+            let text = player.speech;
+            let textMetrics = ctx.measureText(text);
+            let bubbleWidth = Math.max(textMetrics.width + 18, 45);
+            let bubbleHeight = 26;
+            
+            // Mathar opore heart bar er opore thakbe
+            let bubbleY = y - 72;
+            let bubbleX = dir === 1 ? (x + 10) : (x - 10 - bubbleWidth);
+            
+            // Screen boundary clamping jate canvas theke beriye na jay
+            if (bubbleX < 10) bubbleX = 10;
+            if (bubbleX + bubbleWidth > canvas.width - 10) bubbleX = canvas.width - bubbleWidth - 10;
+            if (bubbleY < 10) bubbleY = 10;
+            
+            // Bubble box
+            ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+            ctx.strokeStyle = "#111";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 6);
+            } else {
+                ctx.rect(bubbleX, bubbleY, bubbleWidth, bubbleHeight);
+            }
+            ctx.fill();
+            ctx.stroke();
+            
+            // Pointer tail pointing towards stickman
+            ctx.beginPath();
+            let tailBaseX = Math.min(Math.max(x + (dir * 10), bubbleX + 10), bubbleX + bubbleWidth - 10);
+            let tailTipX = x + (dir * 5);
+            let tailTipY = Math.min(bubbleY + bubbleHeight + 8, y - 35);
+            ctx.moveTo(tailBaseX - 5, bubbleY + bubbleHeight);
+            ctx.lineTo(tailTipX, tailTipY);
+            ctx.lineTo(tailBaseX + 5, bubbleY + bubbleHeight);
+            ctx.closePath();
+            ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+            ctx.fill();
+            ctx.stroke();
+
+            // Tail base connection mask
+            ctx.beginPath();
+            ctx.moveTo(tailBaseX - 4, bubbleY + bubbleHeight);
+            ctx.lineTo(tailBaseX + 4, bubbleY + bubbleHeight);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Text render inside bubble
+            ctx.fillStyle = "#111";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(text, bubbleX + (bubbleWidth / 2), bubbleY + (bubbleHeight / 2) + 1);
+            ctx.restore();
+        }
     }
 
     // Dujon player k aa ki
@@ -229,3 +289,140 @@ socket.on('game_restarted', () => {
 });
 
 socket.on('update_game_gui',draw_on_camvas);// oi tag julto data jokhoni pabe ei ta triger hobe draw_on_camvas function ta call hobe and oi data ke draw_on_camvas function e pathabe
+
+
+// --- VS Code Style Code Editor (Line Numbers, Tab & Auto-Indent) ---
+const ide = document.getElementById("ide");
+const lineNumbers = document.getElementById("line_numbers");
+
+function updateLineNumbers() {
+    if (!ide || !lineNumbers) return;
+    const lines = ide.value.split("\n");
+    let numbers = "";
+    for (let i = 1; i <= lines.length; i++) {
+        numbers += i + "<br>";
+    }
+    lineNumbers.innerHTML = numbers;
+}
+
+function syncEditorScroll() {
+    if (!ide || !lineNumbers) return;
+    lineNumbers.scrollTop = ide.scrollTop;
+}
+
+if (ide) {
+    ide.addEventListener("input", updateLineNumbers);
+    ide.addEventListener("scroll", syncEditorScroll);
+
+    ide.addEventListener("keydown", function(e) {
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+
+        // 1. Tab Key Handler (inserts 4 spaces instead of losing focus)
+        if (e.key === "Tab") {
+            e.preventDefault();
+            this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 4;
+            updateLineNumbers();
+        }
+        // 2. Enter Key Handler (Auto-indentation, extra 4 spaces on ':')
+        else if (e.key === "Enter") {
+            e.preventDefault();
+            const textBefore = this.value.substring(0, start);
+            const textAfter = this.value.substring(end);
+
+            // current line ber kora
+            const currentLine = textBefore.split("\n").pop();
+
+            // current line er leading spaces ber kora
+            const match = currentLine.match(/^\s*/);
+            let indent = match ? match[0] : "";
+
+            // line er seshe ':' thakle aro 4 space barano
+            if (currentLine.trim().endsWith(":")) {
+                indent += "    ";
+            }
+
+            this.value = textBefore + "\n" + indent + textAfter;
+            this.selectionStart = this.selectionEnd = start + 1 + indent.length;
+            updateLineNumbers();
+
+            // cursor scroll er sathe align rakha
+            this.dispatchEvent(new Event("scroll"));
+        }
+        // 3. Backspace Key Handler (Smart delete 4 spaces if on indent)
+        else if (e.key === "Backspace" && start === end && start >= 4) {
+            const before = this.value.substring(start - 4, start);
+            const currentLineBefore = this.value.substring(0, start).split("\n").pop();
+            if (before === "    " && /^\s+$/.test(currentLineBefore)) {
+                e.preventDefault();
+                this.value = this.value.substring(0, start - 4) + this.value.substring(start);
+                this.selectionStart = this.selectionEnd = start - 4;
+                updateLineNumbers();
+            }
+        }
+    });
+
+    // Initial line numbers on page load
+    updateLineNumbers();
+}
+
+
+// --- OPPONENT INPUT MODAL (Model 1 Challenge/Dialogue) ---
+socket.on('prompt_opponent_input', function(data) {
+    if (data.from_player !== MY_PLAYER_ID) {
+        let modal = document.getElementById('opponent_input_modal');
+        let title = document.getElementById('input_modal_title');
+        let prompt = document.getElementById('input_modal_prompt');
+        let field = document.getElementById('input_modal_field');
+        if (modal && prompt && field) {
+            title.innerText = `💬 Player ${data.from_player} asks:`;
+            prompt.innerText = data.prompt || "Say something:";
+            field.value = "";
+            modal.style.display = "block";
+            setTimeout(() => field.focus(), 50);
+        }
+    }
+});
+
+function sendInputReply() {
+    let modal = document.getElementById('opponent_input_modal');
+    let field = document.getElementById('input_modal_field');
+    if (!field || !modal) return;
+    let reply = field.value.trim();
+    if (reply) {
+        socket.emit('reply_input', {
+            room_id: typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default',
+            from_player: MY_PLAYER_ID,
+            reply: reply
+        });
+    }
+    modal.style.display = "none";
+    field.value = "";
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('input_modal_send')?.addEventListener('click', sendInputReply);
+    document.getElementById('input_modal_close')?.addEventListener('click', () => {
+        let modal = document.getElementById('opponent_input_modal');
+        if (modal) modal.style.display = "none";
+    });
+    document.getElementById('input_modal_field')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendInputReply();
+        }
+    });
+});
+// Fallback direct listeners if script runs after DOMContentLoaded
+document.getElementById('input_modal_send')?.addEventListener('click', sendInputReply);
+document.getElementById('input_modal_close')?.addEventListener('click', () => {
+    let modal = document.getElementById('opponent_input_modal');
+    if (modal) modal.style.display = "none";
+});
+document.getElementById('input_modal_field')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        sendInputReply();
+    }
+});

@@ -16,14 +16,36 @@
 </div>
 
 <div style="display: flex; gap:20px; justify-content: center; flex-wrap: wrap;">
-<canvas id="gui_screen" width="800" height="600" style="border:2px solid #000000; background-color: #000000; max-width: 100%; height: auto;"></canvas>
+<div style="position: relative; display: inline-block;">
+    <canvas id="gui_screen" width="800" height="600" style="border:2px solid #000000; background-color: #000000; max-width: 100%; height: auto;"></canvas>
+    
+    <!-- Floating Opponent Input Modal (Model 1 Challenge Prompt) -->
+    <div id="opponent_input_modal" style="display: none; position: absolute; top: 30px; left: 50%; transform: translateX(-50%); background: #252526; color: #fff; border: 2px solid #007acc; border-radius: 8px; padding: 12px 16px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 100; width: 330px; max-width: 90%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span id="input_modal_title" style="font-weight: bold; font-size: 13px; color: #4ec9b0;">💬 Question from Opponent</span>
+            <button id="input_modal_close" style="background: transparent; border: none; color: #aaa; font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;" title="Ignore and close">&times;</button>
+        </div>
+        <div id="input_modal_prompt" style="font-size: 14px; margin-bottom: 10px; color: #f1f1f1; font-weight: 500; word-break: break-word;">...</div>
+        <div style="display: flex; gap: 8px;">
+            <input type="text" id="input_modal_field" maxlength="40" placeholder="Type your reply..." style="flex: 1; background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 4px; padding: 6px 10px; color: #fff; font-size: 13px; outline: none;">
+            <button id="input_modal_send" style="background: #0e639c; color: white; border: none; border-radius: 4px; padding: 6px 14px; font-size: 13px; font-weight: bold; cursor: pointer;">Send</button>
+        </div>
+    </div>
+</div>
 
 
 <div id="code_eddior" style="max-width: 100%;">
-    <textarea id="ide" rows=" 40" cols="70" style="max-width: 100%;"></textarea><br>
-    <button id="run_btn" onclick="run()" disabled>Run (Waiting for Player...)</button>
-    <button onclick="open_commands_dialog()">Commands List</button>
-    <button id="restart_btn" onclick="request_restart()" style="display: none;">Play Again / Rematch</button>
+    <div style="display: flex; border: 2px solid #333; background: #1e1e1e; border-radius: 6px; overflow: hidden; width: 560px; max-width: 100%; height: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+        <!-- Line Numbers Column -->
+        <div id="line_numbers" style="width: 44px; background: #181818; color: #858585; text-align: right; padding: 10px 8px 10px 0; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 20px; user-select: none; border-right: 1px solid #333; overflow: hidden; box-sizing: border-box;">1</div>
+        <!-- Code Editor Textarea -->
+        <textarea id="ide" spellcheck="false" style="flex: 1; border: none; outline: none; background: #1e1e1e; color: #d4d4d4; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 20px; padding: 10px; resize: none; overflow-y: auto; white-space: pre; tab-size: 4; box-sizing: border-box; background-image: repeating-linear-gradient(to right, transparent 0px, transparent calc(4ch - 1px), rgba(255, 255, 255, 0.05) calc(4ch - 1px), rgba(255, 255, 255, 0.05) 4ch);"></textarea>
+    </div>
+    <div style="margin-top: 10px; display: flex; gap: 8px;">
+        <button id="run_btn" onclick="run()" disabled>Run (Waiting for Player...)</button>
+        <button onclick="open_commands_dialog()">Commands List</button>
+        <button id="restart_btn" onclick="request_restart()" style="display: none;">Play Again / Rematch</button>
+    </div>
 </div>
 
 <!-- HTML5 Native Popup Dialog (No CSS) -->
@@ -80,6 +102,36 @@
             <td>range(n)</td>
             <td>For loop er jono</td>
             <td>for i in range(5):</td>
+        </tr>
+        <tr>
+            <td>get_enemy_distance()</td>
+            <td>Sotru koto pixel dure ache mape</td>
+            <td>if get_enemy_distance() < 120:</td>
+        </tr>
+        <tr>
+            <td>is_enemy_attacking()</td>
+            <td>Sotru attack korche kina (True/False)</td>
+            <td>if is_enemy_attacking(): block()</td>
+        </tr>
+        <tr>
+            <td>get_my_health()</td>
+            <td>Nijer baki heart sonkha</td>
+            <td>if get_my_health() <= 2:</td>
+        </tr>
+        <tr>
+            <td>get_enemy_health()</td>
+            <td>Sotrur baki heart sonkha</td>
+            <td>if get_enemy_health() == 1:</td>
+        </tr>
+        <tr>
+            <td>print(text)</td>
+            <td>Kothar speech bubble toiri kore</td>
+            <td>print("Fight me!")</td>
+        </tr>
+        <tr>
+            <td>input(prompt)</td>
+            <td>Sotrur screen e challenge/proshno pathay</td>
+            <td>input("Surrender korbi?")</td>
         </tr>
     </table>
 </dialog>

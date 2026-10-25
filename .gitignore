@@ -14,6 +14,14 @@ env/
 # Private Backlog / Feature notes
 features.md
 
+# Editor and agent workspace files
+.vscode/
+.agents/
+skills-lock.json
+
+# Scratch files
+durga_ascii_detailed.py
+
 # Operating System Files
 .DS_Store
 Thumbs.db

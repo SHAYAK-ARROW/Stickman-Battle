@@ -8,6 +8,9 @@ class Character:
         self.target_x=x
         self.target_y=y
         self.action_queue = []
+        self.speech_text = ""
+        self.speech_timer = 0
+        self.pending_question = None
     
     # 1 step amra 10 pixel dhorchi - command gulo action queue te append hocche
     def move(self, step=1):
@@ -82,6 +85,16 @@ class Body(Character):
         if len(self.action_queue) < 100:
             self.action_queue.append(('block',))
 
+    def say(self, text):
+        # Action queue te dialogue pathano holo (speech bubble)
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('say', str(text)[:40]))
+
+    def ask(self, prompt=""):
+        # Action queue te opponent ke challenge/input prompt pathano holo
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('ask', str(prompt)[:40]))
+
     def execute_next_action(self):
         # Action Queue theke porer command ber kore execute kora
         if not self.action_queue:
@@ -142,6 +155,18 @@ class Body(Character):
         elif action_type == 'block':
             if hasattr(self, 'shield'):
                 self.shield.block()
+        elif action_type == 'say':
+            self.speech_text = action[1]
+            self.speech_timer = 90  # 90 frames = 1.5 seconds
+            # say action run hoye gele shathe shathe porer action chalu kora
+            if self.action_queue:
+                self.execute_next_action()
+        elif action_type == 'ask':
+            self.pending_question = action[1]
+            self.speech_text = action[1]
+            self.speech_timer = 90
+            if self.action_queue:
+                self.execute_next_action()
         
 
         

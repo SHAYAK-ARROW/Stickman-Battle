@@ -109,6 +109,12 @@ class   GameEngine:
                             player.sword.attack_queued = False
                             player.sword.attack_state = 1
                             player.sword.target_angle = -40
+
+            # Speech bubble timer
+            if hasattr(player, 'speech_timer') and player.speech_timer > 0:
+                player.speech_timer -= 1
+                if player.speech_timer == 0:
+                    player.speech_text = ""
         
         # colison ebong damage shudhu tokhon hobe jokhon match game over na
         if not is_game_over and len(self.players)>=2:
@@ -166,4 +172,4 @@ class   GameEngine:
             if hasattr(p1, 'sword') and p1.sword.attack_state == 0:
                 p1.sword.has_hit = False
             if hasattr(p2, 'sword') and p2.sword.attack_state == 0:
-                p2.sword.has_hit = False
+                p2.sword.has_hit = False

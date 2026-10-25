@@ -51,6 +51,9 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         if hasattr(self.player1, 'shield'):
             self.player1.shield.shield_angel = 45
             self.player1.shield.block_timer = 0
+        self.player1.speech_text = ""
+        self.player1.speech_timer = 0
+        self.player1.pending_question = None
 
         # player 2 ke ager jaygay firiye deoya
         self.player2.heart = 5
@@ -73,6 +76,9 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         if hasattr(self.player2, 'shield'):
             self.player2.shield.shield_angel = 45
             self.player2.shield.block_timer = 0
+        self.player2.speech_text = ""
+        self.player2.speech_timer = 0
+        self.player2.pending_question = None
 
 rooms={}
 def get_or_create_room(room_id):#eta besicaly room banabe mane room an thakle room banabe thakle banabe na 
@@ -123,7 +129,8 @@ def code_handeler(data):
     
     # oi room er player1 naki player2 seta thik kore compiler ke dilam
     target_player = room.player1 if data['player_id'] == 1 else room.player2
-    compiler.compiler(code=data['code'], current_player=target_player)
+    enemy_player = room.player2 if data['player_id'] == 1 else room.player1
+    compiler.compiler(code=data['code'], current_player=target_player, enemy_player=enemy_player)
     # eta holo player join korar function
 @socketio.on('player_joined')
 def handle_player_join(data):
@@ -163,6 +170,20 @@ def handle_disconnect():
                 print(f"Room [{room.room_id}] -> Player {player_id} left!")
                 socketio.emit('player_left', {'player_id': player_id}, to=room.room_id)
 
+# Opponent input modal theke reply pathale eta cholbe
+@socketio.on('reply_input')
+def handle_reply_input(data):
+    room_id = data.get('room_id', 'default') if isinstance(data, dict) else 'default'
+    room = get_or_create_room(room_id)
+    from_player = data.get('from_player')
+    reply = str(data.get('reply', ''))[:40].strip()
+    if not reply:
+        return
+    target_player = room.player1 if from_player == 1 else room.player2
+    target_player.speech_text = reply
+    target_player.speech_timer = 90
+    print(f"Room [{room_id}] -> Player {from_player} replied: {reply}")
+
 # frontend theke restart button e chap dile eta cholbe
 @socketio.on('restart_game')
 def handle_restart_game(data=None):
@@ -183,6 +204,16 @@ def game_loop():
                 if room.is_match_active or room.connected_players:
                     room.engine.update()
                     
+                    # Pending opponent input question emit kora
+                    if getattr(room.player1, 'pending_question', None):
+                        q = room.player1.pending_question
+                        room.player1.pending_question = None
+                        socketio.emit('prompt_opponent_input', {'from_player': 1, 'prompt': q}, to=room.room_id)
+                    if getattr(room.player2, 'pending_question', None):
+                        q = room.player2.pending_question
+                        room.player2.pending_question = None
+                        socketio.emit('prompt_opponent_input', {'from_player': 2, 'prompt': q}, to=room.room_id)
+                    
                     data_to_send = {
                         'player1': {
                             'x': room.player1.x,
@@ -191,7 +222,8 @@ def game_loop():
                             'sword_angle': room.player1.sword.sword_angle,
                             'shield_angle': room.player1.shield.shield_angel,
                             'is_blocking': room.player1.shield.block_timer > 0,
-                            'heart': room.player1.heart
+                            'heart': room.player1.heart,
+                            'speech': getattr(room.player1, 'speech_text', '') if getattr(room.player1, 'speech_timer', 0) > 0 else ""
                         },
                         'player2': {
                             'x': room.player2.x,
@@ -200,7 +232,8 @@ def game_loop():
                             'sword_angle': room.player2.sword.sword_angle,
                             'shield_angle': room.player2.shield.shield_angel,
                             'is_blocking': room.player2.shield.block_timer > 0,
-                            'heart': room.player2.heart
+                            'heart': room.player2.heart,
+                            'speech': getattr(room.player2, 'speech_text', '') if getattr(room.player2, 'speech_timer', 0) > 0 else ""
                         }
                     }
                     # shudhu oi nirdishto room er player der kache update pathano holo
