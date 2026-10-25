@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 from flask_socketio import SocketIO,join_room,leave_room # acha ei duto holo flask lib er readuy made duto fumcyon
 # acha jana thaklo amder je ekta module theke aldakroe fuction o impoer kor ajay 
 from char import Body
@@ -101,13 +101,17 @@ def join_game():
 @app.route('/room/<room_id>')#<> eta holon onke ta f string er  moto jet aurl e vaiable er man bosai 
 def join_room_game(room_id):
     room = get_or_create_room(room_id)
-    # url e ?player=2 deya thakle shetai nebo, nahole prothom jon ashle Player 1, tarporer jon Player 2
+    # url e ?player=1 ba ?player=2 deya thakle shetai nebo
     req_player = request.args.get('player')
     if req_player in ['1', '2']:
         assigned_player = int(req_player)
-    else:
-        assigned_player = 1 if 1 not in room.connected_players else 2
-    return render_template('game.html', room_id=room_id, player_id=assigned_player)
+        return render_template('game.html', room_id=room_id, player_id=assigned_player)
+    
+    # URL e jodi ?player na thake, tobe player assign kore permanent URL e redirect korbo!
+    # Er fole browser address bar e ?player=1 ba ?player=2 permanently save hoye thakbe,
+    # ebong player refresh korleo kokhono tar player_id bodlabe na!
+    assigned_player = 1 if 1 not in room.connected_players else 2
+    return redirect(f"/room/{room_id}?player={assigned_player}")
 
 
 @socketio.on('run_code')# templet er name hobe run code okleta title er jono just caption oi caption thakle or nocher function triger hobe 

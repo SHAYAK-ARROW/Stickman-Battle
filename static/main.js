@@ -1,7 +1,7 @@
 function start_game() {
-    // 6-character er unique random room id toiri korlam
+    // 6-character er unique random room id toiri korlam ebong player=1 hisebe navigate korlam
     const roomId = 'room_' + Math.random().toString(36).substring(2, 8);
-    window.location.href = "/room/" + roomId;
+    window.location.href = "/room/" + roomId + "?player=1";
 }
 
 function join_custom_room() {
