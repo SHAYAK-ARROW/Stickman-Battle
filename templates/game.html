@@ -17,6 +17,11 @@
 
 <div style="display: flex; gap:20px; justify-content: center; flex-wrap: wrap;">
 <div style="position: relative; display: inline-block;">
+    <!-- Live Connection Status Badge -->
+    <div id="connection_status" style="position: absolute; top: 12px; left: 14px; background: rgba(20, 20, 20, 0.75); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 4px 10px; font-family: 'Consolas', monospace; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 6px; z-index: 60; pointer-events: none; backdrop-filter: blur(4px);">
+        <span id="status_dot" style="width: 8px; height: 8px; border-radius: 50%; background: #4ade80; display: inline-block;"></span>
+        <span id="status_text" style="color: #4ade80;">Online</span>
+    </div>
     <canvas id="gui_screen" width="800" height="600" style="border:2px solid #000000; background-color: #000000; max-width: 100%; height: auto;"></canvas>
     
     <!-- Floating Opponent Input Modal (Model 1 Challenge Prompt) -->

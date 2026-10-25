@@ -27,6 +27,7 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         self.connected_players=set()#sey nilam jate repet na hoy 
         self.sid_to_player = {} # socket id er sathe player track korar jono
         self.is_match_active = False # dujon player game e na asha porjonto kew move korte parbena
+        self.pending_disconnects = {} # player_id -> disconnect_time (8s grace period for slow net)
         self.engine.add_player(self.player1,self.player2)
 
     def reset_match(self):
@@ -79,6 +80,7 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         self.player2.speech_text = ""
         self.player2.speech_timer = 0
         self.player2.pending_question = None
+        self.pending_disconnects.clear()
 
 rooms={}
 def get_or_create_room(room_id):#eta besicaly room banabe mane room an thakle room banabe thakle banabe na 
@@ -151,6 +153,10 @@ def handle_player_join(data):
         # ekhon global sid r connected_players na, ei room er bhetor track hobe
         room.sid_to_player[request.sid] = player_id
         room.connected_players.add(player_id)
+        # Player jodi grace period e thake, tobe grace period cancel kore match continue korbo
+        if player_id in room.pending_disconnects:
+            del room.pending_disconnects[player_id]
+            print(f"Room [{room_id}] -> Player {player_id} reconnected within grace period! Match continues.")
         print(f"Room [{room_id}] -> Player {player_id} joined! Connected: {room.connected_players}")
         
         # oi room e jodi 1 ar 2 dujonei ready hoy, tobe shudhu oi room e match start bolbo!
@@ -167,12 +173,12 @@ def handle_disconnect():
     for room in list(rooms.values()):
         if sid in room.sid_to_player:
             player_id = room.sid_to_player.pop(sid)
+            # Jodi player er aar kono socket connection na thake, tobe 8-second grace period shuru
+            # Jate slow/mobile internet e temporary drop hole sath sath match bondho na hoy!
             if player_id not in room.sid_to_player.values():
-                room.connected_players.discard(player_id)
-                room.is_match_active = False
-                room.reset_match() # oi nirdishto room reset holo
-                print(f"Room [{room.room_id}] -> Player {player_id} left!")
-                socketio.emit('player_left', {'player_id': player_id}, to=room.room_id)
+                room.pending_disconnects[player_id] = time.time()
+                print(f"Room [{room.room_id}] -> Player {player_id} temporary disconnect. Starting 8s grace period...")
+                socketio.emit('player_reconnecting', {'player_id': player_id}, to=room.room_id)
 
 # Opponent input modal theke reply pathale eta cholbe
 @socketio.on('reply_input')
@@ -199,13 +205,17 @@ def handle_restart_game(data=None):
 
 bg_thread = None
 bg_lock = threading.Lock()
+tick_counter = 0
 
 def game_loop():
+    global tick_counter
     while True:
         try:
+            tick_counter += 1
+            now = time.time()
             # shob active room er engine update kora hocche
             for room in list(rooms.values()):
-                if room.is_match_active or room.connected_players:
+                if room.is_match_active or room.connected_players or room.pending_disconnects:
                     room.engine.update()
                     
                     # Pending opponent input question emit kora
@@ -218,33 +228,48 @@ def game_loop():
                         room.player2.pending_question = None
                         socketio.emit('prompt_opponent_input', {'from_player': 2, 'prompt': q}, to=room.room_id)
                     
-                    data_to_send = {
-                        'player1': {
-                            'x': room.player1.x,
-                            'y': room.player1.y,
-                            'direction': room.player1.direction,
-                            'sword_angle': room.player1.sword.sword_angle,
-                            'shield_angle': room.player1.shield.shield_angel,
-                            'is_blocking': room.player1.shield.block_timer > 0,
-                            'heart': room.player1.heart,
-                            'speech': getattr(room.player1, 'speech_text', '') if getattr(room.player1, 'speech_timer', 0) > 0 else ""
-                        },
-                        'player2': {
-                            'x': room.player2.x,
-                            'y': room.player2.y,
-                            'direction': room.player2.direction,
-                            'sword_angle': room.player2.sword.sword_angle,
-                            'shield_angle': room.player2.shield.shield_angel,
-                            'is_blocking': room.player2.shield.block_timer > 0,
-                            'heart': room.player2.heart,
-                            'speech': getattr(room.player2, 'speech_text', '') if getattr(room.player2, 'speech_timer', 0) > 0 else ""
+                    # Check pending disconnects (Grace period expiration check)
+                    for pid, disc_time in list(room.pending_disconnects.items()):
+                        if pid in room.sid_to_player.values():
+                            del room.pending_disconnects[pid]
+                        elif now - disc_time > 8.0: # 8 seconds grace period expired
+                            del room.pending_disconnects[pid]
+                            room.connected_players.discard(pid)
+                            room.is_match_active = False
+                            room.reset_match()
+                            print(f"Room [{room.room_id}] -> Player {pid} truly left (grace period expired)!")
+                            socketio.emit('player_left', {'player_id': pid}, to=room.room_id)
+                    
+                    # Network Tick: 30 FPS network emit (every 2nd frame)
+                    # Cuts network traffic & packet congestion by 50% while client LERPs at 60 FPS!
+                    if tick_counter % 2 == 0:
+                        data_to_send = {
+                            'player1': {
+                                'x': room.player1.x,
+                                'y': room.player1.y,
+                                'direction': room.player1.direction,
+                                'sword_angle': room.player1.sword.sword_angle,
+                                'shield_angle': room.player1.shield.shield_angel,
+                                'is_blocking': room.player1.shield.block_timer > 0,
+                                'heart': room.player1.heart,
+                                'speech': getattr(room.player1, 'speech_text', '') if getattr(room.player1, 'speech_timer', 0) > 0 else ""
+                            },
+                            'player2': {
+                                'x': room.player2.x,
+                                'y': room.player2.y,
+                                'direction': room.player2.direction,
+                                'sword_angle': room.player2.sword.sword_angle,
+                                'shield_angle': room.player2.shield.shield_angel,
+                                'is_blocking': room.player2.shield.block_timer > 0,
+                                'heart': room.player2.heart,
+                                'speech': getattr(room.player2, 'speech_text', '') if getattr(room.player2, 'speech_timer', 0) > 0 else ""
+                            }
                         }
-                    }
-                    # shudhu oi nirdishto room er player der kache update pathano holo
-                    socketio.emit('update_game_gui', data_to_send, to=room.room_id)
+                        # shudhu oi nirdishto room er player der kache update pathano holo
+                        socketio.emit('update_game_gui', data_to_send, to=room.room_id)
         except Exception:
             pass
-        socketio.sleep(1/60) # 60 FPS
+        socketio.sleep(1/60) # Physics stays at 60 Hz
 
 def ensure_game_loop():
     global bg_thread

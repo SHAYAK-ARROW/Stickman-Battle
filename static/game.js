@@ -1,13 +1,48 @@
 // ami js jani na ai bujhiye diche tai korchi vnaila js
 const socket = io(); // Connect to the server using Socket.IO
 
+// Connection Status Helpers
+const statusDot = document.getElementById('status_dot');
+const statusText = document.getElementById('status_text');
+
+function updateConnectionStatus(status) {
+    if (!statusDot || !statusText) return;
+    if (status === 'connected') {
+        statusDot.style.background = '#4ade80';
+        statusText.style.color = '#4ade80';
+        statusText.innerText = 'Online';
+    } else if (status === 'reconnecting') {
+        statusDot.style.background = '#facc15';
+        statusText.style.color = '#facc15';
+        statusText.innerText = 'Reconnecting...';
+    } else if (status === 'offline') {
+        statusDot.style.background = '#ef4444';
+        statusText.style.color = '#ef4444';
+        statusText.innerText = 'Offline';
+    }
+}
+
 socket.on('connect', () => {
     console.log("Connected to server! Room:", typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default');
+    updateConnectionStatus('connected');
     // server ke janachhi ami ke (pl1 na pl2) ebong kon room e achi
     socket.emit('player_joined', { 
         player_id: MY_PLAYER_ID,
         room_id: typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default'
     });
+});
+
+socket.on('disconnect', (reason) => {
+    console.log("Socket disconnected:", reason);
+    updateConnectionStatus('reconnecting');
+});
+
+socket.on('connect_error', () => {
+    updateConnectionStatus('reconnecting');
+});
+
+socket.on('player_reconnecting', (data) => {
+    console.log("Player temporary disconnect (grace period):", data);
 });
 
 const canvas = document.getElementById('gui_screen');// eta diye canvas ta khuje bar kora hoche
@@ -288,7 +323,52 @@ socket.on('game_restarted', () => {
     }
 });
 
-socket.on('update_game_gui',draw_on_camvas);// oi tag julto data jokhoni pabe ei ta triger hobe draw_on_camvas function ta call hobe and oi data ke draw_on_camvas function e pathabe
+// --- Client-side Smooth 60 FPS LERP Interpolation ---
+let targetState = null;
+let currentState = null;
+
+function lerp(start, end, factor) {
+    return start + (end - start) * factor;
+}
+
+socket.on('update_game_gui', (data) => {
+    targetState = data;
+    if (!currentState) {
+        currentState = JSON.parse(JSON.stringify(data));
+    } else {
+        // Discrete values update instantly
+        currentState.player1.direction = data.player1.direction;
+        currentState.player1.heart = data.player1.heart;
+        currentState.player1.is_blocking = data.player1.is_blocking;
+        currentState.player1.speech = data.player1.speech;
+
+        currentState.player2.direction = data.player2.direction;
+        currentState.player2.heart = data.player2.heart;
+        currentState.player2.is_blocking = data.player2.is_blocking;
+        currentState.player2.speech = data.player2.speech;
+    }
+});
+
+// Browser Native 60 FPS Animation Render Loop
+function renderLoop() {
+    if (currentState && targetState) {
+        // Smoothly glide continuous positions and angles at 60 FPS
+        const factor = 0.4;
+        currentState.player1.x = lerp(currentState.player1.x, targetState.player1.x, factor);
+        currentState.player1.y = lerp(currentState.player1.y, targetState.player1.y, factor);
+        currentState.player1.sword_angle = lerp(currentState.player1.sword_angle, targetState.player1.sword_angle, factor);
+        currentState.player1.shield_angle = lerp(currentState.player1.shield_angle, targetState.player1.shield_angle, factor);
+
+        currentState.player2.x = lerp(currentState.player2.x, targetState.player2.x, factor);
+        currentState.player2.y = lerp(currentState.player2.y, targetState.player2.y, factor);
+        currentState.player2.sword_angle = lerp(currentState.player2.sword_angle, targetState.player2.sword_angle, factor);
+        currentState.player2.shield_angle = lerp(currentState.player2.shield_angle, targetState.player2.shield_angle, factor);
+
+        draw_on_camvas(currentState);
+    }
+    requestAnimationFrame(renderLoop);
+}
+requestAnimationFrame(renderLoop);// oi tag julto data jokhoni pabe ei ta triger hobe draw_on_camvas function ta call hobe and oi data ke draw_on_camvas function e pathabe
 
 
 // --- VS Code Style Code Editor (Line Numbers, Dynamic Indent Guides & Auto-Indent) ---
