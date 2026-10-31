@@ -323,52 +323,8 @@ socket.on('game_restarted', () => {
     }
 });
 
-// --- Client-side Smooth 60 FPS LERP Interpolation ---
-let targetState = null;
-let currentState = null;
-
-function lerp(start, end, factor) {
-    return start + (end - start) * factor;
-}
-
-socket.on('update_game_gui', (data) => {
-    targetState = data;
-    if (!currentState) {
-        currentState = JSON.parse(JSON.stringify(data));
-    } else {
-        // Discrete values update instantly
-        currentState.player1.direction = data.player1.direction;
-        currentState.player1.heart = data.player1.heart;
-        currentState.player1.is_blocking = data.player1.is_blocking;
-        currentState.player1.speech = data.player1.speech;
-
-        currentState.player2.direction = data.player2.direction;
-        currentState.player2.heart = data.player2.heart;
-        currentState.player2.is_blocking = data.player2.is_blocking;
-        currentState.player2.speech = data.player2.speech;
-    }
-});
-
-// Browser Native 60 FPS Animation Render Loop
-function renderLoop() {
-    if (currentState && targetState) {
-        // Smoothly glide continuous positions and angles at 60 FPS
-        const factor = 0.4;
-        currentState.player1.x = lerp(currentState.player1.x, targetState.player1.x, factor);
-        currentState.player1.y = lerp(currentState.player1.y, targetState.player1.y, factor);
-        currentState.player1.sword_angle = lerp(currentState.player1.sword_angle, targetState.player1.sword_angle, factor);
-        currentState.player1.shield_angle = lerp(currentState.player1.shield_angle, targetState.player1.shield_angle, factor);
-
-        currentState.player2.x = lerp(currentState.player2.x, targetState.player2.x, factor);
-        currentState.player2.y = lerp(currentState.player2.y, targetState.player2.y, factor);
-        currentState.player2.sword_angle = lerp(currentState.player2.sword_angle, targetState.player2.sword_angle, factor);
-        currentState.player2.shield_angle = lerp(currentState.player2.shield_angle, targetState.player2.shield_angle, factor);
-
-        draw_on_camvas(currentState);
-    }
-    requestAnimationFrame(renderLoop);
-}
-requestAnimationFrame(renderLoop);// oi tag julto data jokhoni pabe ei ta triger hobe draw_on_camvas function ta call hobe and oi data ke draw_on_camvas function e pathabe
+// Direct 60 FPS Instant Canvas Draw (No lag, no slow motion, no erratic LERP)
+socket.on('update_game_gui', draw_on_camvas);
 
 
 // --- VS Code Style Code Editor (Line Numbers, Dynamic Indent Guides & Auto-Indent) ---

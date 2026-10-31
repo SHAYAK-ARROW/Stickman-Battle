@@ -205,13 +205,10 @@ def handle_restart_game(data=None):
 
 bg_thread = None
 bg_lock = threading.Lock()
-tick_counter = 0
 
 def game_loop():
-    global tick_counter
     while True:
         try:
-            tick_counter += 1
             now = time.time()
             # shob active room er engine update kora hocche
             for room in list(rooms.values()):
@@ -232,7 +229,7 @@ def game_loop():
                     for pid, disc_time in list(room.pending_disconnects.items()):
                         if pid in room.sid_to_player.values():
                             del room.pending_disconnects[pid]
-                        elif now - disc_time > 8.0: # 8 seconds grace period expired
+                        elif now - disc_time > 6.0: # 6 seconds grace period expired
                             del room.pending_disconnects[pid]
                             room.connected_players.discard(pid)
                             room.is_match_active = False
@@ -240,36 +237,33 @@ def game_loop():
                             print(f"Room [{room.room_id}] -> Player {pid} truly left (grace period expired)!")
                             socketio.emit('player_left', {'player_id': pid}, to=room.room_id)
                     
-                    # Network Tick: 30 FPS network emit (every 2nd frame)
-                    # Cuts network traffic & packet congestion by 50% while client LERPs at 60 FPS!
-                    if tick_counter % 2 == 0:
-                        data_to_send = {
-                            'player1': {
-                                'x': room.player1.x,
-                                'y': room.player1.y,
-                                'direction': room.player1.direction,
-                                'sword_angle': room.player1.sword.sword_angle,
-                                'shield_angle': room.player1.shield.shield_angel,
-                                'is_blocking': room.player1.shield.block_timer > 0,
-                                'heart': room.player1.heart,
-                                'speech': getattr(room.player1, 'speech_text', '') if getattr(room.player1, 'speech_timer', 0) > 0 else ""
-                            },
-                            'player2': {
-                                'x': room.player2.x,
-                                'y': room.player2.y,
-                                'direction': room.player2.direction,
-                                'sword_angle': room.player2.sword.sword_angle,
-                                'shield_angle': room.player2.shield.shield_angel,
-                                'is_blocking': room.player2.shield.block_timer > 0,
-                                'heart': room.player2.heart,
-                                'speech': getattr(room.player2, 'speech_text', '') if getattr(room.player2, 'speech_timer', 0) > 0 else ""
-                            }
+                    # 60 FPS full speed real-time sync (Immediate & responsive)
+                    data_to_send = {
+                        'player1': {
+                            'x': room.player1.x,
+                            'y': room.player1.y,
+                            'direction': room.player1.direction,
+                            'sword_angle': room.player1.sword.sword_angle,
+                            'shield_angle': room.player1.shield.shield_angel,
+                            'is_blocking': room.player1.shield.block_timer > 0,
+                            'heart': room.player1.heart,
+                            'speech': getattr(room.player1, 'speech_text', '') if getattr(room.player1, 'speech_timer', 0) > 0 else ""
+                        },
+                        'player2': {
+                            'x': room.player2.x,
+                            'y': room.player2.y,
+                            'direction': room.player2.direction,
+                            'sword_angle': room.player2.sword.sword_angle,
+                            'shield_angle': room.player2.shield.shield_angel,
+                            'is_blocking': room.player2.shield.block_timer > 0,
+                            'heart': room.player2.heart,
+                            'speech': getattr(room.player2, 'speech_text', '') if getattr(room.player2, 'speech_timer', 0) > 0 else ""
                         }
-                        # shudhu oi nirdishto room er player der kache update pathano holo
-                        socketio.emit('update_game_gui', data_to_send, to=room.room_id)
+                    }
+                    socketio.emit('update_game_gui', data_to_send, to=room.room_id)
         except Exception:
             pass
-        socketio.sleep(1/60) # Physics stays at 60 Hz
+        socketio.sleep(1/60) # 60 FPS
 
 def ensure_game_loop():
     global bg_thread
