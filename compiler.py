@@ -1,11 +1,57 @@
+import ast
+
+class SecurityValidator(ast.NodeVisitor):
+    def visit_Import(self, node):
+        raise ValueError("Importing modules ('import') is forbidden!")
+
+    def visit_ImportFrom(self, node):
+        raise ValueError("Importing modules ('from ... import') is forbidden!")
+
+    def visit_Attribute(self, node):
+        if node.attr.startswith('_'):
+            raise ValueError(f"Attribute '{node.attr}' is forbidden!")
+        self.generic_visit(node)
+
+    def visit_Name(self, node):
+        if node.id.startswith('_'):
+            raise ValueError(f"Variable '{node.id}' is forbidden!")
+        self.generic_visit(node)
+
+    def visit_While(self, node):
+        raise ValueError("'while' loops are disabled! Use 'for i in range(...)'.")
+
+    def visit_Try(self, node):
+        raise ValueError("'try/except' blocks are forbidden!")
+
+    def visit_With(self, node):
+        raise ValueError("'with' blocks are forbidden!")
+
+    def visit_AsyncFunctionDef(self, node):
+        raise ValueError("Async functions are forbidden!")
+
+    def visit_AsyncWith(self, node):
+        raise ValueError("Async blocks are forbidden!")
+
+    def visit_AsyncFor(self, node):
+        raise ValueError("Async loops are forbidden!")
+
+def safe_range(*args):
+    # Action queue limit is 100, so prevent huge loop iterations
+    if len(args) == 1:
+        if args[0] > 100:
+            raise ValueError("Max 100 loop iterations allowed!")
+    elif len(args) >= 2:
+        if abs(args[1] - args[0]) > 100:
+            raise ValueError("Max 100 loop iterations allowed!")
+    return range(*args)
+
 def compiler(code, current_player, enemy_player=None):
-    # Notun code run korar shathe shathe ager pending action queue clear kora holo
     if hasattr(current_player, 'action_queue'):
         current_player.action_queue.clear()
 
-    # Code string lowercase kora bad deoya holo jate print("Text") er case preserve thake
-    # code = code.lower()
-    
+    if not code or not code.strip():
+        return
+
     # Custom Speech Bubble Print (Max 5 dialogues per execution, 40 chars cap)
     print_count = 0
     def game_print(*args):
@@ -29,9 +75,9 @@ def compiler(code, current_player, enemy_player=None):
             current_player.ask(prompt)
         return ""
 
-    # Safe sandboxed builtins - os, sys, eval, exec, __import__, open shob block thakbe security r jonno
+    # Safe sandboxed builtins
     safe_builtins = {
-        "range": range,
+        "range": safe_range,
         "len": len,
         "print": game_print,
         "input": game_input,
@@ -49,7 +95,6 @@ def compiler(code, current_player, enemy_player=None):
         "True": True,
         "False": False,
         "None": None,
-        # code.lower() use kora hoyeche tai lowercase boolean o support korche
         "true": True,
         "false": False,
         "none": None,
@@ -84,7 +129,9 @@ def compiler(code, current_player, enemy_player=None):
         "jump": current_player.jump,
         "Jump": current_player.jump,
         "bend": current_player.bend,
+        "Bend": current_player.bend,
         "flip": current_player.flip,
+        "Flip": current_player.flip,
         
         # hand
         "set_right_hand": current_player.set_right_hand,
@@ -98,14 +145,16 @@ def compiler(code, current_player, enemy_player=None):
         "attack": current_player.attack,
         "Attack": current_player.attack,
         
-        # shield (Body.block use kora hocche jate queue te step-by-step execute hoy)
+        # shield
         "set_shield": current_player.shield.set_shield,
         "block": current_player.block,
         "Block": current_player.block,
         
-        # laf deoyar jono       
+        # jump & project
         "project": current_player.project,
+        "Project": current_player.project,
         "long_jump": current_player.long_jump,
+        "Long_jump": current_player.long_jump,
 
         # Sensor / Intel functions
         "get_enemy_distance": get_enemy_distance,
@@ -120,8 +169,32 @@ def compiler(code, current_player, enemy_player=None):
     }
 
     try:
-        # Sandboxed environment e code run kora hocche (kono malicious code kaj korbena)
+        # Step 1: AST Static Security Analysis
+        parsed_tree = ast.parse(code)
+        validator = SecurityValidator()
+        validator.visit(parsed_tree)
+
+        # Step 2: Sandboxed environment execution
         exec(code, safe_env)
         print("Code executed successfully! Actions queued.")
+    except SyntaxError as se:
+        err = f"Syntax Error (line {se.lineno})"
+        print("Error occurred during code execution:", err)
+        if hasattr(current_player, 'say'):
+            current_player.say(err)
+            if hasattr(current_player, 'execute_next_action'):
+                current_player.execute_next_action()
+    except ValueError as ve:
+        err = f"Security: {ve}"[:40]
+        print("Error occurred during code execution:", err)
+        if hasattr(current_player, 'say'):
+            current_player.say(err)
+            if hasattr(current_player, 'execute_next_action'):
+                current_player.execute_next_action()
     except Exception as e:
-        print("Error occurred during code execution:", e)
+        err = f"Error: {e}"[:40]
+        print("Error occurred during code execution:", err)
+        if hasattr(current_player, 'say'):
+            current_player.say(err)
+            if hasattr(current_player, 'execute_next_action'):
+                current_player.execute_next_action()
