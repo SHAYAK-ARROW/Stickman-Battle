@@ -1,10 +1,149 @@
 import ast
-import threading
 import logging
+import multiprocessing
+import sys
+import time
 
 logger = logging.getLogger("stickman_battle.compiler")
 
 MAX_CODE_LENGTH = 2000
+MAX_EXECUTION_SECONDS = 0.3
+MAX_ACTIONS = 100
+PROCESS_STARTUP_GRACE_SECONDS = 1.0
+
+
+def _record_command(commands, name, args):
+    """Record only small, serializable command arguments in the worker."""
+    if len(commands) >= MAX_ACTIONS:
+        return
+    if not all(isinstance(value, (int, float, str, bool, type(None))) for value in args):
+        raise ValueError("Command arguments must be simple values")
+    commands.append((name, tuple(args)))
+
+
+def _sandbox_worker(code, sensors, result_conn):
+    """Run untrusted code in a killable process with command-only proxies."""
+    commands = []
+    print_count = 0
+    input_count = 0
+
+    def command(name):
+        def proxy(*args):
+            _record_command(commands, name, args)
+        return proxy
+
+    def game_print(*args):
+        nonlocal print_count
+        if print_count < 5:
+            print_count += 1
+            _record_command(commands, "say", (" ".join(str(a) for a in args)[:40],))
+
+    def game_input(*args):
+        nonlocal input_count
+        if input_count < 3:
+            input_count += 1
+            prompt = " ".join(str(a) for a in args)[:40] if args else "Say something:"
+            _record_command(commands, "ask", (prompt,))
+        return ""
+
+    safe_builtins = {
+        "range": safe_range,
+        "len": len,
+        "print": game_print,
+        "input": game_input,
+        "Input": game_input,
+        "min": min,
+        "max": max,
+        "abs": abs,
+        "round": round,
+        "int": int,
+        "float": float,
+        "str": str,
+        "bool": bool,
+        "list": list,
+        "dict": dict,
+        "True": True,
+        "False": False,
+        "None": None,
+        "true": True,
+        "false": False,
+        "none": None,
+    }
+    safe_env = {"__builtins__": safe_builtins}
+
+    command_aliases = {
+        "move": "move", "Move": "move",
+        "run": "run_to", "Run": "run_to",
+        "jump": "jump", "Jump": "jump",
+        "bend": "bend", "Bend": "bend",
+        "flip": "flip", "Flip": "flip",
+        "crouch": "crouch", "Crouch": "crouch",
+        "duck": "duck", "Duck": "duck",
+        "dash": "dash", "Dash": "dash",
+        "dodge": "dodge", "Dodge": "dodge",
+        "set_right_hand": "set_right_hand",
+        "set_left_hand": "set_left_hand",
+        "move_right_hand": "move_right_hand",
+        "move_left_hand": "move_left_hand",
+        "set_sword": "set_sword", "Set_sword": "set_sword",
+        "swing": "swing", "Swing": "swing",
+        "attack": "attack", "Attack": "attack",
+        "heavy_attack": "heavy_attack", "Heavy_attack": "heavy_attack",
+        "throw_sword": "throw_sword", "Throw_sword": "throw_sword",
+        "set_shield": "set_shield", "Set_shield": "set_shield",
+        "block": "block", "Block": "block",
+        "project": "project", "Project": "project",
+        "long_jump": "long_jump", "Long_jump": "long_jump",
+        "sin_wave": "sin_wave", "Sin_wave": "sin_wave",
+        "cos_wave": "cos_wave", "Cos_wave": "cos_wave",
+        "tan_spike": "tan_spike", "Tan_spike": "tan_spike",
+        "sec_barrier": "sec_barrier", "Sec_barrier": "sec_barrier",
+        "cosec_dome": "cosec_dome", "Cosec_dome": "cosec_dome",
+        "cot_wall": "cot_wall", "Cot_wall": "cot_wall",
+    }
+    for public_name, command_name in command_aliases.items():
+        safe_env[public_name] = command(command_name)
+
+    safe_env.update({
+        "get_enemy_distance": lambda: sensors["enemy_distance"],
+        "is_enemy_attacking": lambda: sensors["enemy_attacking"],
+        "get_my_health": lambda: sensors["my_health"],
+        "get_enemy_health": lambda: sensors["enemy_health"],
+        "print": game_print,
+        "input": game_input,
+        "Input": game_input,
+    })
+
+    previous_trace = sys.gettrace()
+    deadline = time.monotonic() + MAX_EXECUTION_SECONDS
+
+    def timeout_trace(frame, event, arg):
+        if time.monotonic() >= deadline:
+            raise TimeoutError(
+                f"Execution timed out (max {MAX_EXECUTION_SECONDS}s)!"
+            )
+        return timeout_trace
+
+    try:
+        sys.settrace(timeout_trace)
+        exec(code, safe_env)
+        result_conn.send(("ok", commands))
+    except TimeoutError as exc:
+        result_conn.send(("timeout", str(exc)))
+    except Exception as exc:
+        result_conn.send(("error", type(exc).__name__, str(exc)[:120]))
+    finally:
+        sys.settrace(previous_trace)
+        result_conn.close()
+
+
+def _apply_commands(commands, current_player):
+    """Replay validated worker commands on the live player object."""
+    for method_name, args in commands:
+        method = getattr(current_player, method_name, None)
+        if method is None:
+            raise ValueError(f"Unsupported command: {method_name}")
+        method(*args)
 
 class SecurityValidator(ast.NodeVisitor):
     FORBIDDEN_NAMES = {
@@ -252,23 +391,44 @@ def compiler(code, current_player, enemy_player=None):
         validator = SecurityValidator()
         validator.visit(parsed_tree)
 
-        # Step 2: Sandboxed environment execution with 0.3s timeout guard
-        exec_error = []
-        def run_target():
-            try:
-                exec(code, safe_env)
-            except Exception as ex:
-                exec_error.append(ex)
+        # Step 2: Execute untrusted code in a killable child process. The
+        # child receives snapshots and command proxies, never live game
+        # objects. Only recorded primitive commands are replayed in parent.
+        sensors = {
+            "enemy_distance": get_enemy_distance(),
+            "enemy_attacking": is_enemy_attacking(),
+            "my_health": get_my_health(),
+            "enemy_health": get_enemy_health(),
+        }
+        context = multiprocessing.get_context("spawn")
+        result_conn, worker_conn = context.Pipe(duplex=False)
+        worker = context.Process(
+            target=_sandbox_worker,
+            args=(code, sensors, worker_conn),
+        )
+        worker.start()
+        worker_conn.close()
+        # Process startup is separate from the user-code deadline enforced by
+        # timeout_trace inside the child.
+        worker.join(MAX_EXECUTION_SECONDS + PROCESS_STARTUP_GRACE_SECONDS)
 
-        t = threading.Thread(target=run_target)
-        t.daemon = True
-        t.start()
-        t.join(timeout=0.3)
+        if worker.is_alive():
+            worker.terminate()
+            worker.join(0.2)
+            raise TimeoutError(
+                f"Execution timed out (max {MAX_EXECUTION_SECONDS}s)!"
+            )
 
-        if t.is_alive():
-            raise TimeoutError("Execution timed out (max 0.3s)!")
-        if exec_error:
-            raise exec_error[0]
+        if not result_conn.poll():
+            raise RuntimeError("Sandbox worker exited without a result")
+        result = result_conn.recv()
+        result_conn.close()
+        if result[0] == "timeout":
+            raise TimeoutError(result[1])
+        if result[0] == "error":
+            raise RuntimeError(f"{result[1]}: {result[2]}")
+
+        _apply_commands(result[1], current_player)
 
         logger.info("Code executed successfully! Actions queued.")
     except SyntaxError as se:
