@@ -189,8 +189,9 @@ function draw_on_camvas(data) {
         
         ctx.stroke(); // Shorir aaka sesh
         
-        // --- SWORD ---
+        // --- SWORD (Dynamic length & stances) ---
         let has_sword = player.has_sword !== undefined ? player.has_sword : true;
+        let swordLen = player.sword_length || 50;
         if (has_sword && player.sword_angle !== undefined) {
             ctx.save();
             ctx.translate(sword_hand_x, sword_hand_y);
@@ -202,18 +203,24 @@ function draw_on_camvas(data) {
                 ctx.shadowColor = "#ff4500";
                 ctx.shadowBlur = 14;
                 ctx.lineWidth = 7;
+                swordLen += 10;
+            } else if (player.is_swing) {
+                ctx.strokeStyle = "#00f0ff"; // Swift horizontal swing cyan glow
+                ctx.shadowColor = "#00f0ff";
+                ctx.shadowBlur = 12;
+                ctx.lineWidth = 5;
             } else {
                 ctx.strokeStyle = "white";
                 ctx.lineWidth = 5;
             }
             ctx.beginPath();
             ctx.moveTo(0, 0); 
-            ctx.lineTo(0, player.is_heavy ? -60 : -50);
+            ctx.lineTo(0, -swordLen);
             ctx.stroke();
             ctx.restore();
         }
 
-        // --- SHIELD ---
+        // --- SHIELD (Dynamic length) ---
         ctx.save();
         ctx.translate(shield_hand_x, shield_hand_y);
         if (player.shield_angle !== undefined) {
@@ -221,11 +228,13 @@ function draw_on_camvas(data) {
             ctx.rotate(rad);
         }
 
+        let shieldLen = player.shield_length || 40;
+        let halfH = shieldLen / 2;
         ctx.strokeStyle = "yellow";
         ctx.lineWidth = 7;
         ctx.beginPath();
-        ctx.moveTo(-5 * dir, -22);
-        ctx.lineTo(-5 * dir, 25);
+        ctx.moveTo(-5 * dir, -halfH);
+        ctx.lineTo(-5 * dir, halfH);
         ctx.stroke();
         ctx.restore();
 

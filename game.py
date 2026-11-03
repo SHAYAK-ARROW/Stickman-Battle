@@ -1,37 +1,58 @@
-from flask import Flask, render_template, request, redirect, url_for
-from flask_socketio import SocketIO,join_room,leave_room # acha ei duto holo flask lib er readuy made duto fumcyon
-# acha jana thaklo amder je ekta module theke aldakroe fuction o impoer kor ajay 
+from flask import Flask, render_template, request, redirect, url_for, abort
+from flask_socketio import SocketIO, join_room, leave_room
 from char import Body
 import compiler
 from engine import GameEngine
 import os
 import time 
 import threading
+import re
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger("stickman_battle.game")
 
+ROOM_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{3,24}$')
+MAX_ROOMS = 100
 
+app = Flask(__name__)
 
+# Strict CORS configuration (no wildcard in production)
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS")
+if ALLOWED_ORIGINS:
+    cors_origins = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
+else:
+    cors_origins = [
+        "http://localhost:5000",
+        "http://127.0.0.1:5000",
+        "https://stickman-battle.onrender.com"
+    ]
 
-app=Flask(__name__)#ekta flask app banalam eta mainly web server
-socketio=SocketIO(app, async_mode='threading', cors_allowed_origins="*")#ekta socketio banalam eta mainly web server er sathe client er communication er jono mane ekta conctoin feet korlam
+# In local dev environment, allow all origins if requested, otherwise enforce whitelist
+if os.environ.get("ENV") == "development" or os.environ.get("DEBUG") == "true":
+    socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
+else:
+    socketio = SocketIO(app, async_mode='threading', cors_allowed_origins=cors_origins)
 
-class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami jani na eto kom jinins ner commen trochi keno?
-    
-    def __init__(self,room_id):
-        self.room_id=room_id
-        self.player1 = Body(name="Fighter1",x=200, y=300, direction=1)
-        self.player2 = Body(name="Fighter2",x=600, y=300, direction=-1)
-
-        # engine baniye palyer dhokano holo
+class GameRoom:
+    def __init__(self, room_id):
+        self.room_id = room_id
+        self.player1 = Body(name="Fighter1", x=200, y=300, direction=1)
+        self.player2 = Body(name="Fighter2", x=600, y=300, direction=-1)
         self.engine = GameEngine()
-        self.connected_players=set()#sey nilam jate repet na hoy 
-        self.sid_to_player = {} # socket id er sathe player track korar jono
-        self.is_match_active = False # dujon player game e na asha porjonto kew move korte parbena
-        self.pending_disconnects = {} # player_id -> disconnect_time (8s grace period for slow net)
-        self.engine.add_player(self.player1,self.player2)
+        self.connected_players = set()
+        self.sid_to_player = {}
+        self.is_match_active = False
+        self.pending_disconnects = {}
+        self.last_activity = time.time()
+        self.engine.add_player(self.player1, self.player2)
 
     def reset_match(self):
-        # player 1 ke ager jaygay firiye deoya
+        self.last_activity = time.time()
+        # Reset Player 1
         self.player1.heart = 5
         self.player1.x = 200
         self.player1.target_x = 200
@@ -56,6 +77,7 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
             self.player1.sword.target_angle = 0
             self.player1.sword.has_hit = False
             self.player1.sword.is_heavy = False
+            self.player1.sword.is_swing = False
         if hasattr(self.player1, 'shield'):
             self.player1.shield.shield_angel = 45
             self.player1.shield.block_timer = 0
@@ -63,7 +85,7 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         self.player1.speech_timer = 0
         self.player1.pending_question = None
 
-        # player 2 ke ager jaygay firiye deoya
+        # Reset Player 2
         self.player2.heart = 5
         self.player2.x = 600
         self.player2.target_x = 600
@@ -88,6 +110,7 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
             self.player2.sword.target_angle = 0
             self.player2.sword.has_hit = False
             self.player2.sword.is_heavy = False
+            self.player2.sword.is_swing = False
         if hasattr(self.player2, 'shield'):
             self.player2.shield.shield_angel = 45
             self.player2.shield.block_timer = 0
@@ -97,10 +120,19 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         self.pending_disconnects.clear()
         self.engine.spells = []
 
-rooms={}
-def get_or_create_room(room_id):#eta besicaly room banabe mane room an thakle room banabe thakle banabe na 
-    if room_id not in rooms:# jodi na thke tahole ekhane baniye nebe 
-        rooms[room_id]=GameRoom(room_id)
+rooms = {}
+sid_auth = {} # sid -> {'room_id': str, 'player_id': int}
+
+def get_or_create_room(room_id):
+    if not ROOM_ID_PATTERN.match(room_id):
+        logger.warning(f"Invalid room_id rejected by pattern: '{room_id}'")
+        return None
+    if room_id not in rooms:
+        if len(rooms) >= MAX_ROOMS:
+            logger.warning(f"Server room capacity reached ({len(rooms)}/{MAX_ROOMS}). Cannot create room '{room_id}'.")
+            return None
+        rooms[room_id] = GameRoom(room_id)
+        logger.info(f"Created new room: [{room_id}] (Active rooms: {len(rooms)})")
     return rooms[room_id]
 
 @app.route('/')
@@ -109,128 +141,186 @@ def lobby_menu():
 
 @app.route('/player1')
 def host_game():
-    return render_template('game.html', player_id=1)
+    return render_template('game.html', player_id=1, room_id='default')
 
 @app.route('/player2')
 def join_game():
-    return render_template('game.html', player_id=2)
+    return render_template('game.html', player_id=2, room_id='default')
 
-@app.route('/room/<room_id>')#<> eta holon onke ta f string er  moto jet aurl e vaiable er man bosai 
+@app.route('/room/<room_id>')
 def join_room_game(room_id):
+    if not ROOM_ID_PATTERN.match(room_id):
+        abort(400, "Invalid Room ID format. Use 3-24 alphanumeric characters, underscores, or hyphens.")
     room = get_or_create_room(room_id)
-    # url e ?player=1 ba ?player=2 deya thakle shetai nebo
+    if room is None:
+        abort(503, "Server room limit reached. Please try again later.")
+    
     req_player = request.args.get('player')
     if req_player in ['1', '2']:
         assigned_player = int(req_player)
         return render_template('game.html', room_id=room_id, player_id=assigned_player)
     
-    # URL e jodi ?player na thake, tobe player assign kore permanent URL e redirect korbo!
-    # Er fole browser address bar e ?player=1 ba ?player=2 permanently save hoye thakbe,
-    # ebong player refresh korleo kokhono tar player_id bodlabe na!
     assigned_player = 1 if 1 not in room.connected_players else 2
     return redirect(f"/room/{room_id}?player={assigned_player}")
 
+# --- SOCKET.IO EVENT HANDLERS WITH STRICT AUTHENTICATION ---
 
-@socketio.on('run_code')# templet er name hobe run code okleta title er jono just caption oi caption thakle or nocher function triger hobe 
-def code_handeler(data): 
-     # data theke room_id ber kore oi room khuje nilam
-    room_id = data.get('room_id', 'default')
-    room = get_or_create_room(room_id)
-    # oi room e dujon player ready na thakle code run bondho
-    if not room.is_match_active:
-        print(f"Room [{room_id}] -> Dujon player ready nei! Code run kora jabe na.")
-        return
-        
-    # Match game over kina check kora (keu mara geche kina)
-    if room.player1.heart <= 0 or room.player2.heart <= 0:
-        print(f"Room [{room_id}] -> Match game over hoye geche! Play Again chara notun code run hobena.")
-        return
-        
-    print(f"Room [{room_id}] -> Player {data['player_id']} Code Run!")
-    
-    # oi room er player1 naki player2 seta thik kore compiler ke dilam
-    target_player = room.player1 if data['player_id'] == 1 else room.player2
-    enemy_player = room.player2 if data['player_id'] == 1 else room.player1
-    compiler.compiler(code=data['code'], current_player=target_player, enemy_player=enemy_player)
-    # eta holo player join korar function
 @socketio.on('player_joined')
 def handle_player_join(data):
-    # data theke room_id ber korlam (na thakle defult' dhorbo)
-    room_id = data.get('room_id', 'default')
-    room = get_or_create_room(room_id)
-    
-    # ai connection take oi specific room e dhukiye dilambut somoa hobe ekhane slow hot pare bodahy 
-
-    join_room(room_id)# paetr der room e dhokano 
-    #acha amra dict use krochi tai duplicate room sombhob na  
-    player_id = data.get('player_id')
-    if player_id:
-        # ekhon global sid r connected_players na, ei room er bhetor track hobe
-        room.sid_to_player[request.sid] = player_id
-        room.connected_players.add(player_id)
-        # Player jodi grace period e thake, tobe grace period cancel kore match continue korbo
-        if player_id in room.pending_disconnects:
-            del room.pending_disconnects[player_id]
-            print(f"Room [{room_id}] -> Player {player_id} reconnected within grace period! Match continues.")
-        print(f"Room [{room_id}] -> Player {player_id} joined! Connected: {room.connected_players}")
-        
-        # oi room e jodi 1 ar 2 dujonei ready hoy, tobe shudhu oi room e match start bolbo!
-        if 1 in room.connected_players and 2 in room.connected_players:
-            room.is_match_active = True
-            print(f"Room [{room_id}] -> Both players in! Starting match...")
-            socketio.emit('match_start', to=room_id)
-
-# keu jodi game theke beriye jay ba browser tab kete dey tobe eta cholbe
-@socketio.on('disconnect')
-def handle_disconnect():
-    sid = request.sid
-    # shob room e khuje dekhbo kon room theke player beriye geche
-    for room in list(rooms.values()):
-        if sid in room.sid_to_player:
-            player_id = room.sid_to_player.pop(sid)
-            # Jodi player er aar kono socket connection na thake, tobe 8-second grace period shuru
-            # Jate slow/mobile internet e temporary drop hole sath sath match bondho na hoy!
-            if player_id not in room.sid_to_player.values():
-                room.pending_disconnects[player_id] = time.time()
-                print(f"Room [{room.room_id}] -> Player {player_id} temporary disconnect. Starting 8s grace period...")
-                socketio.emit('player_reconnecting', {'player_id': player_id}, to=room.room_id)
-
-# Opponent input modal theke reply pathale eta cholbe
-@socketio.on('reply_input')
-def handle_reply_input(data):
-    room_id = data.get('room_id', 'default') if isinstance(data, dict) else 'default'
-    room = get_or_create_room(room_id)
-    from_player = data.get('from_player')
-    reply = str(data.get('reply', ''))[:40].strip()
-    if not reply:
+    if not isinstance(data, dict):
+        logger.warning(f"Malformed player_joined payload from {request.sid}")
         return
-    target_player = room.player1 if from_player == 1 else room.player2
-    target_player.speech_text = reply
-    target_player.speech_timer = 90
-    print(f"Room [{room_id}] -> Player {from_player} replied: {reply}")
+    
+    room_id = str(data.get('room_id', 'default')).strip()
+    if not ROOM_ID_PATTERN.match(room_id):
+        logger.warning(f"Rejected join with invalid room_id: '{room_id}'")
+        return
+        
+    try:
+        player_id = int(data.get('player_id'))
+        if player_id not in (1, 2):
+            raise ValueError()
+    except (TypeError, ValueError):
+        logger.warning(f"Rejected join with invalid player_id: {data.get('player_id')}")
+        return
+        
+    room = get_or_create_room(room_id)
+    if room is None:
+        return
+        
+    join_room(room_id)
+    # Register SID authentication binding
+    sid_auth[request.sid] = {'room_id': room_id, 'player_id': player_id}
+    room.sid_to_player[request.sid] = player_id
+    room.connected_players.add(player_id)
+    room.last_activity = time.time()
+    
+    if player_id in room.pending_disconnects:
+        del room.pending_disconnects[player_id]
+        logger.info(f"Room [{room_id}] -> Player {player_id} reconnected within grace period.")
+        
+    logger.info(f"Room [{room_id}] -> Player {player_id} authenticated and joined. Connected: {room.connected_players}")
+    
+    if 1 in room.connected_players and 2 in room.connected_players:
+        room.is_match_active = True
+        logger.info(f"Room [{room_id}] -> Both players connected! Starting match...")
+        socketio.emit('match_start', to=room_id)
 
-# frontend theke restart button e chap dile eta cholbe
+@socketio.on('run_code')
+def code_handler(data):
+    # Verify SID authentication binding
+    auth = sid_auth.get(request.sid)
+    if not auth:
+        logger.warning(f"Rejected unauthenticated run_code attempt from sid {request.sid}")
+        return
+        
+    room_id = auth['room_id']
+    player_id = auth['player_id'] # Enforce authenticated player_id, reject client forgery
+    
+    room = rooms.get(room_id)
+    if not room:
+        return
+        
+    if not room.is_match_active:
+        logger.info(f"Room [{room_id}] -> Match not active. Code run blocked.")
+        return
+        
+    if room.player1.heart <= 0 or room.player2.heart <= 0:
+        logger.info(f"Room [{room_id}] -> Match game over. Rematch required.")
+        return
+        
+    if not isinstance(data, dict):
+        return
+        
+    raw_code = str(data.get('code', ''))
+    if len(raw_code) > 2000:
+        raw_code = raw_code[:2000]
+        
+    room.last_activity = time.time()
+    logger.info(f"Room [{room_id}] -> Authorized Player {player_id} Code Execution.")
+    
+    target_player = room.player1 if player_id == 1 else room.player2
+    enemy_player = room.player2 if player_id == 1 else room.player1
+    compiler.compiler(code=raw_code, current_player=target_player, enemy_player=enemy_player)
+
 @socketio.on('restart_game')
 def handle_restart_game(data=None):
-    room_id = data.get('room_id', 'default') if isinstance(data, dict) else 'default'
-    room = get_or_create_room(room_id)
-    print(f"Room [{room_id}] -> Match rematch/restart hocche...")
+    auth = sid_auth.get(request.sid)
+    if not auth:
+        logger.warning(f"Rejected unauthenticated restart_game attempt from sid {request.sid}")
+        return
+    room_id = auth['room_id']
+    room = rooms.get(room_id)
+    if not room:
+        return
+    room.last_activity = time.time()
+    logger.info(f"Room [{room_id}] -> Authorized rematch requested by Player {auth['player_id']}.")
     room.reset_match()
     socketio.emit('game_restarted', to=room_id)
 
+@socketio.on('reply_input')
+def handle_reply_input(data):
+    auth = sid_auth.get(request.sid)
+    if not auth:
+        logger.warning(f"Rejected unauthenticated reply_input from sid {request.sid}")
+        return
+    room_id = auth['room_id']
+    from_player = auth['player_id'] # Enforce authentic sender
+    room = rooms.get(room_id)
+    if not room or not isinstance(data, dict):
+        return
+    reply = str(data.get('reply', ''))[:40].strip()
+    if not reply:
+        return
+    room.last_activity = time.time()
+    target_player = room.player1 if from_player == 1 else room.player2
+    target_player.speech_text = reply
+    target_player.speech_timer = 90
+    logger.info(f"Room [{room_id}] -> Player {from_player} replied: '{reply}'")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    sid = request.sid
+    auth = sid_auth.pop(sid, None)
+    if not auth:
+        return
+    room_id = auth['room_id']
+    player_id = auth['player_id']
+    room = rooms.get(room_id)
+    if not room:
+        return
+    room.sid_to_player.pop(sid, None)
+    if player_id not in room.sid_to_player.values():
+        room.pending_disconnects[player_id] = time.time()
+        logger.info(f"Room [{room_id}] -> Player {player_id} disconnected. Grace period (6s) started...")
+        socketio.emit('player_reconnecting', {'player_id': player_id}, to=room_id)
+
+# --- 60 FPS BACKGROUND GAME SIMULATION & GARBAGE COLLECTION LOOP ---
 bg_thread = None
 bg_lock = threading.Lock()
 
 def game_loop():
+    last_cleanup_time = time.time()
     while True:
         try:
             now = time.time()
-            # shob active room er engine update kora hocche
+            # Periodic room garbage collection (every 60 seconds)
+            if now - last_cleanup_time > 60.0:
+                last_cleanup_time = now
+                for rid, r in list(rooms.items()):
+                    no_connected = (len(r.connected_players) == 0 and len(r.pending_disconnects) == 0)
+                    is_stale = (now - r.last_activity > 900) # 15 minutes inactive
+                    is_abandoned = (now - r.last_activity > 1800) # 30 minutes abandoned
+                    if (no_connected and is_stale) or is_abandoned:
+                        logger.info(f"Garbage collecting inactive room [{rid}]")
+                        del rooms[rid]
+
+            # Update all active rooms
             for room in list(rooms.values()):
                 if room.is_match_active or room.connected_players or room.pending_disconnects:
                     room.engine.update()
                     
-                    # Pending opponent input question emit kora
+                    # Opponent dialogue question dispatch
                     if getattr(room.player1, 'pending_question', None):
                         q = room.player1.pending_question
                         room.player1.pending_question = None
@@ -240,32 +330,35 @@ def game_loop():
                         room.player2.pending_question = None
                         socketio.emit('prompt_opponent_input', {'from_player': 2, 'prompt': q}, to=room.room_id)
                     
-                    # Check pending disconnects (Grace period expiration check)
+                    # Grace period expiration
                     for pid, disc_time in list(room.pending_disconnects.items()):
                         if pid in room.sid_to_player.values():
                             del room.pending_disconnects[pid]
-                        elif now - disc_time > 6.0: # 6 seconds grace period expired
+                        elif now - disc_time > 6.0:
                             del room.pending_disconnects[pid]
                             room.connected_players.discard(pid)
                             room.is_match_active = False
                             room.reset_match()
-                            print(f"Room [{room.room_id}] -> Player {pid} truly left (grace period expired)!")
+                            logger.info(f"Room [{room.room_id}] -> Player {pid} grace period expired.")
                             socketio.emit('player_left', {'player_id': pid}, to=room.room_id)
                     
-                    # 60 FPS full speed real-time sync (Immediate & responsive)
+                    # 60 FPS state broadcast with dynamic weapon lengths & states
                     data_to_send = {
                         'player1': {
                             'x': room.player1.x,
                             'y': room.player1.y,
                             'direction': room.player1.direction,
                             'sword_angle': room.player1.sword.sword_angle,
+                            'sword_length': getattr(room.player1.sword, 'sword_length', 50),
                             'shield_angle': room.player1.shield.shield_angel,
+                            'shield_length': getattr(room.player1.shield, 'shield_length', 40),
                             'is_blocking': room.player1.shield.block_timer > 0,
                             'is_crouching': getattr(room.player1, 'crouch_timer', 0) > 0,
                             'has_barrier': getattr(room.player1, 'barrier_timer', 0) > 0,
                             'has_dome': getattr(room.player1, 'dome_timer', 0) > 0,
                             'has_sword': getattr(room.player1, 'has_sword', True),
                             'is_heavy': getattr(room.player1.sword, 'is_heavy', False),
+                            'is_swing': getattr(room.player1.sword, 'is_swing', False),
                             'heart': room.player1.heart,
                             'speech': getattr(room.player1, 'speech_text', '') if getattr(room.player1, 'speech_timer', 0) > 0 else ""
                         },
@@ -274,13 +367,16 @@ def game_loop():
                             'y': room.player2.y,
                             'direction': room.player2.direction,
                             'sword_angle': room.player2.sword.sword_angle,
+                            'sword_length': getattr(room.player2.sword, 'sword_length', 50),
                             'shield_angle': room.player2.shield.shield_angel,
+                            'shield_length': getattr(room.player2.shield, 'shield_length', 40),
                             'is_blocking': room.player2.shield.block_timer > 0,
                             'is_crouching': getattr(room.player2, 'crouch_timer', 0) > 0,
                             'has_barrier': getattr(room.player2, 'barrier_timer', 0) > 0,
                             'has_dome': getattr(room.player2, 'dome_timer', 0) > 0,
                             'has_sword': getattr(room.player2, 'has_sword', True),
                             'is_heavy': getattr(room.player2.sword, 'is_heavy', False),
+                            'is_swing': getattr(room.player2.sword, 'is_swing', False),
                             'heart': room.player2.heart,
                             'speech': getattr(room.player2, 'speech_text', '') if getattr(room.player2, 'speech_timer', 0) > 0 else ""
                         },
@@ -297,8 +393,8 @@ def game_loop():
                     }
                     socketio.emit('update_game_gui', data_to_send, to=room.room_id)
         except Exception:
-            pass
-        socketio.sleep(1/60) # 60 FPS
+            logger.exception("Unexpected error in 60 FPS game loop:")
+        socketio.sleep(1/60)
 
 def ensure_game_loop():
     global bg_thread
@@ -310,10 +406,8 @@ def ensure_game_loop():
 def handle_connect():
     ensure_game_loop()
 
-# gunicorn o local python - dujaygay e background loop chalu kora
 ensure_game_loop()
 
 if __name__ == '__main__':
-    # render er jono dinamic port number 
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)

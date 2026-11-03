@@ -75,20 +75,78 @@ class TestAllFeaturesV2(unittest.TestCase):
         self.assertEqual(self.p2.shield.block_timer, 0)
         self.assertEqual(self.p2.heart, 2)
 
-    def test_weapon_setters_and_swing(self):
-        # set_sword customize
-        self.p1.set_sword(65, 15)
-        self.assertEqual(self.p1.sword.sword_length, 65)
-        self.assertEqual(self.p1.sword.sword_angle, 15)
-        
-        # set_shield customize
-        self.p1.set_shield(50, 30)
-        self.assertEqual(self.p1.shield.shield_lenght, 50)
-        self.assertEqual(self.p1.shield.shield_angel, 30)
-        
-        # swing() triggers attack
+    def test_swing_as_distinct_swift_attack(self):
+        # swing() queues ('swing',) and has faster lifecycle and animation
         self.p1.swing()
-        self.assertEqual(self.p1.action_queue[-1], ('attack',))
+        self.assertEqual(self.p1.action_queue[0], ('swing',))
+        
+        self.p1.execute_next_action()
+        self.assertTrue(self.p1.sword.is_swing)
+        self.assertEqual(self.p1.sword.attack_state, 1)
+        self.assertEqual(self.p1.sword.target_angle, -15)
+        
+        # Test collision damage for swing
+        self.p1.x = 200
+        self.p2.x = 270
+        self.p2.heart = 5
+        self.p1.sword.attack_state = 2
+        self.p1.sword.sword_angle = 0
+        self.p1.sword.target_angle = 45
+        self.p1.sword.has_hit = False
+        
+        self.engine.update()
+        self.assertEqual(self.p2.heart, 4)
+
+    def test_dynamic_sword_length_reach(self):
+        # Default sword length is 50. Reach is 50 + 55 = 105px
+        # Enemy at dx = 120 is out of reach for a 50px sword
+        self.p1.x = 200
+        self.p2.x = 320 # dx = 120px
+        self.p2.heart = 5
+        self.p1.sword.set_sword(50, 0)
+        self.p1.sword.attack_state = 2
+        self.p1.sword.sword_angle = 0
+        self.p1.sword.target_angle = 60
+        self.p1.sword.has_hit = False
+        
+        self.engine.update()
+        self.assertEqual(self.p2.heart, 5) # Missed!
+        
+        # Now forge a longer claymore (75px)! Reach becomes 75 + 55 = 130px
+        self.p1.set_sword(75, 0)
+        self.p1.sword.attack_state = 2
+        self.p1.sword.sword_angle = 0
+        self.p1.sword.target_angle = 60
+        self.p1.sword.has_hit = False
+        
+        self.engine.update()
+        self.assertEqual(self.p2.heart, 4) # Hit! Longer sword reached!
+
+    def test_dynamic_shield_length_blocking(self):
+        self.p1.x = 200
+        self.p2.x = 280
+        self.p2.heart = 5
+        self.p2.shield.block_timer = 20
+        
+        # Standard shield (40px) blocks normal attack
+        self.p2.set_shield(40, 45)
+        self.p1.sword.attack_state = 2
+        self.p1.sword.sword_angle = 0
+        self.p1.sword.target_angle = 60
+        self.p1.sword.has_hit = False
+        
+        self.engine.update()
+        self.assertEqual(self.p2.heart, 5) # Blocked!
+        
+        # Too tiny shield (<25px) fails to block full strike
+        self.p2.set_shield(20, 45)
+        self.p1.sword.attack_state = 2
+        self.p1.sword.sword_angle = 0
+        self.p1.sword.target_angle = 60
+        self.p1.sword.has_hit = False
+        
+        self.engine.update()
+        self.assertEqual(self.p2.heart, 4) # Took damage!
 
     def test_throw_sword_disarm_range_and_return(self):
         self.p1.x = 100
@@ -116,8 +174,7 @@ class TestAllFeaturesV2(unittest.TestCase):
         for _ in range(25):
             self.engine.update()
             
-        # P2 was at 500 (beyond 100+280=380), so sword did not fly to end of canvas
-        # It reversed and returned to P1's hand!
+        # Returning flight
         for _ in range(25):
             self.engine.update()
             
@@ -156,7 +213,7 @@ class TestAllFeaturesV2(unittest.TestCase):
 
     def test_compiler_code_execution(self):
         user_code = '''
-set_sword(60, 5)
+set_sword(65, 5)
 set_shield(45, 30)
 swing()
 crouch()

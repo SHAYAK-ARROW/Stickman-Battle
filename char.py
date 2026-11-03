@@ -1,18 +1,17 @@
 class Character:
-    def __init__(self, name,x=0,y=0,direction=1):
+    def __init__(self, name, x=0, y=0, direction=1):
         self.name = name
         self.heart = 5
-        self.x=x
-        self.y=y
-        self.direction=direction
-        self.target_x=x
-        self.target_y=y
+        self.x = x
+        self.y = y
+        self.direction = direction
+        self.target_x = x
+        self.target_y = y
         self.action_queue = []
         self.speech_text = ""
         self.speech_timer = 0
         self.pending_question = None
     
-    # 1 step amra 10 pixel dhorchi - command gulo action queue te append hocche
     def move(self, step=1):
         if len(self.action_queue) < 100:
             self.action_queue.append(('move', step))
@@ -26,21 +25,21 @@ class Character:
             self.action_queue.append(('flip',))
 
 class Body(Character):
-    def __init__(self,name,x,y,direction=1):
-        super().__init__(name=name,x=x,y=y,direction=direction)
-        self.right_hand_x = x+40
+    def __init__(self, name, x, y, direction=1):
+        super().__init__(name=name, x=x, y=y, direction=direction)
+        self.right_hand_x = x + 40
         self.right_hand_y = y
-        self.left_hand_x = x+40
+        self.left_hand_x = x + 40
         self.left_hand_y = y 
-        self.jump_pixel=0
-        self.bend_angle=0
+        self.jump_pixel = 0
+        self.bend_angle = 0
         self.crouch_timer = 0
         self.barrier_timer = 0
         self.dome_timer = 0
         self.cast_timer = 0
         self.has_sword = True
         self.pending_spells = []
-        self.sword  = Sword(length=50, angle=0)
+        self.sword = Sword(length=50, angle=0)
         self.shield = Shield(length=40)
        
     def set_right_hand(self, x, y):
@@ -65,11 +64,12 @@ class Body(Character):
             self.sword.set_sword(length, angle)
 
     def swing(self, dx=0, dy=0):
+        # Distinct swift horizontal attack (faster than regular attack)
         if not getattr(self, 'has_sword', True):
             self.say("No sword to swing!")
             return
         if len(self.action_queue) < 100:
-            self.action_queue.append(('attack',))
+            self.action_queue.append(('swing',))
 
     def set_shield(self, length=40, angle=45):
         if hasattr(self, 'shield'):
@@ -231,9 +231,24 @@ class Body(Character):
             elif hasattr(self, 'shield') and self.shield.block_timer > 0:
                 self.sword.attack_queued = True
                 self.sword.is_heavy = False
+                self.sword.is_swing = False
             elif hasattr(self, 'sword') and self.sword.attack_state == 0:
                 self.sword.is_heavy = False
+                self.sword.is_swing = False
                 self.sword.attack()
+        elif action_type == 'swing':
+            if not getattr(self, 'has_sword', True):
+                self.speech_text = "No sword!"
+                self.speech_timer = 40
+            elif hasattr(self, 'shield') and self.shield.block_timer > 0:
+                self.sword.attack_queued = True
+                self.sword.is_heavy = False
+                self.sword.is_swing = True
+            elif hasattr(self, 'sword') and self.sword.attack_state == 0:
+                self.sword.is_heavy = False
+                self.sword.is_swing = True
+                self.sword.attack_state = 1
+                self.sword.target_angle = -15  # Swift horizontal windup
         elif action_type == 'heavy_attack':
             if not getattr(self, 'has_sword', True):
                 self.speech_text = "No sword!"
@@ -241,8 +256,10 @@ class Body(Character):
             elif hasattr(self, 'shield') and self.shield.block_timer > 0:
                 self.sword.attack_queued = True
                 self.sword.is_heavy = True
+                self.sword.is_swing = False
             elif hasattr(self, 'sword') and self.sword.attack_state == 0:
                 self.sword.is_heavy = True
+                self.sword.is_swing = False
                 self.sword.attack_state = 1
                 self.sword.target_angle = -70
         elif action_type == 'throw_sword':
@@ -293,40 +310,48 @@ class Body(Character):
                 self.execute_next_action()
 
 class Shield:
-    def __init__(self,length):
-        self.shield_lenght = length
+    def __init__(self, length=40):
+        self.shield_length = max(20, min(70, int(length)))
+        self.shield_lenght = self.shield_length # Compatibility
         self.shield_angel = 45
-        self.block_timer=0
+        self.block_timer = 0
 
     def set_shield(self, length=40, angle=45):
-        self.shield_lenght = max(20, min(70, int(length)))
+        self.shield_length = max(20, min(70, int(length)))
+        self.shield_lenght = self.shield_length
         self.shield_angel = int(angle)
 
     def block(self):
-        self.shield_angel=0
-        self.block_timer=30
+        self.shield_angel = 0
+        self.block_timer = 30
 
 class Sword:
-    def __init__(self, length, angle=0):
-        self.sword_length = length
-        self.sword_angle = angle
-        self.target_angle = angle
+    def __init__(self, length=50, angle=0):
+        self.sword_length = max(30, min(80, int(length)))
+        self.sword_angle = int(angle)
+        self.target_angle = int(angle)
         self.attack_state = 0 # 0=idle, 1=windup, 2=slash, 3=return
         self.attack_queued = False
         self.has_hit = False
         self.is_heavy = False
+        self.is_swing = False
         
     def set_sword(self, length=50, angle=0):
-        self.sword_length = max(25, min(80, int(length)))
+        self.sword_length = max(30, min(80, int(length)))
         self.sword_angle = int(angle)
         self.target_angle = int(angle)
         
     def swing(self, dx=0, dy=0):
-        self.attack()
+        if self.attack_state == 0:
+            self.is_heavy = False
+            self.is_swing = True
+            self.attack_state = 1
+            self.target_angle = -15
         
     def attack(self):
         if self.attack_state == 0:
             self.is_heavy = False
+            self.is_swing = False
             self.attack_state = 1
             self.target_angle = -40
 
