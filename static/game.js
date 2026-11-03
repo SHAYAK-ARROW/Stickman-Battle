@@ -471,6 +471,31 @@ function draw_on_camvas(data) {
             if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 28, width * ratio, height, 3); ctx.fill(); }
             else { ctx.fillRect(left, 28, width * ratio, height); }
         }
+
+        // Fixed HUD Energy / Stamina Bar (y = 38, height = 4, cyan glow)
+        const maxEnergy = player.max_energy || 100;
+        const energy = Math.max(0, Math.min(maxEnergy, player.energy !== undefined ? player.energy : 100));
+        const energyRatio = energy / maxEnergy;
+        
+        ctx.fillStyle = "#16171d";
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 38, width, 4, 2); ctx.fill(); }
+        else { ctx.fillRect(left, 38, width, 4); }
+        
+        if (energyRatio > 0) {
+            ctx.fillStyle = energyRatio > 0.35 ? "#38bdf8" : "#f59e0b";
+            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 38, width * energyRatio, 4, 2); ctx.fill(); }
+            else { ctx.fillRect(left, 38, width * energyRatio, 4); }
+        }
+
+        // Energy text badge
+        ctx.font = "600 9.5px 'Segoe UI', Arial, sans-serif";
+        ctx.fillStyle = "#7dd3fc";
+        const energyStr = `${Math.round(energy)}⚡`;
+        if (align === "right") {
+            ctx.fillText(energyStr, x, 49);
+        } else {
+            ctx.fillText(energyStr, x, 49);
+        }
         ctx.restore();
     }
     const p2Label = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM)
@@ -670,6 +695,7 @@ function draw_on_camvas(data) {
 }
 
 function run() {
+    dismissDiagnostics();
     const runBtn = document.getElementById("run_btn");
     if (runBtn && runBtn.disabled) {
         if (typeof showToast === 'function') {
@@ -715,6 +741,115 @@ socket.on('game_restarted', () => {
 });
 
 socket.on('update_game_gui', draw_on_camvas);
+
+// --- PRIVATE IN-EDITOR DIAGNOSTICS (Opponent never sees this) ---
+function showDiagnostics(msg) {
+    const diag = document.getElementById("editor_diagnostics");
+    const diagMsg = document.getElementById("diag_message");
+    if (!diag || !diagMsg) return;
+    diagMsg.innerText = msg;
+    diag.style.display = "flex";
+}
+
+function dismissDiagnostics() {
+    const diag = document.getElementById("editor_diagnostics");
+    if (diag) diag.style.display = "none";
+}
+
+socket.on('code_error', (data) => {
+    if (data && data.error) {
+        showDiagnostics(data.error);
+    }
+});
+
+socket.on('code_success', () => {
+    dismissDiagnostics();
+});
+
+// --- TACTICAL EMERGENCY DEFENSE SYSTEM ---
+const emergencyCooldowns = {
+    shield: 0,
+    dodge: 0
+};
+let emergencyFeedbackTimer = null;
+
+function showEmergencyFeedback(msg, type) {
+    const el = document.getElementById('emergency_feedback');
+    if (!el) return;
+    el.innerText = msg;
+    el.style.opacity = '1';
+    if (type === 'warning') el.style.color = '#f59e0b';
+    else if (type === 'danger') el.style.color = '#ef4444';
+    else if (type === 'success') el.style.color = '#38bdf8';
+    else el.style.color = '#8a8b94';
+
+    if (emergencyFeedbackTimer) clearTimeout(emergencyFeedbackTimer);
+    emergencyFeedbackTimer = setTimeout(() => {
+        el.style.opacity = '0';
+    }, 3200);
+}
+
+function triggerEmergency(action) {
+    if (action !== 'shield' && action !== 'dodge') return;
+    const now = Date.now();
+    if (emergencyCooldowns[action] && now < emergencyCooldowns[action]) {
+        const rem = Math.ceil((emergencyCooldowns[action] - now) / 1000);
+        showEmergencyFeedback(`Cooling down... (${rem}s)`, 'warning');
+        return;
+    }
+    socket.emit('emergency_action', { action: action });
+}
+
+function startEmergencyCooldownUI(action, cooldownSec) {
+    const btn = document.getElementById(`emergency_${action}_btn`);
+    const overlay = document.getElementById(`${action}_cd_overlay`);
+    if (!btn || !overlay) return;
+
+    btn.disabled = true;
+    btn.classList.add('on-cooldown');
+    let remaining = cooldownSec;
+    overlay.innerText = `${remaining}s`;
+
+    const interval = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+            clearInterval(interval);
+            btn.disabled = false;
+            btn.classList.remove('on-cooldown');
+            overlay.innerText = '';
+        } else {
+            overlay.innerText = `${remaining}s`;
+        }
+    }, 1000);
+}
+
+socket.on('emergency_used', (data) => {
+    const action = data.action;
+    const cd = data.cooldown || 8;
+    emergencyCooldowns[action] = Date.now() + (cd * 1000);
+    startEmergencyCooldownUI(action, cd);
+    const label = action === 'shield' ? '🛡️ Quick Shield' : '💨 Quick Dodge';
+    showEmergencyFeedback(`${label} activated!`, 'success');
+});
+
+socket.on('emergency_cooldown', (data) => {
+    showEmergencyFeedback(`Wait ${data.remaining}s`, 'warning');
+});
+
+socket.on('emergency_rejected', (data) => {
+    showEmergencyFeedback(data.reason || 'Action rejected', 'danger');
+});
+
+// Tactical Keyboard Hotkeys (Alt+S for Shield, Alt+D for Dodge)
+window.addEventListener('keydown', (e) => {
+    if (e.altKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        triggerEmergency('shield');
+    } else if (e.altKey && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault();
+        triggerEmergency('dodge');
+    }
+});
 
 // --- VS Code Style Code Editor (Line Numbers, Dynamic Indent Guides & Auto-Indent) ---
 const ide = document.getElementById("ide");

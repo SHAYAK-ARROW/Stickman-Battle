@@ -83,7 +83,8 @@ The in-browser code editor grants fighters access to an expressive set of comman
 | **Movement** | `move(step)`, `dash(step)`, `dodge(step)`, `jump(power)`, `long_jump(step, power)`, `crouch()`, `flip()`, `bend(angle)` | Full mobility, high-speed dashes, evasive crouching, and jumping physics. |
 | **Melee Combat** | `attack()`, `heavy_attack()`, `swing()`, `block()`, `throw_sword()` | Dynamic weapon hitboxes, shield parries, shield-breaking heavy slashes, and boomerang throws. |
 | **Magic Spells** | `sin_wave(power)`, `cos_wave(power)`, `tan_spike(power)`, `sec_barrier(power)`, `cosec_dome(power)` | Mathematical energy waves. Supports both direct calls and `import math; math.sin(power)`. |
-| **Tactical Sensors** | `get_enemy_distance()`, `is_enemy_attacking()`, `get_my_health()`, `get_enemy_health()` | Read real-time battle arena metrics to write responsive algorithms. |
+| **Tactical Sensors** | `get_enemy_distance()`, `is_enemy_attacking()`, `get_my_health()`, `get_enemy_health()`, `get_my_energy()`, `get_enemy_energy()` | Read real-time arena distance, health, and stamina metrics to write smart algorithms. |
+| **Emergency Actions** | `[Alt+S] Quick Shield`, `[Alt+D] Quick Dodge` | Tactical panic actions with 8s cooldown to defend while typing in the IDE. |
 | **Interactive Dialogue** | `print(text)`, `input(prompt)` | Overhead player-colored speech bubbles and interactive challenge modals with quick-reply chips. |
 
 *(Press the **Commands Manual** button inside the game interface for live searchable documentation and code samples).*
@@ -117,7 +118,7 @@ pip install -r requirements.txt
 # 3. Launch local game server (runs on http://localhost:5000)
 python game.py
 
-# 4. Run test suite (37 unit & security tests)
+# 4. Run test suite (43 unit & security tests)
 python -m unittest discover -p "test_*.py"
 ```
 

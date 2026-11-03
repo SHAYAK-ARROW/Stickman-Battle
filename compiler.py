@@ -158,6 +158,8 @@ def _sandbox_execute(code, sensors):
         "is_enemy_attacking": lambda: sensors["enemy_attacking"],
         "get_my_health": lambda: sensors["my_health"],
         "get_enemy_health": lambda: sensors["enemy_health"],
+        "get_my_energy": lambda: sensors.get("my_energy", 100),
+        "get_enemy_energy": lambda: sensors.get("enemy_energy", 100),
         "print": game_print,
         "input": game_input,
         "Input": game_input,
@@ -482,6 +484,8 @@ def compiler(code, current_player, enemy_player=None):
         "is_enemy_attacking": is_enemy_attacking,
         "get_my_health": get_my_health,
         "get_enemy_health": get_enemy_health,
+        "get_my_energy": lambda: round(getattr(current_player, 'energy', 100), 1),
+        "get_enemy_energy": lambda: round(getattr(enemy_player, 'energy', 100), 1),
         "math": type("SafeMath", (), {
             "sin": staticmethod(math.sin),
             "cos": staticmethod(math.cos),
@@ -507,6 +511,8 @@ def compiler(code, current_player, enemy_player=None):
             "enemy_attacking": is_enemy_attacking(),
             "my_health": get_my_health(),
             "enemy_health": get_enemy_health(),
+            "my_energy": round(getattr(current_player, 'energy', 100), 1),
+            "enemy_energy": round(getattr(enemy_player, 'energy', 100), 1),
         }
         with _SANDBOX_LOCK:
             _ensure_sandbox_worker()
@@ -525,24 +531,32 @@ def compiler(code, current_player, enemy_player=None):
         _apply_commands(result[1], current_player)
 
         logger.info("Code executed successfully! Actions queued.")
+        current_player.last_error = None
+        return {"success": True, "error": None}
     except SyntaxError as se:
         err = f"Syntax Error (line {se.lineno})"
         logger.warning(f"Syntax error: {err}")
+        current_player.last_error = err
         if hasattr(current_player, 'say'):
             current_player.say(err)
             if hasattr(current_player, 'execute_next_action'):
                 current_player.execute_next_action()
+        return {"success": False, "error": err}
     except (ValueError, TimeoutError) as ve:
         err = f"Security: {ve}"[:40]
         logger.warning(f"Security error: {err}")
+        current_player.last_error = err
         if hasattr(current_player, 'say'):
             current_player.say(err)
             if hasattr(current_player, 'execute_next_action'):
                 current_player.execute_next_action()
+        return {"success": False, "error": err}
     except Exception as e:
         err = f"Error: {e}"[:40]
         logger.warning(f"Execution error: {err}")
+        current_player.last_error = err
         if hasattr(current_player, 'say'):
             current_player.say(err)
             if hasattr(current_player, 'execute_next_action'):
                 current_player.execute_next_action()
+        return {"success": False, "error": err}

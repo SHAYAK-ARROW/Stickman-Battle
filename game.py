@@ -68,6 +68,8 @@ class GameRoom:
         self.last_activity = time.time()
         # Reset Player 1
         self.player1.heart = MAX_HEALTH
+        self.player1.energy = 100
+        self.player1.max_energy = 100
         self.player1.x = 200
         self.player1.target_x = 200
         self.player1.y = 300
@@ -103,6 +105,8 @@ class GameRoom:
 
         # Reset Player 2
         self.player2.heart = MAX_HEALTH
+        self.player2.energy = 100
+        self.player2.max_energy = 100
         self.player2.x = 600
         self.player2.target_x = 600
         self.player2.y = 300
@@ -136,6 +140,8 @@ class GameRoom:
         self.player2.speech_timer = 0
         self.player2.pending_question = None
         self.pending_disconnects.clear()
+        self.player1_emergency_cooldowns = {}
+        self.player2_emergency_cooldowns = {}
         self.engine.spells = []
         if getattr(self, 'is_bot_room', False) and getattr(self, 'bot', None):
             self.bot.reset()
@@ -356,7 +362,78 @@ def code_handler(data):
     
     target_player = room.player1 if player_id == 1 else room.player2
     enemy_player = room.player2 if player_id == 1 else room.player1
-    compiler.compiler(code=raw_code, current_player=target_player, enemy_player=enemy_player)
+    target_player.last_error = None
+    res = compiler.compiler(code=raw_code, current_player=target_player, enemy_player=enemy_player)
+    last_err = getattr(target_player, 'last_error', None)
+    if isinstance(res, dict) and not res.get('success'):
+        err_msg = res.get('error') or last_err or "Compilation error"
+        socketio.emit('code_error', {'error': str(err_msg)}, to=request.sid)
+    elif last_err:
+        socketio.emit('code_error', {'error': str(last_err)}, to=request.sid)
+    else:
+        socketio.emit('code_success', {'message': 'Code executed successfully!'}, to=request.sid)
+
+@socketio.on('emergency_action')
+def handle_emergency_action(data):
+    auth = sid_auth.get(request.sid)
+    if not auth:
+        logger.warning(f"Rejected unauthenticated emergency_action from sid {request.sid}")
+        return
+        
+    room_id = auth['room_id']
+    player_id = auth['player_id']
+    room = rooms.get(room_id)
+    if not room or not room.is_match_active:
+        return
+        
+    if room.player1.heart <= 0 or room.player2.heart <= 0:
+        return
+        
+    if not isinstance(data, dict):
+        return
+        
+    action = data.get('action') # 'shield' or 'dodge'
+    if action not in ('shield', 'dodge'):
+        return
+
+    now = time.time()
+    COOLDOWN_SEC = 8.0
+    attr_name = f"player{player_id}_emergency_cooldowns"
+    cooldown_dict = getattr(room, attr_name, None)
+    if cooldown_dict is None:
+        cooldown_dict = {}
+        setattr(room, attr_name, cooldown_dict)
+
+    last_used = cooldown_dict.get(action, 0)
+    if now - last_used < COOLDOWN_SEC:
+        rem = round(COOLDOWN_SEC - (now - last_used), 1)
+        socketio.emit('emergency_cooldown', {'action': action, 'remaining': rem}, to=request.sid)
+        return
+
+    target_player = room.player1 if player_id == 1 else room.player2
+    cost = 15
+    if getattr(target_player, 'energy', 100) < cost:
+        socketio.emit('emergency_rejected', {
+            'action': action, 
+            'reason': 'Not enough energy! (15⚡ required)'
+        }, to=request.sid)
+        return
+
+    # Deduct energy & update cooldown
+    target_player.energy = max(0, target_player.energy - cost)
+    cooldown_dict[action] = now
+    room.last_activity = now
+
+    if action == 'shield':
+        if hasattr(target_player, 'shield'):
+            target_player.shield.block()
+        logger.info(f"Room [{room_id}] -> Player {player_id} used Emergency Shield.")
+    elif action == 'dodge':
+        target_player.speed_x = 10
+        target_player.target_x -= (10 * 3 * target_player.direction)
+        logger.info(f"Room [{room_id}] -> Player {player_id} used Emergency Dodge.")
+
+    socketio.emit('emergency_used', {'action': action, 'cooldown': COOLDOWN_SEC}, to=request.sid)
 
 @socketio.on('restart_game')
 def handle_restart_game(data=None):
@@ -416,6 +493,14 @@ def handle_disconnect():
 # --- 60 FPS BACKGROUND GAME SIMULATION & GARBAGE COLLECTION LOOP ---
 bg_thread = None
 bg_lock = threading.Lock()
+
+def _get_public_speech(player):
+    if getattr(player, 'speech_timer', 0) <= 0:
+        return ""
+    text = str(getattr(player, 'speech_text', ''))
+    if text.startswith(('Error:', 'Syntax Error', 'Security:')):
+        return "" # Keep private in-editor diagnostics; do not broadcast error stack to opponent
+    return text
 
 def game_loop():
     last_cleanup_time = time.time()
@@ -486,7 +571,9 @@ def game_loop():
                             'is_swing': getattr(room.player1.sword, 'is_swing', False),
                             'heart': room.player1.heart,
                             'max_health': MAX_HEALTH,
-                            'speech': getattr(room.player1, 'speech_text', '') if getattr(room.player1, 'speech_timer', 0) > 0 else ""
+                            'energy': round(getattr(room.player1, 'energy', 100), 1),
+                            'max_energy': getattr(room.player1, 'max_energy', 100),
+                            'speech': _get_public_speech(room.player1)
                         },
                         'player2': {
                             'x': room.player2.x,
@@ -507,7 +594,9 @@ def game_loop():
                             'is_swing': getattr(room.player2.sword, 'is_swing', False),
                             'heart': room.player2.heart,
                             'max_health': MAX_HEALTH,
-                            'speech': getattr(room.player2, 'speech_text', '') if getattr(room.player2, 'speech_timer', 0) > 0 else ""
+                            'energy': round(getattr(room.player2, 'energy', 100), 1),
+                            'max_energy': getattr(room.player2, 'max_energy', 100),
+                            'speech': _get_public_speech(room.player2)
                         },
                         'spells': [
                             {

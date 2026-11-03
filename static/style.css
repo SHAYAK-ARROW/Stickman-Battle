@@ -1508,3 +1508,159 @@ button { color: inherit; }
         flex: 1;
     }
 }
+
+/* --- TACTICAL EMERGENCY DEFENSE BAR --- */
+.emergency-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: rgba(18, 19, 25, 0.95);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-top: 10px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    flex-wrap: wrap;
+}
+
+.emergency-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+}
+
+.emergency-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #1e2029;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #f1f0f5;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all var(--transition);
+    user-select: none;
+}
+
+.emergency-btn:hover:not(:disabled) {
+    background: #282b37;
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(56, 189, 248, 0.2);
+}
+
+.emergency-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.emergency-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.emergency-badge {
+    font-size: 9.5px;
+    font-family: var(--mono);
+    color: var(--text-tertiary);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.cd-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #38bdf8;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+.emergency-btn.on-cooldown .cd-overlay {
+    display: flex;
+}
+
+.emergency-feedback {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-left: auto;
+    font-family: var(--mono);
+    transition: opacity 0.3s ease;
+}
+
+/* --- IN-EDITOR DIAGNOSTICS CONSOLE --- */
+.editor-diagnostics {
+    margin: 8px 0 4px;
+    padding: 8px 12px;
+    background: rgba(224, 90, 90, 0.12);
+    border: 1px solid rgba(224, 90, 90, 0.35);
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    animation: diagSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes diagSlideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.diag-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.diag-icon {
+    font-size: 13px;
+}
+
+.diag-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #e05a5a;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+}
+
+.diag-close-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: #e05a5a;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0 4px;
+    opacity: 0.7;
+    transition: opacity var(--transition);
+}
+
+.diag-close-btn:hover {
+    opacity: 1;
+}
+
+.diag-message {
+    font-size: 12px;
+    color: #fca5a5;
+    font-family: var(--mono);
+    line-height: 1.4;
+    word-break: break-word;
+}
+

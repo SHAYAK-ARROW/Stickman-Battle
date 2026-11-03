@@ -1,12 +1,15 @@
 import math
 
 MAX_HEALTH = 10
+MAX_ENERGY = 100
 
 
 class Character:
     def __init__(self, name, x=0, y=0, direction=1):
         self.name = name
         self.heart = MAX_HEALTH
+        self.energy = MAX_ENERGY
+        self.max_energy = MAX_ENERGY
         self.x = x
         self.y = y
         self.direction = direction
@@ -181,6 +184,31 @@ class Body(Character):
             
         action = self.action_queue.pop(0)
         action_type = action[0]
+        
+        # Energy Cost Evaluation
+        if action_type == 'spell':
+            power = action[2] if len(action) > 2 else 1
+            cost = 12 + (power * 2)
+        elif action_type == 'heavy_attack':
+            cost = 30
+        elif action_type == 'throw_sword':
+            cost = 25
+        elif action_type in ('block', 'dash', 'dodge'):
+            cost = 12
+        elif action_type in ('attack', 'swing'):
+            cost = 8
+        elif action_type in ('jump', 'long_jump', 'project', 'crouch'):
+            cost = 5
+        else:
+            cost = 0
+
+        # Stamina / Energy Check: insufficient energy drops the action
+        current_energy = getattr(self, 'energy', MAX_ENERGY)
+        if current_energy < cost:
+            return
+        
+        if cost > 0:
+            self.energy = max(0, current_energy - cost)
         
         if action_type == 'move':
             step = action[1]

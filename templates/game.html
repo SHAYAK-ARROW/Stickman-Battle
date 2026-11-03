@@ -80,6 +80,24 @@
         </div>
     </div>
 </div>
+
+<!-- Tactical Emergency Defense Bar -->
+<div class="emergency-bar" aria-label="Tactical emergency defense actions">
+    <span class="emergency-label">TACTICAL PANIC:</span>
+    <button id="emergency_shield_btn" type="button" class="emergency-btn" onclick="triggerEmergency('shield')" title="Emergency Shield block for 1.5s (Cost: 15⚡, Cooldown: 8s). Shortcut: Alt+S">
+        <span class="emergency-icon">🛡️</span>
+        <span class="emergency-text">Emergency Shield</span>
+        <span class="emergency-badge">[Alt+S]</span>
+        <span id="shield_cd_overlay" class="cd-overlay"></span>
+    </button>
+    <button id="emergency_dodge_btn" type="button" class="emergency-btn" onclick="triggerEmergency('dodge')" title="Emergency retreat leap backward (Cost: 15⚡, Cooldown: 8s). Shortcut: Alt+D">
+        <span class="emergency-icon">💨</span>
+        <span class="emergency-text">Emergency Dodge</span>
+        <span class="emergency-badge">[Alt+D]</span>
+        <span id="dodge_cd_overlay" class="cd-overlay"></span>
+    </button>
+    <div id="emergency_feedback" class="emergency-feedback"></div>
+</div>
 </div>
 
 <div id="code_eddior" class="panel editor-panel">
@@ -95,13 +113,22 @@
             <div id="indent_guides"></div>
             <textarea id="ide" spellcheck="false" aria-label="Python battle strategy editor" placeholder="# Write your combat strategy here in Python:
 # Available commands: move(step), jump(power), attack(), block(), dash(step), swing(), sin_wave()
-# Sensors: get_enemy_distance(), is_enemy_attacking(), get_my_health()
+# Sensors: get_enemy_distance(), is_enemy_attacking(), get_my_health(), get_my_energy()
 
 if get_enemy_distance() > 100:
     dash(3)
 else:
     attack()"></textarea>
         </div>
+    </div>
+    <!-- Private In-Editor Diagnostics Console (only you see this, never broadcast to opponent) -->
+    <div id="editor_diagnostics" class="editor-diagnostics" style="display: none;">
+        <div class="diag-header">
+            <span class="diag-icon">⚠️</span>
+            <span id="diag_title" class="diag-title">Code Diagnostics</span>
+            <button type="button" class="diag-close-btn" onclick="dismissDiagnostics()" title="Dismiss">✕</button>
+        </div>
+        <div id="diag_message" class="diag-message"></div>
     </div>
     <div class="editor-toolbar">
         <button id="run_btn" class="button button-primary" onclick="run()" disabled>Run (Waiting for Player...)</button>
@@ -351,6 +378,18 @@ else:
                 <td><code>get_enemy_health()</code></td>
                 <td>Opponent's remaining hearts</td>
                 <td><code>if get_enemy_health() == 1:</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill sensor">Sensors</span></td>
+                <td><code>get_my_energy()</code></td>
+                <td>Your current energy / stamina (0-100)</td>
+                <td><code>if get_my_energy() &gt;= 35:</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill sensor">Sensors</span></td>
+                <td><code>get_enemy_energy()</code></td>
+                <td>Opponent's current energy (0-100)</td>
+                <td><code>if get_enemy_energy() &lt; 20:</code></td>
             </tr>
             <tr>
                 <td><span class="category-pill dialogue">Dialogue</span></td>
