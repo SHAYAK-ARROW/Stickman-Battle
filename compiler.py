@@ -15,13 +15,29 @@ _SANDBOX_PROCESS = None
 _SANDBOX_CONNECTION = None
 
 
+NUMERIC_COMMANDS = {
+    'move', 'run', 'run_to', 'dash', 'dodge', 'jump', 'long_jump',
+    'project', 'set_sword', 'set_shield', 'sin_wave', 'cos_wave',
+    'tan_spike', 'sec_barrier', 'cosec_dome', 'cot_wall'
+}
+
 def _record_command(commands, name, args):
     """Record only small, serializable command arguments in the worker."""
     if len(commands) >= MAX_ACTIONS:
         return
-    if not all(isinstance(value, (int, float, str, bool, type(None))) for value in args):
-        raise ValueError("Command arguments must be simple values")
-    commands.append((name, tuple(args)))
+    if name in NUMERIC_COMMANDS:
+        clean_args = []
+        for val in args:
+            if isinstance(val, bool) or not isinstance(val, (int, float)):
+                raise ValueError(f"Command '{name}' expects numeric argument(s), got {type(val).__name__}")
+            if not math.isfinite(val):
+                raise ValueError(f"Command '{name}' received non-finite numeric argument")
+            clean_args.append(val)
+        commands.append((name, tuple(clean_args)))
+    else:
+        if not all(isinstance(value, (int, float, str, bool, type(None))) for value in args):
+            raise ValueError("Command arguments must be simple values")
+        commands.append((name, tuple(args)))
 
 
 def _sandbox_execute(code, sensors):
@@ -311,6 +327,28 @@ class SecurityValidator(ast.NodeVisitor):
         self.generic_visit(node)
         self.current_function = old_func
 
+    def visit_ListComp(self, node):
+        raise ValueError("List comprehensions are restricted for security! Use 'for' loops.")
+
+    def visit_SetComp(self, node):
+        raise ValueError("Set comprehensions are restricted for security! Use 'for' loops.")
+
+    def visit_DictComp(self, node):
+        raise ValueError("Dict comprehensions are restricted for security! Use 'for' loops.")
+
+    def visit_GeneratorExp(self, node):
+        raise ValueError("Generator expressions are restricted for security!")
+
+    def visit_BinOp(self, node):
+        if isinstance(node.op, ast.Mult):
+            if isinstance(node.left, ast.Constant) and isinstance(node.left.value, (str, list, tuple)):
+                if isinstance(node.right, ast.Constant) and isinstance(node.right.value, (int, float)) and node.right.value > 100:
+                    raise ValueError("Multiplication repetition exceeds safety limit (max 100)!")
+            elif isinstance(node.right, ast.Constant) and isinstance(node.right.value, (str, list, tuple)):
+                if isinstance(node.left, ast.Constant) and isinstance(node.left.value, (int, float)) and node.left.value > 100:
+                    raise ValueError("Multiplication repetition exceeds safety limit (max 100)!")
+        self.generic_visit(node)
+
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name):
             if self.current_function and node.func.id == self.current_function:
@@ -347,160 +385,6 @@ def compiler(code, current_player, enemy_player=None):
                 current_player.execute_next_action()
         return
 
-    # Custom Speech Bubble Print (Max 5 dialogues per execution, 40 chars cap)
-    print_count = 0
-    def game_print(*args):
-        nonlocal print_count
-        if print_count >= 5:
-            return
-        print_count += 1
-        msg = " ".join(str(a) for a in args)[:40]
-        if hasattr(current_player, 'say'):
-            current_player.say(msg)
-
-    # Custom Opponent Input Prompt (Max 3 prompts per execution, 40 chars cap)
-    input_count = 0
-    def game_input(*args):
-        nonlocal input_count
-        if input_count >= 3:
-            return ""
-        input_count += 1
-        prompt = " ".join(str(a) for a in args)[:40] if args else "Say something:"
-        if hasattr(current_player, 'ask'):
-            current_player.ask(prompt)
-        return ""
-
-    # Safe sandboxed builtins
-    safe_builtins = {
-        "range": safe_range,
-        "len": len,
-        "print": game_print,
-        "input": game_input,
-        "Input": game_input,
-        "min": min,
-        "max": max,
-        "abs": abs,
-        "round": round,
-        "int": int,
-        "float": float,
-        "str": str,
-        "bool": bool,
-        "list": list,
-        "dict": dict,
-        "True": True,
-        "False": False,
-        "None": None,
-        "true": True,
-        "false": False,
-        "none": None,
-    }
-
-    # Sensor / Intel functions
-    def get_enemy_distance():
-        if enemy_player is None:
-            return 999
-        return abs(current_player.x - enemy_player.x)
-
-    def is_enemy_attacking():
-        if enemy_player is None or not hasattr(enemy_player, 'sword'):
-            return False
-        return enemy_player.sword.attack_state != 0
-
-    def get_my_health():
-        return current_player.heart
-
-    def get_enemy_health():
-        if enemy_player is None:
-            return 0
-        return enemy_player.heart
-
-    safe_env = {
-        "__builtins__": safe_builtins,
-        # Character & Body methods
-        "move": current_player.move,
-        "Move": current_player.move,
-        "run": current_player.run_to,
-        "Run": current_player.run_to,
-        "jump": current_player.jump,
-        "Jump": current_player.jump,
-        "bend": current_player.bend,
-        "Bend": current_player.bend,
-        "flip": current_player.flip,
-        "Flip": current_player.flip,
-        
-        # New Movement & Evasion commands
-        "crouch": getattr(current_player, 'crouch', current_player.bend),
-        "Crouch": getattr(current_player, 'crouch', current_player.bend),
-        "duck": getattr(current_player, 'duck', current_player.bend),
-        "Duck": getattr(current_player, 'duck', current_player.bend),
-        "dash": getattr(current_player, 'dash', current_player.run_to),
-        "Dash": getattr(current_player, 'dash', current_player.run_to),
-        "dodge": getattr(current_player, 'dodge', current_player.move),
-        "Dodge": getattr(current_player, 'dodge', current_player.move),
-        
-        # hand
-        "set_right_hand": current_player.set_right_hand,
-        "set_left_hand": current_player.set_left_hand,
-        "move_right_hand": current_player.move_right_hand,
-        "move_left_hand": current_player.move_left_hand,
-        
-        # sword & attack
-        "set_sword": getattr(current_player, 'set_sword', current_player.sword.set_sword),
-        "Set_sword": getattr(current_player, 'set_sword', current_player.sword.set_sword),
-        "swing": getattr(current_player, 'swing', current_player.attack),
-        "Swing": getattr(current_player, 'swing', current_player.attack),
-        "attack": current_player.attack,
-        "Attack": current_player.attack,
-        "heavy_attack": getattr(current_player, 'heavy_attack', current_player.attack),
-        "Heavy_attack": getattr(current_player, 'heavy_attack', current_player.attack),
-        "throw_sword": getattr(current_player, 'throw_sword', current_player.attack),
-        "Throw_sword": getattr(current_player, 'throw_sword', current_player.attack),
-        
-        # shield
-        "set_shield": getattr(current_player, 'set_shield', current_player.shield.set_shield),
-        "Set_shield": getattr(current_player, 'set_shield', current_player.shield.set_shield),
-        "block": current_player.block,
-        "Block": current_player.block,
-        
-        # jump & project
-        "project": current_player.project,
-        "Project": current_player.project,
-        "long_jump": current_player.long_jump,
-        "Long_jump": current_player.long_jump,
-
-        # Trigonometric Magic Spells
-        "sin_wave": getattr(current_player, 'sin_wave', None),
-        "Sin_wave": getattr(current_player, 'sin_wave', None),
-        "cos_wave": getattr(current_player, 'cos_wave', None),
-        "Cos_wave": getattr(current_player, 'cos_wave', None),
-        "tan_spike": getattr(current_player, 'tan_spike', None),
-        "Tan_spike": getattr(current_player, 'tan_spike', None),
-        "sec_barrier": getattr(current_player, 'sec_barrier', None),
-        "Sec_barrier": getattr(current_player, 'sec_barrier', None),
-        "cosec_dome": getattr(current_player, 'cosec_dome', None),
-        "Cosec_dome": getattr(current_player, 'cosec_dome', None),
-        "cot_wall": getattr(current_player, 'cot_wall', None),
-        "Cot_wall": getattr(current_player, 'cot_wall', None),
-
-        # Sensor / Intel functions
-        "get_enemy_distance": get_enemy_distance,
-        "is_enemy_attacking": is_enemy_attacking,
-        "get_my_health": get_my_health,
-        "get_enemy_health": get_enemy_health,
-        "get_my_energy": lambda: round(getattr(current_player, 'energy', 100), 1),
-        "get_enemy_energy": lambda: round(getattr(enemy_player, 'energy', 100), 1),
-        "math": type("SafeMath", (), {
-            "sin": staticmethod(math.sin),
-            "cos": staticmethod(math.cos),
-            "tan": staticmethod(math.tan),
-        })(),
-
-        # Direct print and input access
-        "print": game_print,
-        "input": game_input,
-        "Input": game_input
-    }
-
     try:
         # Step 1: AST Static Security Analysis
         parsed_tree = ast.parse(code)
@@ -510,10 +394,10 @@ def compiler(code, current_player, enemy_player=None):
         # Step 2: Execute in the warm isolated worker. It receives sensor
         # snapshots and returns only primitive command records, never objects.
         sensors = {
-            "enemy_distance": get_enemy_distance(),
-            "enemy_attacking": is_enemy_attacking(),
-            "my_health": get_my_health(),
-            "enemy_health": get_enemy_health(),
+            "enemy_distance": abs(current_player.x - enemy_player.x) if enemy_player else 999,
+            "enemy_attacking": getattr(enemy_player.sword, 'attack_state', 0) != 0 if (enemy_player and hasattr(enemy_player, 'sword')) else False,
+            "my_health": current_player.heart,
+            "enemy_health": enemy_player.heart if enemy_player else 0,
             "my_energy": round(getattr(current_player, 'energy', 100), 1),
             "enemy_energy": round(getattr(enemy_player, 'energy', 100), 1),
         }

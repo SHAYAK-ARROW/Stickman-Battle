@@ -32,17 +32,32 @@ if ALLOWED_ORIGINS:
         cors_origins = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
 else:
     LOCAL_ORIGIN_RE = re.compile(r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$")
+    ITCH_ORIGIN_RE = re.compile(r"^https?://([a-zA-Z0-9-]+\.)*(itch\.io|itch\.zone|hwcdn\.net)(:\d+)?$")
     def check_cors_origin(origin):
-        if not origin:
+        if not origin or origin == "null":
             return True
         if LOCAL_ORIGIN_RE.match(origin):
             return True
         if origin == "https://stickman-battle.onrender.com":
             return True
+        if ITCH_ORIGIN_RE.match(origin):
+            return True
         return False
     cors_origins = check_cors_origin
 
 socketio = SocketIO(app, async_mode='threading', cors_allowed_origins=cors_origins)
+
+@app.after_request
+def add_security_and_cors_headers(response):
+    origin = request.headers.get('Origin')
+    if origin and check_cors_origin(origin):
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
+    # Prevent X-Frame-Options from blocking Itch.io iframe embed
+    response.headers.pop('X-Frame-Options', None)
+    return response
 
 class GameRoom:
     def __init__(self, room_id):
@@ -247,8 +262,10 @@ def join_room_game(room_id):
     elif request.args.get('player'):
         abort(403, "This room requires a valid private invite link.")
     else:
-        # Public room-code join always targets Player 2. The real slot is
-        # still enforced by the Socket.IO SID/token authorization below.
+        # Public room-code join targets Player 2 slot only if not already occupied
+        # by a connected human player (or if it's a bot room that can be taken over).
+        if 2 in room.connected_players and not getattr(room, 'is_bot_room', False):
+            abort(403, "This match is already in progress with 2 players. Create a new room from the lobby.")
         assigned_player = 2
         room_token = room.player_tokens[2]
 
@@ -539,102 +556,105 @@ def game_loop():
 
             # Update all active rooms
             for room in list(rooms.values()):
-                if room.is_match_active or room.connected_players or room.pending_disconnects:
-                    if getattr(room, 'is_bot_room', False) and room.is_match_active and getattr(room, 'bot', None):
-                        try:
-                            room.bot.tick(room)
-                        except Exception as be:
-                            logger.error(f"Bot tick error in room {room.room_id}: {be}")
-                    room.engine.update()
-                    
-                    # Opponent dialogue question dispatch
-                    if getattr(room.player1, 'pending_question', None):
-                        q = room.player1.pending_question
-                        room.player1.pending_question = None
-                        socketio.emit('prompt_opponent_input', {'from_player': 1, 'prompt': q}, to=room.room_id)
-                    if getattr(room.player2, 'pending_question', None):
-                        q = room.player2.pending_question
-                        room.player2.pending_question = None
-                        socketio.emit('prompt_opponent_input', {'from_player': 2, 'prompt': q}, to=room.room_id)
-                    
-                    # Grace period expiration
-                    for pid, disc_time in list(room.pending_disconnects.items()):
-                        if pid in room.sid_to_player.values():
-                            del room.pending_disconnects[pid]
-                        elif now - disc_time > 30.0:
-                            del room.pending_disconnects[pid]
-                            room.connected_players.discard(pid)
-                            room.is_match_active = False
-                            room.reset_match()
-                            logger.info(f"Room [{room.room_id}] -> Player {pid} grace period expired.")
-                            socketio.emit('player_left', {'player_id': pid}, to=room.room_id)
-                    
-                    # 60 FPS state broadcast with dynamic weapon lengths & states
-                    data_to_send = {
-                        'is_match_active': getattr(room, 'is_match_active', False),
-                        'player1': {
-                            'x': room.player1.x,
-                            'y': room.player1.y,
-                            'direction': room.player1.direction,
-                            'sword_angle': room.player1.sword.sword_angle,
-                            'sword_length': getattr(room.player1.sword, 'sword_length', 50),
-                            'shield_angle': room.player1.shield.shield_angel,
-                            'shield_length': getattr(room.player1.shield, 'shield_length', 40),
-                            'is_blocking': room.player1.shield.block_timer > 0,
-                            'is_crouching': getattr(room.player1, 'crouch_timer', 0) > 0,
-                            'has_barrier': getattr(room.player1, 'barrier_timer', 0) > 0,
-                            'has_dome': getattr(room.player1, 'dome_timer', 0) > 0,
-                            'barrier_power': getattr(room.player1, 'barrier_power', 1),
-                            'dome_power': getattr(room.player1, 'dome_power', 1),
-                            'has_sword': getattr(room.player1, 'has_sword', True),
-                            'is_heavy': getattr(room.player1.sword, 'is_heavy', False),
-                            'is_swing': getattr(room.player1.sword, 'is_swing', False),
-                            'attack_state': getattr(room.player1.sword, 'attack_state', 0),
-                            'heart': room.player1.heart,
-                            'max_health': MAX_HEALTH,
-                            'energy': round(getattr(room.player1, 'energy', 100), 1),
-                            'max_energy': getattr(room.player1, 'max_energy', 100),
-                            'speech': _get_public_speech(room.player1)
-                        },
-                        'player2': {
-                            'x': room.player2.x,
-                            'y': room.player2.y,
-                            'direction': room.player2.direction,
-                            'sword_angle': room.player2.sword.sword_angle,
-                            'sword_length': getattr(room.player2.sword, 'sword_length', 50),
-                            'shield_angle': room.player2.shield.shield_angel,
-                            'shield_length': getattr(room.player2.shield, 'shield_length', 40),
-                            'is_blocking': room.player2.shield.block_timer > 0,
-                            'is_crouching': getattr(room.player2, 'crouch_timer', 0) > 0,
-                            'has_barrier': getattr(room.player2, 'barrier_timer', 0) > 0,
-                            'has_dome': getattr(room.player2, 'dome_timer', 0) > 0,
-                            'barrier_power': getattr(room.player2, 'barrier_power', 1),
-                            'dome_power': getattr(room.player2, 'dome_power', 1),
-                            'has_sword': getattr(room.player2, 'has_sword', True),
-                            'is_heavy': getattr(room.player2.sword, 'is_heavy', False),
-                            'is_swing': getattr(room.player2.sword, 'is_swing', False),
-                            'attack_state': getattr(room.player2.sword, 'attack_state', 0),
-                            'heart': room.player2.heart,
-                            'max_health': MAX_HEALTH,
-                            'energy': round(getattr(room.player2, 'energy', 100), 1),
-                            'max_energy': getattr(room.player2, 'max_energy', 100),
-                            'speech': _get_public_speech(room.player2)
-                        },
-                        'spells': [
-                            {
-                                'type': s['type'],
-                                'x': round(s.get('x', s.get('target_x', 0)), 1),
-                                'y': round(s.get('y', 470), 1),
-                                'dir': s.get('dir', 1),
-                                't': s.get('t', 0),
-                                'power': s.get('power', 1),
-                                'origin_x': round(s.get('origin_x', s.get('x', 0)), 1),
-                                'origin_y': round(s.get('origin_y', s.get('y', 470)), 1)
-                            }
-                            for s in getattr(room.engine, 'spells', [])
-                        ]
-                    }
-                    socketio.emit('update_game_gui', data_to_send, to=room.room_id)
+                try:
+                    if room.is_match_active or room.connected_players or room.pending_disconnects:
+                        if getattr(room, 'is_bot_room', False) and room.is_match_active and getattr(room, 'bot', None):
+                            try:
+                                room.bot.tick(room)
+                            except Exception as be:
+                                logger.error(f"Bot tick error in room {room.room_id}: {be}")
+                        room.engine.update()
+                        
+                        # Opponent dialogue question dispatch
+                        if getattr(room.player1, 'pending_question', None):
+                            q = room.player1.pending_question
+                            room.player1.pending_question = None
+                            socketio.emit('prompt_opponent_input', {'from_player': 1, 'prompt': q}, to=room.room_id)
+                        if getattr(room.player2, 'pending_question', None):
+                            q = room.player2.pending_question
+                            room.player2.pending_question = None
+                            socketio.emit('prompt_opponent_input', {'from_player': 2, 'prompt': q}, to=room.room_id)
+                        
+                        # Grace period expiration
+                        for pid, disc_time in list(room.pending_disconnects.items()):
+                            if pid in room.sid_to_player.values():
+                                del room.pending_disconnects[pid]
+                            elif now - disc_time > 30.0:
+                                del room.pending_disconnects[pid]
+                                room.connected_players.discard(pid)
+                                room.is_match_active = False
+                                room.reset_match()
+                                logger.info(f"Room [{room.room_id}] -> Player {pid} grace period expired.")
+                                socketio.emit('player_left', {'player_id': pid}, to=room.room_id)
+                        
+                        # 60 FPS state broadcast with dynamic weapon lengths & states
+                        data_to_send = {
+                            'is_match_active': getattr(room, 'is_match_active', False),
+                            'player1': {
+                                'x': room.player1.x,
+                                'y': room.player1.y,
+                                'direction': room.player1.direction,
+                                'sword_angle': room.player1.sword.sword_angle,
+                                'sword_length': getattr(room.player1.sword, 'sword_length', 50),
+                                'shield_angle': room.player1.shield.shield_angel,
+                                'shield_length': getattr(room.player1.shield, 'shield_length', 40),
+                                'is_blocking': room.player1.shield.block_timer > 0,
+                                'is_crouching': getattr(room.player1, 'crouch_timer', 0) > 0,
+                                'has_barrier': getattr(room.player1, 'barrier_timer', 0) > 0,
+                                'has_dome': getattr(room.player1, 'dome_timer', 0) > 0,
+                                'barrier_power': getattr(room.player1, 'barrier_power', 1),
+                                'dome_power': getattr(room.player1, 'dome_power', 1),
+                                'has_sword': getattr(room.player1, 'has_sword', True),
+                                'is_heavy': getattr(room.player1.sword, 'is_heavy', False),
+                                'is_swing': getattr(room.player1.sword, 'is_swing', False),
+                                'attack_state': getattr(room.player1.sword, 'attack_state', 0),
+                                'heart': room.player1.heart,
+                                'max_health': MAX_HEALTH,
+                                'energy': round(getattr(room.player1, 'energy', 100), 1),
+                                'max_energy': getattr(room.player1, 'max_energy', 100),
+                                'speech': _get_public_speech(room.player1)
+                            },
+                            'player2': {
+                                'x': room.player2.x,
+                                'y': room.player2.y,
+                                'direction': room.player2.direction,
+                                'sword_angle': room.player2.sword.sword_angle,
+                                'sword_length': getattr(room.player2.sword, 'sword_length', 50),
+                                'shield_angle': room.player2.shield.shield_angel,
+                                'shield_length': getattr(room.player2.shield, 'shield_length', 40),
+                                'is_blocking': room.player2.shield.block_timer > 0,
+                                'is_crouching': getattr(room.player2, 'crouch_timer', 0) > 0,
+                                'has_barrier': getattr(room.player2, 'barrier_timer', 0) > 0,
+                                'has_dome': getattr(room.player2, 'dome_timer', 0) > 0,
+                                'barrier_power': getattr(room.player2, 'barrier_power', 1),
+                                'dome_power': getattr(room.player2, 'dome_power', 1),
+                                'has_sword': getattr(room.player2, 'has_sword', True),
+                                'is_heavy': getattr(room.player2.sword, 'is_heavy', False),
+                                'is_swing': getattr(room.player2.sword, 'is_swing', False),
+                                'attack_state': getattr(room.player2.sword, 'attack_state', 0),
+                                'heart': room.player2.heart,
+                                'max_health': MAX_HEALTH,
+                                'energy': round(getattr(room.player2, 'energy', 100), 1),
+                                'max_energy': getattr(room.player2, 'max_energy', 100),
+                                'speech': _get_public_speech(room.player2)
+                            },
+                            'spells': [
+                                {
+                                    'type': s['type'],
+                                    'x': round(s.get('x', s.get('target_x', 0)), 1),
+                                    'y': round(s.get('y', 470), 1),
+                                    'dir': s.get('dir', 1),
+                                    't': s.get('t', 0),
+                                    'power': s.get('power', 1),
+                                    'origin_x': round(s.get('origin_x', s.get('x', 0)), 1),
+                                    'origin_y': round(s.get('origin_y', s.get('y', 470)), 1)
+                                }
+                                for s in getattr(room.engine, 'spells', [])
+                            ]
+                        }
+                        socketio.emit('update_game_gui', data_to_send, to=room.room_id)
+                except Exception as re:
+                    logger.error(f"Error updating room {getattr(room, 'room_id', 'unknown')}: {re}", exc_info=True)
         except Exception:
             logger.exception("Unexpected error in 60 FPS game loop:")
         socketio.sleep(1/60)

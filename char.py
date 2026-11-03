@@ -4,6 +4,14 @@ MAX_HEALTH = 10
 MAX_ENERGY = 100
 
 
+def _safe_float(val, default=1.0, min_val=-100.0, max_val=100.0):
+    if isinstance(val, bool) or not isinstance(val, (int, float)):
+        return default
+    if not math.isfinite(val):
+        return default
+    return max(min_val, min(max_val, float(val)))
+
+
 class Character:
     def __init__(self, name, x=0, y=0, direction=1):
         self.name = name
@@ -22,11 +30,11 @@ class Character:
     
     def move(self, step=1):
         if len(self.action_queue) < 100:
-            self.action_queue.append(('move', step))
+            self.action_queue.append(('move', _safe_float(step, 1.0, -20.0, 20.0)))
     
     def run_to(self, step=1):
         if len(self.action_queue) < 100:
-            self.action_queue.append(('run', step))
+            self.action_queue.append(('run', _safe_float(step, 1.0, -20.0, 20.0)))
 
     def flip(self):
         if len(self.action_queue) < 100:
@@ -71,7 +79,7 @@ class Body(Character):
     # Custom Weapon & Shield Setters (fully functional)
     def set_sword(self, length=50, angle=0):
         if hasattr(self, 'sword'):
-            self.sword.set_sword(length, angle)
+            self.sword.set_sword(_safe_float(length, 50.0, 10.0, 120.0), _safe_float(angle, 0.0, -360.0, 360.0))
 
     def swing(self, dx=0, dy=0):
         # Distinct swift horizontal attack (faster than regular attack)
@@ -83,11 +91,7 @@ class Body(Character):
 
     def set_shield(self, length=40, angle=45):
         if hasattr(self, 'shield'):
-            self.shield.set_shield(length, angle)
-
-    def bend(self, angle=0):
-        if len(self.action_queue) < 100:
-            self.action_queue.append(('bend', angle))
+            self.shield.set_shield(_safe_float(length, 40.0, 10.0, 100.0), _safe_float(angle, 45.0, -360.0, 360.0))
 
     def crouch(self):
         if len(self.action_queue) < 100:
@@ -98,11 +102,11 @@ class Body(Character):
 
     def dash(self, step=3):
         if len(self.action_queue) < 100:
-            self.action_queue.append(('dash', step))
+            self.action_queue.append(('dash', _safe_float(step, 3.0, -20.0, 20.0)))
 
     def dodge(self, step=3):
         if len(self.action_queue) < 100:
-            self.action_queue.append(('dodge', step))
+            self.action_queue.append(('dodge', _safe_float(step, 3.0, -20.0, 20.0)))
 
     def heavy_attack(self):
         if not getattr(self, 'has_sword', True):
@@ -149,15 +153,15 @@ class Body(Character):
 
     def jump(self, power=5):
         if len(self.action_queue) < 100:
-            self.action_queue.append(('jump', power))
+            self.action_queue.append(('jump', _safe_float(power, 5.0, 0.0, 30.0)))
 
     def long_jump(self, step=2, power=5):
         if len(self.action_queue) < 100:
-            self.action_queue.append(('long_jump', step, power))
+            self.action_queue.append(('long_jump', _safe_float(step, 2.0, -20.0, 20.0), _safe_float(power, 5.0, 0.0, 30.0)))
             
     def project(self, angle=45, power=5):
         if len(self.action_queue) < 100:
-            self.action_queue.append(('project', angle, power))
+            self.action_queue.append(('project', _safe_float(angle, 45.0, -360.0, 360.0), _safe_float(power, 5.0, 0.0, 30.0)))
 
     def attack(self):
         if not getattr(self, 'has_sword', True):
@@ -211,11 +215,11 @@ class Body(Character):
             self.energy = max(0, current_energy - cost)
         
         if action_type == 'move':
-            step = action[1]
+            step = _safe_float(action[1], 1.0, -20.0, 20.0)
             self.speed_x = 2
             self.target_x += (10 * step * self.direction)
         elif action_type == 'run':
-            step = action[1]
+            step = _safe_float(action[1], 1.0, -20.0, 20.0)
             self.speed_x = 4
             self.target_x += (10 * step * self.direction)
         elif action_type == 'flip':
@@ -224,21 +228,22 @@ class Body(Character):
             elif self.direction == -1:
                 self.direction = 1
         elif action_type == 'dash':
-            step = action[1]
+            step = _safe_float(action[1], 3.0, -20.0, 20.0)
             self.speed_x = 10
             self.target_x += (10 * step * self.direction)
         elif action_type == 'dodge':
-            step = action[1]
+            step = _safe_float(action[1], 3.0, -20.0, 20.0)
             self.speed_x = 10
             self.target_x -= (10 * step * self.direction)
         elif action_type == 'crouch':
             self.crouch_timer = 30
         elif action_type == 'jump':
-            power = action[1]
+            power = _safe_float(action[1], 5.0, 0.0, 30.0)
             pixel = power * 5
             self.jump_pixel = -pixel
         elif action_type == 'long_jump':
-            step, power = action[1], action[2]
+            step = _safe_float(action[1], 2.0, -20.0, 20.0)
+            power = _safe_float(action[2] if len(action) > 2 else 5.0, 5.0, 0.0, 30.0)
             v_y = power * 5
             self.jump_pixel = -v_y
             air_time = 2 * v_y
@@ -249,8 +254,8 @@ class Body(Character):
             else:
                 self.speed_x = 2
         elif action_type == 'project':
-            import math
-            angle, power = action[1], action[2]
+            angle = _safe_float(action[1], 45.0, -360.0, 360.0)
+            power = _safe_float(action[2] if len(action) > 2 else 5.0, 5.0, 0.0, 30.0)
             rad = math.radians(angle)
             v = power * 5
             v_y = v * math.sin(rad)
@@ -397,6 +402,3 @@ class Sword:
             self.is_swing = False
             self.attack_state = 1
             self.target_angle = -40
-
-def collision(obj1, obj2):
-    ...
