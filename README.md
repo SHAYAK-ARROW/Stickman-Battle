@@ -3,7 +3,7 @@
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Play%20Online-6366f1?style=for-the-badge&logo=render&logoColor=white)](https://stickman-battle.onrender.com)
 [![Python](https://img.shields.io/badge/Python-3.12-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![WebSocket](https://img.shields.io/badge/Engine-60%20FPS%20Real--Time-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io)
-[![Tests](https://img.shields.io/badge/Unit%20Tests-37%20Passed-4ade80?style=for-the-badge)]()
+[![Tests](https://img.shields.io/badge/Unit%20Tests-43%20Passed-4ade80?style=for-the-badge)]()
 
 > **A real-time 1v1 multiplayer combat arena where fighters battle by writing and executing Python algorithms directly in their browser.**
 > 
