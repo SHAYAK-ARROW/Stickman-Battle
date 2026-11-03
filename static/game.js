@@ -126,6 +126,76 @@ let prevP2Attacking = false;
 let activeSpellKeys = new Set();
 let prevGameOver = false;
 
+// --- SWORD TRAIL / MOTION BLUR SYSTEM ---
+const swordTrails = {
+    p1: [],
+    p2: []
+};
+
+function draw_sword_trails() {
+    ['p1', 'p2'].forEach(key => {
+        const trail = swordTrails[key];
+        if (!trail || trail.length === 0) return;
+
+        // Fade and clean old trail points
+        for (let i = trail.length - 1; i >= 0; i--) {
+            trail[i].alpha *= 0.70;
+            if (trail[i].alpha < 0.05) {
+                trail.splice(i, 1);
+            }
+        }
+
+        if (trail.length < 2) return;
+
+        // Draw motion blur ribbon arcs between consecutive positions
+        for (let i = 0; i < trail.length - 1; i++) {
+            const ptA = trail[i];
+            const ptB = trail[i + 1];
+            const avgAlpha = (ptA.alpha + ptB.alpha) * 0.5;
+
+            ctx.save();
+            let strokeColor, fillColor;
+            if (ptB.isHeavy) {
+                strokeColor = `rgba(255, 69, 0, ${avgAlpha * 0.95})`;
+                fillColor = `rgba(249, 115, 22, ${avgAlpha * 0.38})`;
+                ctx.shadowColor = "#ff4500";
+                ctx.shadowBlur = 18;
+            } else if (ptB.isSwing) {
+                strokeColor = `rgba(0, 240, 255, ${avgAlpha * 0.95})`;
+                fillColor = `rgba(56, 189, 248, ${avgAlpha * 0.32})`;
+                ctx.shadowColor = "#00f0ff";
+                ctx.shadowBlur = 14;
+            } else {
+                strokeColor = `rgba(255, 255, 255, ${avgAlpha * 0.90})`;
+                fillColor = `rgba(226, 232, 240, ${avgAlpha * 0.28})`;
+                ctx.shadowColor = ptB.color || "rgba(255, 255, 255, 0.8)";
+                ctx.shadowBlur = 12;
+            }
+
+            // 1. Shaded motion blur fan ribbon between hand and blade tip
+            ctx.beginPath();
+            ctx.moveTo(ptA.baseX, ptA.baseY);
+            ctx.lineTo(ptA.tipX, ptA.tipY);
+            ctx.lineTo(ptB.tipX, ptB.tipY);
+            ctx.lineTo(ptB.baseX, ptB.baseY);
+            ctx.closePath();
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+
+            // 2. High-intensity glowing blade edge arc along the tip
+            ctx.beginPath();
+            ctx.moveTo(ptA.tipX, ptA.tipY);
+            ctx.lineTo(ptB.tipX, ptB.tipY);
+            ctx.lineWidth = 3.5;
+            ctx.lineCap = "round";
+            ctx.strokeStyle = strokeColor;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+    });
+}
+
 function draw_on_camvas(data) {
     if (!data || !data.player1 || !data.player2) return;
 
@@ -192,8 +262,11 @@ function draw_on_camvas(data) {
     ctx.lineTo(canvas.width, 600);
     ctx.stroke();
 
+    // Render sword slash trails & motion blur arcs behind fighters
+    draw_sword_trails();
+
     // Player Ankar Function
-    function draw_player(player, color) {
+    function draw_player(player, color, playerKey) {
         let x = player.x;
         let y = player.y;
         let dir = player.direction; // 1 (Right) or -1 (Left)
@@ -303,6 +376,25 @@ function draw_on_camvas(data) {
             const isHeavy = player.is_heavy;
             const isSwing = player.is_swing;
             const actualLen = isHeavy ? swordLen + 10 : swordLen;
+
+            // Record motion blur trail during attack swing
+            if ((player.attack_state === 2 || isHeavy || isSwing) && playerKey && swordTrails[playerKey]) {
+                const tipX = sword_hand_x + Math.sin(rad) * actualLen;
+                const tipY = sword_hand_y - Math.cos(rad) * actualLen;
+                swordTrails[playerKey].push({
+                    tipX: tipX,
+                    tipY: tipY,
+                    baseX: sword_hand_x,
+                    baseY: sword_hand_y,
+                    alpha: 1.0,
+                    isHeavy: isHeavy,
+                    isSwing: isSwing,
+                    color: color
+                });
+                if (swordTrails[playerKey].length > 8) {
+                    swordTrails[playerKey].shift();
+                }
+            }
 
             // 1. Grip / Handle (extends backward into hand)
             ctx.save();
@@ -504,8 +596,8 @@ function draw_on_camvas(data) {
     }
 
     // Two players drawn with clear, accessible modern dark palette
-    draw_player(data.player1, "#ff5c5c");
-    draw_player(data.player2, "#38bdf8");
+    draw_player(data.player1, "#ff5c5c", "p1");
+    draw_player(data.player2, "#38bdf8", "p2");
 
     // Fixed HUD health bars - clear fighting game style.
     function draw_health_bar(player, label, x, align) {
