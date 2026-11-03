@@ -10,13 +10,36 @@
 (function() {
     'use strict';
 
+    // Safe Storage helper (prevents crash when browser Tracking Prevention blocks storage)
+    function safeGet(key, defaultVal) {
+        try {
+            if (typeof window !== 'undefined' && window.localStorage) {
+                const val = window.localStorage.getItem(key);
+                return val !== null ? val : defaultVal;
+            }
+        } catch (e) {
+            console.warn("Storage access restricted by browser tracking prevention; using in-memory default.");
+        }
+        return defaultVal;
+    }
+
+    function safeSet(key, val) {
+        try {
+            if (typeof window !== 'undefined' && window.localStorage) {
+                window.localStorage.setItem(key, val);
+            }
+        } catch (e) {
+            // Ignored
+        }
+    }
+
     let audioCtx = null;
     let masterBgmGain = null;
     let masterSfxGain = null;
 
     // Preferences (Defaults: BGM = true, SFX = true)
-    let bgmEnabled = localStorage.getItem('sb_bgm_enabled') !== '0';
-    let sfxEnabled = localStorage.getItem('sb_sfx_enabled') !== '0';
+    let bgmEnabled = safeGet('sb_bgm_enabled', '1') !== '0';
+    let sfxEnabled = safeGet('sb_sfx_enabled', '1') !== '0';
 
     // BGM State
     let isBgmPlaying = false;
@@ -433,9 +456,12 @@
     }
 
     function toggleBGM() {
-        getAudioContext();
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume();
+        }
         bgmEnabled = !bgmEnabled;
-        localStorage.setItem('sb_bgm_enabled', bgmEnabled ? '1' : '0');
+        safeSet('sb_bgm_enabled', bgmEnabled ? '1' : '0');
         if (bgmEnabled) {
             startBGM();
         } else {
@@ -443,12 +469,16 @@
         }
         updateUI();
         playClick();
+        console.log("🎵 BGM toggled:", bgmEnabled ? "ON" : "OFF");
     }
 
     function toggleSFX() {
-        getAudioContext();
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume();
+        }
         sfxEnabled = !sfxEnabled;
-        localStorage.setItem('sb_sfx_enabled', sfxEnabled ? '1' : '0');
+        safeSet('sb_sfx_enabled', sfxEnabled ? '1' : '0');
         if (masterSfxGain && audioCtx) {
             masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.22 : 0.0, audioCtx.currentTime);
         }
@@ -456,27 +486,33 @@
         if (sfxEnabled) {
             playClick();
         }
+        console.log("🔊 SFX toggled:", sfxEnabled ? "ON" : "OFF");
     }
 
     // Browser Autoplay Policy: resume AudioContext and start BGM on first user touch/click/key
     function handleFirstUserGesture() {
         const ctx = getAudioContext();
-        if (ctx && ctx.state === 'suspended') {
-            ctx.resume();
+        if (ctx) {
+            if (ctx.state === 'suspended') {
+                ctx.resume().then(() => {
+                    if (bgmEnabled && !isBgmPlaying) {
+                        startBGM();
+                    }
+                }).catch(() => {});
+            } else if (bgmEnabled && !isBgmPlaying) {
+                startBGM();
+            }
         }
-        if (bgmEnabled && !isBgmPlaying) {
-            startBGM();
-        }
-        window.removeEventListener('click', handleFirstUserGesture);
-        window.removeEventListener('keydown', handleFirstUserGesture);
-        window.removeEventListener('touchstart', handleFirstUserGesture);
     }
 
-    window.addEventListener('click', handleFirstUserGesture, { passive: true });
-    window.addEventListener('keydown', handleFirstUserGesture, { passive: true });
-    window.addEventListener('touchstart', handleFirstUserGesture, { passive: true });
+    ['click', 'pointerdown', 'keydown', 'touchstart'].forEach(evt => {
+        window.addEventListener(evt, handleFirstUserGesture, { passive: true });
+        document.addEventListener(evt, handleFirstUserGesture, { passive: true });
+    });
 
     document.addEventListener('DOMContentLoaded', updateUI);
+
+    console.log("🔊 Stickman Battle Audio Engine loaded. BGM:", bgmEnabled ? "ON" : "OFF", "| SFX:", sfxEnabled ? "ON" : "OFF");
 
     // Global Audio Engine API
     window.AudioEngine = {
@@ -495,3 +531,4 @@
         isSFXEnabled: () => sfxEnabled
     };
 })();
+

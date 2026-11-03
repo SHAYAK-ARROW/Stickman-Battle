@@ -183,6 +183,10 @@ def get_player_for_token(room, token):
 def lobby_menu():
     return render_template('index.html')
 
+@app.route('/favicon.ico')
+def favicon():
+    return ('', 204)
+
 @app.route('/info')
 def game_info():
     info_data = {}
