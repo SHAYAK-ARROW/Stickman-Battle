@@ -903,6 +903,16 @@ function run() {
         return;
     }
     const code = document.getElementById("ide").value;
+    if (!code || !code.trim()) {
+        if (typeof showToast === 'function') {
+            showToast({
+                title: "Code Editor Empty",
+                message: "Please write or keep the Python combat strategy before clicking Run!",
+                type: "warning"
+            });
+        }
+        return;
+    }
     if (runBtn) {
         runBtn.innerText = "Running...";
         runBtn.style.opacity = "0.75";
