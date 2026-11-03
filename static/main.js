@@ -1,14 +1,17 @@
 function start_game() {
-    // 6-character er unique random room id toiri korlam ebong player=1 hisebe navigate korlam
-    const roomId = 'room_' + Math.random().toString(36).substring(2, 8);
-    window.location.href = "/room/" + roomId + "?player=1";
+    // Server creates the private room and issues the Player 1 invite token.
+    window.location.href = "/player1";
 }
 
 function join_custom_room() {
     const input = document.getElementById("room_input");
-    if (input && input.value.trim()) {
-        window.location.href = "/room/" + input.value.trim();
+    const value = input ? input.value.trim() : "";
+    if (value && value.includes("?token=")) {
+        // Only private invite links carry a valid player token.
+        window.location.href = value;
+    } else if (value) {
+        alert("Room code alone is not enough. Player 1-er private invite link use koro.");
     } else {
-        alert("Room Code likhe Join koro!");
+        alert("Player 1-er private invite link paste koro!");
     }
 }

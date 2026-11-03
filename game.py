@@ -8,6 +8,7 @@ import time
 import threading
 import re
 import logging
+import secrets
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,6 +49,10 @@ class GameRoom:
         self.is_match_active = False
         self.pending_disconnects = {}
         self.last_activity = time.time()
+        self.player_tokens = {
+            1: secrets.token_urlsafe(24),
+            2: secrets.token_urlsafe(24),
+        }
         self.engine.add_player(self.player1, self.player2)
 
     def reset_match(self):
@@ -135,33 +140,62 @@ def get_or_create_room(room_id):
         logger.info(f"Created new room: [{room_id}] (Active rooms: {len(rooms)})")
     return rooms[room_id]
 
+def create_private_room():
+    """Create a room with unpredictable ID and per-player invite tokens."""
+    while True:
+        room_id = f"room_{secrets.token_hex(6)}"
+        if room_id not in rooms:
+            room = get_or_create_room(room_id)
+            if room is not None:
+                return room
+            return None
+
+def get_player_for_token(room, token):
+    if not room or not token:
+        return None
+    for player_id, player_token in room.player_tokens.items():
+        if secrets.compare_digest(player_token, token):
+            return player_id
+    return None
+
 @app.route('/')
 def lobby_menu():
     return render_template('index.html')
 
 @app.route('/player1')
 def host_game():
-    return render_template('game.html', player_id=1, room_id='default')
+    room = create_private_room()
+    if room is None:
+        abort(503, "Server room limit reached. Please try again later.")
+    return redirect(url_for('join_room_game', room_id=room.room_id,
+                            token=room.player_tokens[1]))
 
 @app.route('/player2')
 def join_game():
-    return render_template('game.html', player_id=2, room_id='default')
+    abort(403, "Player 2 must use the private invite link from Player 1.")
 
 @app.route('/room/<room_id>')
 def join_room_game(room_id):
     if not ROOM_ID_PATTERN.match(room_id):
         abort(400, "Invalid Room ID format. Use 3-24 alphanumeric characters, underscores, or hyphens.")
-    room = get_or_create_room(room_id)
+    room = rooms.get(room_id)
+    token = request.args.get('token', '')
+
+    # Existing rooms require a valid private token; player query parameters are ignored.
     if room is None:
-        abort(503, "Server room limit reached. Please try again later.")
-    
-    req_player = request.args.get('player')
-    if req_player in ['1', '2']:
-        assigned_player = int(req_player)
-        return render_template('game.html', room_id=room_id, player_id=assigned_player)
-    
-    assigned_player = 1 if 1 not in room.connected_players else 2
-    return redirect(f"/room/{room_id}?player={assigned_player}")
+        abort(403, "Unknown room. Create a room from the lobby or use a private invite link.")
+
+    assigned_player = get_player_for_token(room, token)
+    if assigned_player is None:
+        abort(403, "This room requires a valid private invite link.")
+
+    return render_template(
+        'game.html',
+        room_id=room_id,
+        player_id=assigned_player,
+        room_token=token,
+        player2_token=room.player_tokens[2],
+    )
 
 # --- SOCKET.IO EVENT HANDLERS WITH STRICT AUTHENTICATION ---
 
@@ -171,23 +205,29 @@ def handle_player_join(data):
         logger.warning(f"Malformed player_joined payload from {request.sid}")
         return
     
-    room_id = str(data.get('room_id', 'default')).strip()
+    room_id = str(data.get('room_id', '')).strip()
     if not ROOM_ID_PATTERN.match(room_id):
         logger.warning(f"Rejected join with invalid room_id: '{room_id}'")
         return
         
-    try:
-        player_id = int(data.get('player_id'))
-        if player_id not in (1, 2):
-            raise ValueError()
-    except (TypeError, ValueError):
-        logger.warning(f"Rejected join with invalid player_id: {data.get('player_id')}")
+    token = str(data.get('token', '')).strip()
+    room = rooms.get(room_id)
+    player_id = get_player_for_token(room, token)
+    if player_id is None:
+        logger.warning(f"Rejected join with invalid room token from {request.sid}")
         return
-        
-    room = get_or_create_room(room_id)
-    if room is None:
+
+    # A player slot can have one active socket. Reconnects are allowed after
+    # the previous socket has left and entered the grace-period map.
+    occupied_by = next(
+        (sid for sid, pid in room.sid_to_player.items()
+         if pid == player_id and sid != request.sid),
+        None,
+    )
+    if occupied_by is not None:
+        logger.warning(f"Rejected duplicate Player {player_id} slot claim in room {room_id}")
         return
-        
+
     join_room(room_id)
     # Register SID authentication binding
     sid_auth[request.sid] = {'room_id': room_id, 'player_id': player_id}

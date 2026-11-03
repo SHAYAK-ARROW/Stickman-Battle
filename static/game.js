@@ -26,8 +26,8 @@ socket.on('connect', () => {
     console.log("Connected to server! Room:", typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default');
     updateConnectionStatus('connected');
     socket.emit('player_joined', { 
-        player_id: MY_PLAYER_ID,
-        room_id: typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default'
+        room_id: ROOM_ID,
+        token: ROOM_TOKEN
     });
 });
 

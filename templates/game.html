@@ -198,9 +198,11 @@
 </div>
 <script>
     const MY_PLAYER_ID = {{ player_id }};
-    const ROOM_ID = "{{ room_id if room_id is defined and room_id else 'default' }}";
+    const ROOM_ID = {{ room_id|tojson }};
+    const ROOM_TOKEN = {{ room_token|tojson }};
+    const PLAYER2_TOKEN = {{ player2_token|tojson }};
 
-const p2_url = ROOM_ID !== 'default' ? (window.location.origin + "/room/" + ROOM_ID + "?player=2") : (window.location.origin + "/player2");
+const p2_url = window.location.origin + "/room/" + encodeURIComponent(ROOM_ID) + "?token=" + encodeURIComponent(PLAYER2_TOKEN);
 
 const linkElem = document.getElementById('p2_link');
 if (linkElem) linkElem.innerText = p2_url;
