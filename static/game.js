@@ -201,7 +201,7 @@ function draw_on_camvas(data) {
         
         ctx.stroke(); // Shorir aaka sesh
         
-        // --- SWORD (Dynamic length & stances) ---
+        // --- STYLIZED SWORD (Crossguard, grip, pommel & tapered blade) ---
         let has_sword = player.has_sword !== undefined ? player.has_sword : true;
         let swordLen = player.sword_length || 50;
         if (has_sword && player.sword_angle !== undefined) {
@@ -210,29 +210,86 @@ function draw_on_camvas(data) {
             let rad = ((player.sword_angle + 45) * dir) * (Math.PI / 180);
             ctx.rotate(rad);
             
-            if (player.is_heavy) {
-                ctx.strokeStyle = "#ff4500"; // Heavy attack glowing fiery red-orange blade
-                ctx.shadowColor = "#ff4500";
-                ctx.shadowBlur = 14;
-                ctx.lineWidth = 7;
-                swordLen += 10;
-            } else if (player.is_swing) {
-                ctx.strokeStyle = "#00f0ff"; // Swift horizontal swing cyan glow
-                ctx.shadowColor = "#00f0ff";
-                ctx.shadowBlur = 12;
-                ctx.lineWidth = 5;
-            } else {
-                ctx.strokeStyle = "white";
-                ctx.lineWidth = 5;
-            }
+            const isHeavy = player.is_heavy;
+            const isSwing = player.is_swing;
+            const actualLen = isHeavy ? swordLen + 10 : swordLen;
+
+            // 1. Grip / Handle (extends backward into hand)
+            ctx.save();
+            ctx.strokeStyle = "#475569";
+            ctx.lineWidth = 3.5;
+            ctx.lineCap = "round";
             ctx.beginPath();
-            ctx.moveTo(0, 0); 
-            ctx.lineTo(0, -swordLen);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, 11);
             ctx.stroke();
+
+            // Pommel (end of hilt)
+            ctx.fillStyle = isHeavy ? "#f59e0b" : "#cbd5e1";
+            ctx.beginPath();
+            ctx.arc(0, 12, 2.8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // 2. Crossguard (Hilt bar perpendicular to blade)
+            ctx.save();
+            ctx.strokeStyle = isHeavy ? "#f59e0b" : (isSwing ? "#38bdf8" : "#94a3b8");
+            ctx.lineWidth = 3.2;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(-8, 0);
+            ctx.lineTo(8, 0);
+            ctx.stroke();
+            ctx.restore();
+
+            // 3. Blade (Tapered double-edge steel with pointed tip)
+            ctx.save();
+            let bladeStroke = "#ffffff";
+            let bladeFill = "rgba(226, 232, 240, 0.9)";
+            if (isHeavy) {
+                bladeStroke = "#ff4500";
+                bladeFill = "#f97316";
+                ctx.shadowColor = "#ff4500";
+                ctx.shadowBlur = 16;
+            } else if (isSwing) {
+                bladeStroke = "#00f0ff";
+                bladeFill = "#38bdf8";
+                ctx.shadowColor = "#00f0ff";
+                ctx.shadowBlur = 14;
+            } else {
+                bladeStroke = "#ffffff";
+                bladeFill = "#e2e8f0";
+                ctx.shadowColor = "rgba(255, 255, 255, 0.6)";
+                ctx.shadowBlur = 6;
+            }
+
+            // Outer sharp blade polygon
+            ctx.beginPath();
+            ctx.moveTo(-3, 0);
+            ctx.lineTo(-2.2, -actualLen + 9);
+            ctx.lineTo(0, -actualLen); // Sharp pointed tip!
+            ctx.lineTo(2.2, -actualLen + 9);
+            ctx.lineTo(3, 0);
+            ctx.closePath();
+            ctx.fillStyle = bladeFill;
+            ctx.fill();
+            ctx.lineWidth = 1.2;
+            ctx.strokeStyle = bladeStroke;
+            ctx.stroke();
+
+            // Center spine / fuller highlight line
+            ctx.beginPath();
+            ctx.strokeStyle = isHeavy ? "#fef08a" : (isSwing ? "#e0f2fe" : "#ffffff");
+            ctx.lineWidth = 1;
+            ctx.moveTo(0, -1);
+            ctx.lineTo(0, -actualLen + 7);
+            ctx.stroke();
+
+            ctx.restore();
             ctx.restore();
         }
 
-        // --- SHIELD (Dynamic length) ---
+        // --- STYLIZED DEFENSIVE HEATER SHIELD (Dynamic length & active glow) ---
         ctx.save();
         ctx.translate(shield_hand_x, shield_hand_y);
         if (player.shield_angle !== undefined) {
@@ -242,96 +299,160 @@ function draw_on_camvas(data) {
 
         let shieldLen = player.shield_length || 40;
         let halfH = shieldLen / 2;
-        ctx.strokeStyle = "yellow";
-        ctx.lineWidth = 7;
+        let isBlocking = player.is_blocking || false;
+        let forward = 8 * dir;
+
+        // 1. If actively blocking, draw an outer luminous energy barrier shimmer
+        if (isBlocking) {
+            ctx.save();
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.85)";
+            ctx.shadowColor = "#38bdf8";
+            ctx.shadowBlur = 18;
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.moveTo(forward + (3 * dir), -halfH - 5);
+            ctx.quadraticCurveTo(forward + (15 * dir), 0, forward + (3 * dir), halfH + 5);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 2. Shield Body (Curved layered heater plate)
+        ctx.save();
         ctx.beginPath();
-        ctx.moveTo(-5 * dir, -halfH);
-        ctx.lineTo(-5 * dir, halfH);
+        ctx.moveTo(0, -halfH);
+        ctx.quadraticCurveTo(forward + (4 * dir), 0, 0, halfH);
+        ctx.quadraticCurveTo(-4 * dir, 0, 0, -halfH);
+        ctx.closePath();
+
+        // Plate fill: dark steel with slight translucency
+        ctx.fillStyle = isBlocking ? "rgba(30, 41, 59, 0.95)" : "rgba(22, 23, 29, 0.95)";
+        ctx.fill();
+
+        // Glowing rim border: vibrant gold when normal, electric cyan when actively blocking
+        ctx.strokeStyle = isBlocking ? "#38bdf8" : "#f59e0b";
+        ctx.lineWidth = 2.4;
+        ctx.shadowColor = isBlocking ? "#38bdf8" : "rgba(245, 158, 11, 0.65)";
+        ctx.shadowBlur = isBlocking ? 12 : 5;
         ctx.stroke();
+
+        // 3. Center Boss / Grip Stud
+        ctx.beginPath();
+        ctx.arc(forward * 0.3, 0, 3, 0, Math.PI * 2);
+        ctx.fillStyle = isBlocking ? "#38bdf8" : "#fbbf24";
+        ctx.shadowBlur = isBlocking ? 8 : 4;
+        ctx.fill();
+
+        // 4. Subtle metallic rim studs at top and bottom
+        ctx.beginPath();
+        ctx.arc(0, -halfH + 3, 1.6, 0, Math.PI * 2);
+        ctx.arc(0, halfH - 3, 1.6, 0, Math.PI * 2);
+        ctx.fillStyle = "#cbd5e1";
+        ctx.shadowBlur = 0;
+        ctx.fill();
+
+        ctx.restore();
         ctx.restore();
 
-        // --- SPEECH BUBBLE ---
+        // --- SPEECH BUBBLE WITH PLAYER IDENTITY ---
         if (player.speech && player.speech.trim() !== "") {
             ctx.save();
-            ctx.font = "bold 13px 'Consolas', 'Courier New', monospace";
+            ctx.font = "600 12px 'DM Sans', -apple-system, sans-serif";
             let text = player.speech;
             let textMetrics = ctx.measureText(text);
-            let bubbleWidth = Math.max(textMetrics.width + 18, 45);
-            let bubbleHeight = 26;
+            let bubbleWidth = Math.max(textMetrics.width + 26, 54);
+            let bubbleHeight = 28;
             
-            let bubbleY = y - 72 + crouchY;
+            let bubbleY = y - 76 + crouchY;
             let bubbleX = dir === 1 ? (x + 10) : (x - 10 - bubbleWidth);
             
             if (bubbleX < 10) bubbleX = 10;
             if (bubbleX + bubbleWidth > canvas.width - 10) bubbleX = canvas.width - bubbleWidth - 10;
             if (bubbleY < 10) bubbleY = 10;
             
-            ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
-            ctx.strokeStyle = "#111";
-            ctx.lineWidth = 2;
+            const isP1 = (color === "#ff5c5c" || color === "red");
+            const playerAccent = isP1 ? "#ff5c5c" : "#38bdf8";
+            const borderTint = isP1 ? "rgba(255, 92, 92, 0.45)" : "rgba(56, 189, 248, 0.45)";
+
+            // Bubble body
+            ctx.fillStyle = "rgba(18, 19, 25, 0.96)";
+            ctx.strokeStyle = borderTint;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
             if (ctx.roundRect) {
-                ctx.roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 6);
+                ctx.roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 8);
             } else {
                 ctx.rect(bubbleX, bubbleY, bubbleWidth, bubbleHeight);
             }
             ctx.fill();
             ctx.stroke();
             
+            // Pointer tail
             ctx.beginPath();
-            let tailBaseX = Math.min(Math.max(x + (dir * 10), bubbleX + 10), bubbleX + bubbleWidth - 10);
+            let tailBaseX = Math.min(Math.max(x + (dir * 10), bubbleX + 12), bubbleX + bubbleWidth - 12);
             let tailTipX = x + (dir * 5);
-            let tailTipY = Math.min(bubbleY + bubbleHeight + 8, y - 35 + crouchY);
+            let tailTipY = Math.min(bubbleY + bubbleHeight + 7, y - 35 + crouchY);
             ctx.moveTo(tailBaseX - 5, bubbleY + bubbleHeight);
             ctx.lineTo(tailTipX, tailTipY);
             ctx.lineTo(tailBaseX + 5, bubbleY + bubbleHeight);
             ctx.closePath();
-            ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+            ctx.fillStyle = "rgba(18, 19, 25, 0.96)";
             ctx.fill();
-            ctx.stroke();
 
+            // Small speaker indicator dot
             ctx.beginPath();
-            ctx.moveTo(tailBaseX - 4, bubbleY + bubbleHeight);
-            ctx.lineTo(tailBaseX + 4, bubbleY + bubbleHeight);
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
-            ctx.lineWidth = 3;
-            ctx.stroke();
+            ctx.arc(bubbleX + 10, bubbleY + (bubbleHeight / 2), 3, 0, Math.PI * 2);
+            ctx.fillStyle = playerAccent;
+            ctx.fill();
             
-            ctx.fillStyle = "#111";
-            ctx.textAlign = "center";
+            // Speech text
+            ctx.fillStyle = "#f1f0f5";
+            ctx.textAlign = "left";
             ctx.textBaseline = "middle";
-            ctx.fillText(text, bubbleX + (bubbleWidth / 2), bubbleY + (bubbleHeight / 2) + 1);
+            ctx.fillText(text, bubbleX + 18, bubbleY + (bubbleHeight / 2) + 1);
             ctx.restore();
         }
     }
 
-    // Dujon player draw kora holo
-    draw_player(data.player1, "red");
-    draw_player(data.player2, "blue");
+    // Two players drawn with clear, accessible modern dark palette
+    draw_player(data.player1, "#ff5c5c");
+    draw_player(data.player2, "#38bdf8");
 
-    // Fixed HUD health bars keep health readable without crowding the fighters.
+    // Fixed HUD health bars - clean, minimal style.
     function draw_health_bar(player, label, x, align) {
         const maxHealth = player.max_health || 10;
         const health = Math.max(0, Math.min(maxHealth, player.heart || 0));
-        const width = 150;
-        const height = 12;
+        const width = 140;
+        const height = 6;
         const left = align === "right" ? x - width : x;
         const ratio = health / maxHealth;
-        const color = ratio > 0.5 ? "#4ade80" : ratio > 0.25 ? "#facc15" : "#ef4444";
+        const color = ratio > 0.5 ? "#6ec69a" : ratio > 0.25 ? "#d4b84a" : "#e05a5a";
 
         ctx.save();
         ctx.textAlign = align === "right" ? "right" : "left";
         ctx.textBaseline = "alphabetic";
-        ctx.font = "bold 13px Arial";
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(`${label}  HP ${health}/${maxHealth}`, align === "right" ? x : x, 24);
-        ctx.fillStyle = "#333333";
-        ctx.fillRect(left, 30, width, height);
-        ctx.fillStyle = color;
-        ctx.fillRect(left, 30, width * ratio, height);
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(left, 30, width, height);
+        ctx.font = "600 11px 'Segoe UI', Arial, sans-serif";
+        const tagColor = label === "P1" ? "#ff5c5c" : "#38bdf8";
+        ctx.font = "700 11px 'Segoe UI', Arial, sans-serif";
+        ctx.fillStyle = tagColor;
+        if (align === "right") {
+            ctx.fillText(label, x - 42, 22);
+            ctx.fillStyle = "#8a8b94";
+            ctx.font = "500 11px 'Segoe UI', Arial, sans-serif";
+            ctx.fillText(`${health}/${maxHealth}`, x, 22);
+        } else {
+            ctx.fillText(label, x, 22);
+            ctx.fillStyle = "#8a8b94";
+            ctx.font = "500 11px 'Segoe UI', Arial, sans-serif";
+            ctx.fillText(` ${health}/${maxHealth}`, x + 20, 22);
+        }
+        ctx.fillStyle = "#1e1f26";
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 28, width, height, 3); ctx.fill(); }
+        else { ctx.fillRect(left, 28, width, height); }
+        if (ratio > 0) {
+            ctx.fillStyle = color;
+            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 28, width * ratio, height, 3); ctx.fill(); }
+            else { ctx.fillRect(left, 28, width * ratio, height); }
+        }
         ctx.restore();
     }
     draw_health_bar(data.player1, "P1", 20, "left");
@@ -350,16 +471,44 @@ function draw_on_camvas(data) {
                 ctx.save();
                 ctx.translate(sx, sy);
                 ctx.rotate((st * 28 * Math.PI) / 180);
-                ctx.strokeStyle = "#ffffff";
-                ctx.shadowColor = "#ffffff";
-                ctx.shadowBlur = 12;
-                ctx.lineWidth = 4;
+                
+                // Crossguard
+                ctx.strokeStyle = "#cbd5e1";
+                ctx.lineWidth = 3;
+                ctx.lineCap = "round";
                 ctx.beginPath();
-                ctx.moveTo(-25, 0);
-                ctx.lineTo(25, 0);
-                ctx.moveTo(12, -8);
-                ctx.lineTo(12, 8);
+                ctx.moveTo(-6, 0);
+                ctx.lineTo(6, 0);
                 ctx.stroke();
+
+                // Grip & Pommel
+                ctx.strokeStyle = "#475569";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 10);
+                ctx.stroke();
+                ctx.fillStyle = "#cbd5e1";
+                ctx.beginPath();
+                ctx.arc(0, 11, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Flying Glowing Blade
+                ctx.shadowColor = "#00f0ff";
+                ctx.shadowBlur = 14;
+                ctx.fillStyle = "#f8fafc";
+                ctx.strokeStyle = "#00f0ff";
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(-2.5, 0);
+                ctx.lineTo(-2, -30);
+                ctx.lineTo(0, -38);
+                ctx.lineTo(2, -30);
+                ctx.lineTo(2.5, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
                 ctx.restore();
             } else if (spell.type === 'sin_wave') {
                 ctx.save();
@@ -444,18 +593,47 @@ function draw_on_camvas(data) {
         });
     }
 
-    // Winner Banner
-    ctx.textAlign = "center";
-    ctx.font = "bold 36px Arial";
+    // Winner Banner - clean modern pill
     let is_game_over = false;
+    let winnerText = "";
+    let winnerColor = "";
     if (data.player1 && data.player1.heart <= 0) {
-        ctx.fillStyle = "blue";
-        ctx.fillText("PLAYER 2 WINS! 🏆", canvas.width / 2, 250);
+        winnerText = "PLAYER 2 WINS! 🏆";
+        winnerColor = "#38bdf8";
         is_game_over = true;
     } else if (data.player2 && data.player2.heart <= 0) {
-        ctx.fillStyle = "red";
-        ctx.fillText("PLAYER 1 WINS! 🏆", canvas.width / 2, 250);
+        winnerText = "PLAYER 1 WINS! 🏆";
+        winnerColor = "#ff5c5c";
         is_game_over = true;
+    }
+
+    if (is_game_over) {
+        ctx.save();
+        ctx.font = "700 22px 'Space Grotesk', 'Segoe UI', sans-serif";
+        const metrics = ctx.measureText(winnerText);
+        const bannerW = metrics.width + 48;
+        const bannerH = 48;
+        const bannerX = (canvas.width - bannerW) / 2;
+        const bannerY = 220;
+
+        ctx.fillStyle = "rgba(22, 23, 29, 0.94)";
+        ctx.strokeStyle = winnerColor;
+        ctx.lineWidth = 1.5;
+        if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(bannerX, bannerY, bannerW, bannerH, 10);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+            ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
+        }
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = winnerColor;
+        ctx.fillText(winnerText, canvas.width / 2, bannerY + bannerH / 2);
+        ctx.restore();
     }
 
     const restartBtn = document.getElementById('restart_btn');
@@ -473,7 +651,15 @@ function draw_on_camvas(data) {
 function run() {
     const runBtn = document.getElementById("run_btn");
     if (runBtn && runBtn.disabled) {
-        alert("The match is over or Player 2 is not ready. Start a rematch or wait for Player 2.");
+        if (typeof showToast === 'function') {
+            showToast({
+                title: "Player Not Ready",
+                message: "The match is over or Player 2 has not joined yet. Start a rematch or wait for Player 2.",
+                type: "warning"
+            });
+        } else {
+            console.warn("The match is over or Player 2 is not ready.");
+        }
         return;
     }
     let code = document.getElementById("ide").value;
@@ -686,3 +872,25 @@ document.getElementById('input_modal_field')?.addEventListener('keydown', (e) =>
         sendInputReply();
     }
 });
+
+
+// --- Commands Dialog Live Search Filter ---
+function filterCommands(query) {
+    const table = document.getElementById("commands_table");
+    if (!table) return;
+    const q = query.toLowerCase().trim();
+    const rows = table.querySelectorAll("tr");
+    rows.forEach((row, idx) => {
+        if (idx === 0) return; // Skip table header
+        const text = row.innerText.toLowerCase();
+        row.style.display = (!q || text.includes(q)) ? "" : "none";
+    });
+}
+
+
+// Quick banter chip helper for dialogue
+function sendQuickReply(text) {
+    const field = document.getElementById('input_modal_field');
+    if (field) field.value = text;
+    sendInputReply();
+}

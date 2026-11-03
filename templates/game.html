@@ -1,268 +1,350 @@
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-<title>Stickman Battle</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101114">
+    <title>Stickman Battle</title>
+    <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 
-<body>
+<body class="game-page">
+<main class="game-shell">
+<header class="site-header">
+    <a class="brand" href="/" aria-label="Stickman Battle home">
+        <span class="brand-mark" aria-hidden="true">SB</span>
+        <div class="brand-text-wrap">
+            <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v1.0</span></span>
+            <span class="brand-subtitle">Made by Arrows Development Hub</span>
+        </div>
+    </a>
+    <span class="header-note">ARROWS DEVELOPMENT HUB</span>
+</header>
 
-<div><h1>Stick Man Battle</h1><br>
-<h2>Made by Arrows Development Hub</h2>
-</div>
-<div id="wait_screen">
-    <h2>Waiting for Player 2 to join...</h2>
-    <p>Player 2 Link: <b id="p2_link"></b></p>
-    <p>Share this invite link with Player 2, or share the room code to let them join.</p>
-    <button onclick="copy_link()">Copy Link</button>
-</div>
-
-<div style="display: flex; gap:20px; justify-content: center; flex-wrap: wrap;">
-<div style="position: relative; display: inline-block;">
-    <!-- Live Connection Status Badge -->
-    <div id="connection_status" style="position: absolute; top: 12px; left: 14px; background: rgba(20, 20, 20, 0.75); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 4px 10px; font-family: 'Consolas', monospace; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 6px; z-index: 60; pointer-events: none; backdrop-filter: blur(4px);">
-        <span id="status_dot" style="width: 8px; height: 8px; border-radius: 50%; background: #4ade80; display: inline-block;"></span>
-        <span id="status_text" style="color: #4ade80;">Online</span>
+<section id="wait_screen" class="invite-card">
+    <div class="invite-copy">
+        <p class="eyebrow">ROOM INVITE</p>
+        <h1>Bring a friend into the arena</h1>
+        <p>Share this private invite link, or send them the room code so they can join manually.</p>
     </div>
-    <canvas id="gui_screen" width="800" height="600" style="border:2px solid #000000; background-color: #000000; max-width: 100%; height: auto;"></canvas>
+    <div class="invite-link-row">
+        <div class="invite-link-box"><span class="invite-link-label">PLAYER 2 LINK</span><b id="p2_link"></b></div>
+        <button id="copy_btn" class="button button-secondary" onclick="copy_link()">Copy invite link</button>
+    </div>
+    <p class="invite-hint">Waiting for Player 2 to join…</p>
+</section>
+
+<section id="battle_layout" aria-label="Battle arena and code editor">
+<div id="battle_stage" class="panel arena-panel">
+    <div class="panel-heading">
+        <div><p class="eyebrow">LIVE MATCH</p><h2>Battle arena</h2></div>
+        <div id="connection_status" class="connection-status" role="status" aria-live="polite">
+            <span id="status_dot" class="status-dot"></span>
+            <span id="status_text">Online</span>
+        </div>
+    </div>
+    <div class="arena-wrap">
+    <!-- Live Connection Status Badge -->
+    <canvas id="gui_screen" width="800" height="600" aria-label="Stickman Battle game arena"></canvas>
     
     <!-- Floating Opponent Input Modal (Model 1 Challenge Prompt) -->
-    <div id="opponent_input_modal" style="display: none; position: absolute; top: 30px; left: 50%; transform: translateX(-50%); background: #252526; color: #fff; border: 2px solid #007acc; border-radius: 8px; padding: 12px 16px; box-shadow: 0 6px 20px rgba(0,0,0,0.8); z-index: 100; width: 330px; max-width: 90%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span id="input_modal_title" style="font-weight: bold; font-size: 13px; color: #4ec9b0;">Question from your opponent</span>
-            <button id="input_modal_close" style="background: transparent; border: none; color: #aaa; font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;" title="Ignore and close">&times;</button>
+    <div id="opponent_input_modal" class="opponent-modal" style="display: none;">
+        <div class="opponent-modal-heading">
+            <span id="input_modal_title">Question from your opponent</span>
+            <button id="input_modal_close" class="icon-button" title="Ignore and close">&times;</button>
         </div>
-        <div id="input_modal_prompt" style="font-size: 14px; margin-bottom: 10px; color: #f1f1f1; font-weight: 500; word-break: break-word;">...</div>
-        <div style="display: flex; gap: 8px;">
-            <input type="text" id="input_modal_field" maxlength="40" placeholder="Type your reply..." style="flex: 1; background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 4px; padding: 6px 10px; color: #fff; font-size: 13px; outline: none;">
-            <button id="input_modal_send" style="background: #0e639c; color: white; border: none; border-radius: 4px; padding: 6px 14px; font-size: 13px; font-weight: bold; cursor: pointer;">Send</button>
+        <div id="input_modal_prompt" class="opponent-modal-prompt">...</div>
+        <div class="quick-banter-row">
+            <button type="button" class="banter-chip" onclick="sendQuickReply('⚔️ Bring it on!')">⚔️ Bring it on!</button>
+            <button type="button" class="banter-chip" onclick="sendQuickReply('🛡️ Never surrender!')">🛡️ Never!</button>
+            <button type="button" class="banter-chip" onclick="sendQuickReply('🔥 Watch this move!')">🔥 Watch this!</button>
+            <button type="button" class="banter-chip" onclick="sendQuickReply('GG')">GG</button>
+        </div>
+        <div class="opponent-reply-row">
+            <input type="text" id="input_modal_field" maxlength="40" placeholder="Type your reply...">
+            <button id="input_modal_send" class="button button-primary">Send</button>
         </div>
     </div>
 </div>
+</div>
 
-
-<div id="code_eddior" style="max-width: 100%;">
-    <div style="display: flex; border: 2px solid #333; background: #1e1e1e; border-radius: 6px; overflow: hidden; width: 560px; max-width: 100%; height: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+<div id="code_eddior" class="panel editor-panel">
+    <div class="panel-heading editor-heading">
+        <div><p class="eyebrow">YOUR STRATEGY</p><h2>Code editor</h2></div>
+        <span class="language-pill">Python</span>
+    </div>
+    <div class="editor-frame">
         <!-- Line Numbers Column -->
-        <div id="line_numbers" style="width: 44px; background: #181818; color: #858585; text-align: right; padding: 10px 8px 10px 0; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 20px; user-select: none; border-right: 1px solid #333; overflow: hidden; box-sizing: border-box;">1</div>
+        <div id="line_numbers">1</div>
         <!-- Editor Content Area with VS Code style Indent Guides Backdrop -->
-        <div style="position: relative; flex: 1; height: 100%; overflow: hidden; background: #1e1e1e;">
-            <div id="indent_guides" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 20px; padding: 10px; margin: 0; box-sizing: border-box; white-space: pre;"></div>
-            <textarea id="ide" spellcheck="false" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; outline: none; background: transparent; color: #d4d4d4; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; line-height: 20px; padding: 10px; margin: 0; resize: none; overflow: auto; white-space: pre; tab-size: 4; box-sizing: border-box; caret-color: #fff;"></textarea>
+        <div class="editor-content">
+            <div id="indent_guides"></div>
+            <textarea id="ide" spellcheck="false" aria-label="Python battle strategy editor" placeholder="# Write your combat strategy here in Python:
+# Available commands: move(step), jump(power), attack(), block(), dash(step), swing(), sin_wave()
+# Sensors: get_enemy_distance(), is_enemy_attacking(), get_my_health()
+
+if get_enemy_distance() > 100:
+    dash(3)
+else:
+    attack()"></textarea>
         </div>
     </div>
-    <div style="margin-top: 10px; display: flex; gap: 8px;">
-        <button id="run_btn" onclick="run()" disabled>Run (Waiting for Player...)</button>
-        <button onclick="open_commands_dialog()">Commands List</button>
-        <button id="restart_btn" onclick="request_restart()" style="display: none;">Play Again / Rematch</button>
+    <div class="editor-toolbar">
+        <button id="run_btn" class="button button-primary" onclick="run()" disabled>Run (Waiting for Player...)</button>
+        <button class="button button-secondary" onclick="open_commands_dialog()">Commands manual</button>
+        <button id="restart_btn" class="button button-secondary" onclick="request_restart()" style="display: none;">Play again</button>
     </div>
 </div>
+</section>
 
 <!-- HTML5 Native Popup Dialog -->
-<dialog id="commands_dialog" style="max-height: 85vh; overflow-y: auto; padding: 16px; border: 2px solid #333; border-radius: 8px; background: #fff;">
-    <h3>Available Battle Commands Manual</h3>
-    <button onclick="close_commands_dialog()" style="padding: 6px 12px; cursor: pointer; margin-bottom: 12px;">Close</button>
-    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; font-family: 'Consolas', monospace; font-size: 13px;">
-        <tr style="background: #f0f0f0;">
-            <th>Category</th>
-            <th>Command</th>
-            <th>Description</th>
-            <th>Example</th>
-        </tr>
-        <tr>
-            <td rowspan="8"><b>Movement & Defense</b></td>
-            <td>move(step)</td>
-            <td>Walk forward</td>
-            <td>move(2)</td>
-        </tr>
-        <tr>
-            <td>run(step)</td>
-            <td>Run forward</td>
-            <td>run(3)</td>
-        </tr>
-        <tr>
-            <td>dash(step)</td>
-            <td>Dash forward quickly</td>
-            <td>dash(4)</td>
-        </tr>
-        <tr>
-            <td>dodge(step)</td>
-            <td>Dodge backward to evade an attack</td>
-            <td>dodge(3)</td>
-        </tr>
-        <tr>
-            <td>crouch() / duck()</td>
-            <td>Crouch to evade high sword strikes</td>
-            <td>crouch()</td>
-        </tr>
-        <tr>
-            <td>jump(power)</td>
-            <td>Jump straight up</td>
-            <td>jump(5)</td>
-        </tr>
-        <tr>
-            <td>long_jump(step, power)</td>
-            <td>Jump forward</td>
-            <td>long_jump(3, 5)</td>
-        </tr>
-        <tr>
-            <td>flip()</td>
-            <td>Turn to face the opposite direction</td>
-            <td>flip()</td>
-        </tr>
-        <tr>
-            <td rowspan="11"><b>Weapons & Combat</b></td>
-            <td>attack()</td>
-            <td>Strike with the sword (1 damage)</td>
-            <td>attack()</td>
-        </tr>
-        <tr>
-            <td>heavy_attack()</td>
-            <td>Deliver a heavy strike (2 damage or break a shield)</td>
-            <td>heavy_attack()</td>
-        </tr>
-        <tr>
-            <td>throw_sword()</td>
-            <td>Throw the sword at a distant opponent</td>
-            <td>throw_sword()</td>
-        </tr>
-        <tr>
-            <td>block()</td>
-            <td>Block incoming attacks for 30 frames</td>
-            <td>block()</td>
-        </tr>
-        <tr>
-            <td>swing()</td>
-            <td>Perform a quick horizontal sword slash</td>
-            <td>swing()</td>
-        </tr>
-        <tr>
-            <td>set_sword(length, angle)</td>
-            <td>Set the sword length (30-80 px) and angle</td>
-            <td>set_sword(65, 10)</td>
-        </tr>
-        <tr>
-            <td>set_shield(length, angle)</td>
-            <td>Set the shield length (20-70 px) and guard angle</td>
-            <td>set_shield(50, 35)</td>
-        </tr>
-        <tr>
-            <td>set_right_hand(x, y)</td>
-            <td>Set the right hand coordinates</td>
-            <td>set_right_hand(240, 350)</td>
-        </tr>
-        <tr>
-            <td>set_left_hand(x, y)</td>
-            <td>Set the left hand coordinates</td>
-            <td>set_left_hand(220, 360)</td>
-        </tr>
-        <tr>
-            <td>move_right_hand(dx, dy)</td>
-            <td>Offset the right hand coordinates</td>
-            <td>move_right_hand(5, -10)</td>
-        </tr>
-        <tr>
-            <td>move_left_hand(dx, dy)</td>
-            <td>Offset the left hand coordinates</td>
-            <td>move_left_hand(-5, -10)</td>
-        </tr>
-        <tr>
-            <td rowspan="6"><b>Trigonometric Magic Spells</b></td>
-            <td>sin_wave(power=1)</td>
-            <td>Trace a sine curve for up to 2 seconds; power 1-90 scales to intensity 1-10 and damage</td>
-            <td>sin_wave(45)</td>
-        </tr>
-        <tr>
-            <td>cos_wave(power=1)</td>
-            <td>Trace a cosine curve for up to 2 seconds; power 1-90 scales to intensity 1-10 and damage</td>
-            <td>cos_wave(45)</td>
-        </tr>
-        <tr>
-            <td>tan_spike(power=1)</td>
-            <td>Trace a clipped tangent graph rising from the ground; power scales size and damage</td>
-            <td>tan_spike(45)</td>
-        </tr>
-        <tr>
-            <td>sec_barrier(power=1)</td>
-            <td>Create a secant-curve force field in front; power 1-90 scales intensity and duration</td>
-            <td>sec_barrier(45)</td>
-        </tr>
-        <tr>
-            <td>cosec_dome(power=1)</td>
-            <td>Create a cosecant-curve force field in front; power 1-90 scales intensity and duration</td>
-            <td>cosec_dome(45)</td>
-        </tr>
-        <tr>
-            <td>cot_wall(power=1)</td>
-            <td>Draw a bounded cotangent-curve wall that knocks back; power scales size and damage</td>
-            <td>cot_wall(45)</td>
-        </tr>
-        <tr>
-            <td rowspan="6"><b>Math Spell Controls</b></td>
-            <td>math.sin(power)</td>
-            <td>Cast a sine-wave attack. Input power 1-90 is scaled to intensity 1-10. Use math.sin_value(x) for a radian calculation.</td>
-            <td>import math<br>math.sin(45)</td>
-        </tr>
-        <tr>
-            <td>math.cos(power)</td>
-            <td>Cast a cosine-wave attack; input power 1-90 scales to intensity 1-10.</td>
-            <td>math.cos(45)</td>
-        </tr>
-        <tr>
-            <td>math.tan(power)</td>
-            <td>Cast a tangent-spike attack; input power 1-90 scales to intensity 1-10.</td>
-            <td>math.tan(45)</td>
-        </tr>
-        <tr>
-            <td>math.cot(power)</td>
-            <td>Cast a knockback-wall attack; input power 1-90 scales to intensity 1-10.</td>
-            <td>math.cot(45)</td>
-        </tr>
-        <tr>
-            <td>math.sec(power)</td>
-            <td>Cast a front-facing secant defense; input power 1-90 scales intensity and duration.</td>
-            <td>math.sec(45)</td>
-        </tr>
-        <tr>
-            <td>math.cosec(power)</td>
-            <td>Cast a front-facing cosecant defense; input power 1-90 scales intensity and duration.</td>
-            <td>math.cosec(45)</td>
-        </tr>
-        <tr>
-            <td rowspan="4"><b>Sensors & Intel</b></td>
-            <td>get_enemy_distance()</td>
-            <td>Returns the distance to the opponent in pixels</td>
-            <td>if get_enemy_distance() < 120:</td>
-        </tr>
-        <tr>
-            <td>is_enemy_attacking()</td>
-            <td>Returns whether the opponent is attacking</td>
-            <td>if is_enemy_attacking(): block()</td>
-        </tr>
-        <tr>
-            <td>get_my_health()</td>
-            <td>Returns your remaining health</td>
-            <td>if get_my_health() <= 2:</td>
-        </tr>
-        <tr>
-            <td>get_enemy_health()</td>
-            <td>Returns the opponent's remaining health</td>
-            <td>if get_enemy_health() == 1:</td>
-        </tr>
-        <tr>
-            <td rowspan="2"><b>Dialogue & Challenge</b></td>
-            <td>print(text)</td>
-            <td>Show a speech bubble above your fighter</td>
-            <td>print("Fight me!")</td>
-        </tr>
-        <tr>
-            <td>input(prompt)</td>
-            <td>Send a question to your opponent</td>
-            <td>input("Do you surrender?")</td>
-        </tr>
-    </table>
+<dialog id="commands_dialog">
+    <div class="dialog-header-row">
+        <h3>Available Battle Commands Manual</h3>
+        <button class="button button-secondary dialog-close" onclick="close_commands_dialog()">Close</button>
+    </div>
+    <div class="dialog-search-row">
+        <input type="text" id="command_search" placeholder="Type to filter commands (e.g. dash, sword, sin, health)..." oninput="filterCommands(this.value)" autocomplete="off">
+    </div>
+    <div class="manual-table-wrap"><table id="commands_table">
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Command</th>
+                <th>Description</th>
+                <th>Example</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><span class="category-pill">Movement</span></td>
+                <td><code>move(step)</code></td>
+                <td>Walk forward</td>
+                <td><code>move(2)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill">Movement</span></td>
+                <td><code>run(step)</code></td>
+                <td>Run forward</td>
+                <td><code>run(3)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill">Movement</span></td>
+                <td><code>dash(step)</code></td>
+                <td>Dash forward quickly</td>
+                <td><code>dash(4)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill">Movement</span></td>
+                <td><code>dodge(step)</code></td>
+                <td>Dodge backward to evade an attack</td>
+                <td><code>dodge(3)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill">Movement</span></td>
+                <td><code>crouch()</code> / <code>duck()</code></td>
+                <td>Crouch to evade high sword strikes</td>
+                <td><code>crouch()</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill">Movement</span></td>
+                <td><code>jump(power)</code></td>
+                <td>Jump straight up</td>
+                <td><code>jump(5)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill">Movement</span></td>
+                <td><code>long_jump(step, power)</code></td>
+                <td>Jump forward</td>
+                <td><code>long_jump(3, 5)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill">Movement</span></td>
+                <td><code>flip()</code></td>
+                <td>Turn to face the opposite direction</td>
+                <td><code>flip()</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>attack()</code></td>
+                <td>Strike with the sword (1 damage)</td>
+                <td><code>attack()</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>heavy_attack()</code></td>
+                <td>Deliver a heavy strike (2 damage or break shield)</td>
+                <td><code>heavy_attack()</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>throw_sword()</code></td>
+                <td>Throw the sword at a distant opponent</td>
+                <td><code>throw_sword()</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>block()</code></td>
+                <td>Block incoming attacks for 30 frames</td>
+                <td><code>block()</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>swing()</code></td>
+                <td>Perform a quick horizontal sword slash</td>
+                <td><code>swing()</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>set_sword(length, angle)</code></td>
+                <td>Set sword length (30-80 px) and angle</td>
+                <td><code>set_sword(65, 10)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>set_shield(length, angle)</code></td>
+                <td>Set shield length (20-70 px) and angle</td>
+                <td><code>set_shield(50, 35)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>set_right_hand(x, y)</code></td>
+                <td>Set the right hand coordinates</td>
+                <td><code>set_right_hand(240, 350)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>set_left_hand(x, y)</code></td>
+                <td>Set the left hand coordinates</td>
+                <td><code>set_left_hand(220, 360)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>move_right_hand(dx, dy)</code></td>
+                <td>Offset the right hand coordinates</td>
+                <td><code>move_right_hand(5, -10)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>move_left_hand(dx, dy)</code></td>
+                <td>Offset the left hand coordinates</td>
+                <td><code>move_left_hand(-5, -10)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill spell">Magic Spells</span></td>
+                <td><code>sin_wave(power=1)</code></td>
+                <td>Sine curve projectile (power 1-90)</td>
+                <td><code>sin_wave(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill spell">Magic Spells</span></td>
+                <td><code>cos_wave(power=1)</code></td>
+                <td>Overhead cosine shockwave (power 1-90)</td>
+                <td><code>cos_wave(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill spell">Magic Spells</span></td>
+                <td><code>tan_spike(power=1)</code></td>
+                <td>Ground tangent energy spike</td>
+                <td><code>tan_spike(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill spell">Magic Spells</span></td>
+                <td><code>sec_barrier(power=1)</code></td>
+                <td>Curved secant force field</td>
+                <td><code>sec_barrier(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill spell">Magic Spells</span></td>
+                <td><code>cosec_dome(power=1)</code></td>
+                <td>Overhead cosecant shield dome</td>
+                <td><code>cosec_dome(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill spell">Magic Spells</span></td>
+                <td><code>cot_wall(power=1)</code></td>
+                <td>Vertical pushback cotangent wall</td>
+                <td><code>cot_wall(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill math">Math API</span></td>
+                <td><code>math.sin(power)</code></td>
+                <td>Cast sine attack via math library</td>
+                <td><code>import math<br>math.sin(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill math">Math API</span></td>
+                <td><code>math.cos(power)</code></td>
+                <td>Cast cosine attack via math library</td>
+                <td><code>math.cos(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill math">Math API</span></td>
+                <td><code>math.tan(power)</code></td>
+                <td>Cast tangent spike via math library</td>
+                <td><code>math.tan(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill math">Math API</span></td>
+                <td><code>math.cot(power)</code></td>
+                <td>Cast knockback wall via math library</td>
+                <td><code>math.cot(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill math">Math API</span></td>
+                <td><code>math.sec(power)</code></td>
+                <td>Cast front secant barrier via math library</td>
+                <td><code>math.sec(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill math">Math API</span></td>
+                <td><code>math.cosec(power)</code></td>
+                <td>Cast cosecant dome via math library</td>
+                <td><code>math.cosec(45)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill sensor">Sensors</span></td>
+                <td><code>get_enemy_distance()</code></td>
+                <td>Distance to opponent in pixels</td>
+                <td><code>if get_enemy_distance() &lt; 120:</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill sensor">Sensors</span></td>
+                <td><code>is_enemy_attacking()</code></td>
+                <td>Whether the opponent is attacking (bool)</td>
+                <td><code>if is_enemy_attacking(): block()</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill sensor">Sensors</span></td>
+                <td><code>get_my_health()</code></td>
+                <td>Your remaining hearts</td>
+                <td><code>if get_my_health() &lt;= 2:</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill sensor">Sensors</span></td>
+                <td><code>get_enemy_health()</code></td>
+                <td>Opponent's remaining hearts</td>
+                <td><code>if get_enemy_health() == 1:</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill dialogue">Dialogue</span></td>
+                <td><code>print(text)</code></td>
+                <td>Display speech bubble above fighter</td>
+                <td><code>print("Fight me!")</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill dialogue">Dialogue</span></td>
+                <td><code>input(prompt)</code></td>
+                <td>Send popup prompt to opponent</td>
+                <td><code>input("Do you surrender?")</code></td>
+            </tr>
+        </tbody>
+    </table></div>
 </dialog>
 
-</div>
+<footer class="game-footer">Stickman Battle · Arrows Development Hub</footer>
+</main>
 <script>
     const MY_PLAYER_ID = {{ player_id }};
     const ROOM_ID = {{ room_id|tojson }};
@@ -274,9 +356,77 @@ const p2_url = window.location.origin + "/room/" + encodeURIComponent(ROOM_ID) +
 const linkElem = document.getElementById('p2_link');
 if (linkElem) linkElem.innerText = p2_url;
 
+// Reusable Modern Toast Notification
+function showToast({ title, message, type = 'info', duration = 3500 }) {
+    let container = document.getElementById('toast_container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast_container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+
+    const iconSymbols = { success: '✓', warning: '!', info: 'ℹ' };
+    const iconChar = iconSymbols[type] || 'ℹ';
+
+    toast.innerHTML = `
+        <div class="toast-icon ${type}">${iconChar}</div>
+        <div class="toast-content">
+            <div class="toast-title">${title}</div>
+            <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" title="Close">&times;</button>
+    `;
+
+    const closeToast = () => {
+        toast.classList.remove('show');
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 250);
+    };
+
+    toast.querySelector('.toast-close').addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeToast();
+    });
+    toast.addEventListener('click', closeToast);
+
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    if (duration > 0) {
+        setTimeout(closeToast, duration);
+    }
+}
+
 function copy_link() {
-    navigator.clipboard.writeText(p2_url);
-    alert("Invite link copied. Share it with Player 2: " + p2_url);
+    navigator.clipboard.writeText(p2_url).then(() => {
+        const btn = document.getElementById('copy_btn');
+        if (btn) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✓ Copied to clipboard!';
+            btn.style.borderColor = '#6ec69a';
+            btn.style.color = '#6ec69a';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.borderColor = '';
+                btn.style.color = '';
+            }, 2400);
+        }
+
+        showToast({
+            title: "Invite Link Copied!",
+            message: "Share the link or room code with Player 2 to start the match.",
+            type: "success"
+        });
+    }).catch(() => {
+        showToast({
+            title: "Copy Failed",
+            message: "Could not copy automatically. Please select and copy the link above.",
+            type: "warning"
+        });
+    });
 }
 
 if (MY_PLAYER_ID === 2) {

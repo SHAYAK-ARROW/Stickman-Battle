@@ -1,30 +1,99 @@
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-<title>Stickman Battle</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0e0f12">
+    <title>Stickman Battle · Made by Arrows Development Hub</title>
+    <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
+<body class="home-page">
+    <main class="home-shell">
+        <header class="site-header">
+            <a class="brand" href="/" aria-label="Stickman Battle home">
+                <span class="brand-mark" aria-hidden="true">SB</span>
+                <div class="brand-text-wrap">
+                    <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v1.0</span></span>
+                    <span class="brand-subtitle">Made by Arrows Development Hub</span>
+                </div>
+            </a>
+            <div class="header-right">
+                <span class="status-pill"><span class="status-pulse"></span>Online PvP</span>
+                <span class="header-note">CODE · FIGHT · OUTPLAY</span>
+            </div>
+        </header>
 
+        <section class="home-hero">
+            <div class="hub-badge">
+                <span class="hub-badge-dot"></span>
+                <span>Made by Arrows Development Hub</span>
+            </div>
 
+            <h1 class="hero-title">
+                Your next move<br>
+                <span>starts with code.</span>
+            </h1>
 
+            <p class="hero-copy">
+                Build a combat strategy in Python, invite an opponent to a private 1v1 arena,
+                and watch real-time physics, melee swordplay, and math spells determine the victor.
+            </p>
 
-<body>
-<div>
-<h1>Stick Man Battle</h1><br>
-<h2>Made by Arrows Development Hub</h2>
-</div>
-<div>
-    <center>
-        <button onclick="start_game()" style="font-size: 18px; padding: 10px 20px; cursor: pointer;">Create New Battle Room</button>
-        <br><br>
-        <p>— OR Join an Existing Room —</p>
-        <input type="text" id="room_input" placeholder="Enter Room Code (e.g. room_a1b2c3)" style="padding: 8px; width: 250px;">
-        <button onclick="join_custom_room()" style="padding: 8px 15px; cursor: pointer;">Join Room</button>
-    </center>
-</div>
+            <div class="welcome-card" aria-labelledby="welcome-title">
+                <div class="room-actions-split">
+                    <div class="action-block host-block">
+                        <span class="action-label">START A NEW MATCH</span>
+                        <h3>Host a Battle</h3>
+                        <p>Generate a private room and get an instant invite link to share with your opponent.</p>
+                        <button class="button button-primary button-large" onclick="start_game()">
+                            <span>Create battle room</span>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+                    </div>
 
+                    <div class="action-divider-vertical">
+                        <span>OR</span>
+                    </div>
 
-<script src="static/main.js"></Script>
+                    <div class="action-block join-block">
+                        <span class="action-label">ENTER AN EXISTING MATCH</span>
+                        <h3>Join a Friend</h3>
+                        <p>Paste the room code or invite link shared by Player 1 to jump straight into the arena.</p>
+                        <form class="join-form" onsubmit="event.preventDefault(); join_custom_room();">
+                            <div class="join-controls">
+                                <input type="text" id="room_input" placeholder="e.g. room_a1b2c3 or invite URL" autocomplete="off" aria-label="Room code or invite link">
+                                <button class="button button-secondary" type="submit">Join</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3 Highlights to fill the screen purposefully -->
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">⚡</div>
+                    <h4>Python Battle Logic</h4>
+                    <p>Program attacks, dashes, jumps, crouches, and shields with real-time sensory feedback.</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📐</div>
+                    <h4>Trigonometric Spells</h4>
+                    <p>Cast <code>sin_wave()</code>, <code>cos_wave()</code>, and <code>tan_spike()</code> energy waves using math as your weapon.</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">⚔️</div>
+                    <h4>Instant 1v1 PvP</h4>
+                    <p>Zero installation required. Share a room link with any friend to duel directly in browser.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="home-footer">
+            <span>Stickman Battle</span> · <span>Made with precision by <b>Arrows Development Hub</b></span>
+        </footer>
+    </main>
+    <script src="/static/main.js"></script>
 </body>
-
-
 </html>

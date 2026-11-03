@@ -21,22 +21,26 @@ MAX_ROOMS = 100
 
 app = Flask(__name__)
 
-# Strict CORS configuration (no wildcard in production)
+# Secure yet flexible CORS configuration (supports localhost, 127.0.0.1, LAN IPs & Render)
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS")
 if ALLOWED_ORIGINS:
-    cors_origins = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
+    if ALLOWED_ORIGINS.strip() == "*":
+        cors_origins = "*"
+    else:
+        cors_origins = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
 else:
-    cors_origins = [
-        "http://localhost:5000",
-        "http://127.0.0.1:5000",
-        "https://stickman-battle.onrender.com"
-    ]
+    LOCAL_ORIGIN_RE = re.compile(r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$")
+    def check_cors_origin(origin):
+        if not origin:
+            return True
+        if LOCAL_ORIGIN_RE.match(origin):
+            return True
+        if origin == "https://stickman-battle.onrender.com":
+            return True
+        return False
+    cors_origins = check_cors_origin
 
-# In local dev environment, allow all origins if requested, otherwise enforce whitelist
-if os.environ.get("ENV") == "development" or os.environ.get("DEBUG") == "true":
-    socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
-else:
-    socketio = SocketIO(app, async_mode='threading', cors_allowed_origins=cors_origins)
+socketio = SocketIO(app, async_mode='threading', cors_allowed_origins=cors_origins)
 
 class GameRoom:
     def __init__(self, room_id):

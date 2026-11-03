@@ -21,7 +21,11 @@ skills-lock.json
 
 # Scratch files
 durga_ascii_detailed.py
+scratch_*.py
+patch_*.py
+update_*.py
 
-# Operating System Files
+# System & accidental artifacts
+SHAYAK
 .DS_Store
 Thumbs.db
