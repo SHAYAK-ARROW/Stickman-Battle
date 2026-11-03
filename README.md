@@ -72,11 +72,13 @@ Watch your Python logic come to life on an HTML5 canvas as stickmen run, leap wi
 | | `dash(step)` | High-speed forward sprint | `dash(4)` |
 | | `dodge(step)` | Rapid evasive backward leap | `dodge(3)` |
 | | `crouch()` / `duck()` | Crouch to evade high sword strikes | `crouch()` |
+| | `bend(angle)` | Bend stickman torso (-45 to 45 deg) | `bend(20)` |
 | | `jump(power)` | Jump vertically upward against gravity | `jump(5)` |
 | | `long_jump(step, power)` | Synchronized forward leap | `long_jump(3, 5)` |
 | | `flip()` | Face opposite direction | `flip()` |
 | **Combat** | `attack()` | Standard sword strike (1 damage) | `attack()` |
 | | `swing()` | Quick horizontal jab slash | `swing()` |
+| | `project(angle, power)` | Propel forward with angled trajectory | `project(45, 5)` |
 | | `heavy_attack()` | Powerful slash (2 damage or breaks shield) | `heavy_attack()` |
 | | `throw_sword()` | Throw sword; returns like a boomerang | `throw_sword()` |
 | | `block()` | Raise shield to block incoming strikes (30 frames) | `block()` |
@@ -135,7 +137,7 @@ python game.py
 
 ## 🧪 Running Unit Tests
 
-Run the full suite of 29 unit and security tests:
+Run the full suite of 37 unit and security tests:
 ```bash
 python -m unittest discover -p "test_*.py"
 ```

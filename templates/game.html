@@ -171,6 +171,12 @@ else:
             </tr>
             <tr>
                 <td><span class="category-pill">Movement</span></td>
+                <td><code>bend(angle)</code></td>
+                <td>Bend the stickman torso (-45 to 45 deg)</td>
+                <td><code>bend(20)</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill">Movement</span></td>
                 <td><code>flip()</code></td>
                 <td>Turn to face the opposite direction</td>
                 <td><code>flip()</code></td>
@@ -204,6 +210,12 @@ else:
                 <td><code>swing()</code></td>
                 <td>Perform a quick horizontal sword slash</td>
                 <td><code>swing()</code></td>
+            </tr>
+            <tr>
+                <td><span class="category-pill combat">Combat</span></td>
+                <td><code>project(angle, power)</code></td>
+                <td>Propel forward with angled trajectory</td>
+                <td><code>project(45, 5)</code></td>
             </tr>
             <tr>
                 <td><span class="category-pill combat">Combat</span></td>
@@ -279,8 +291,8 @@ else:
             </tr>
             <tr>
                 <td><span class="category-pill math">Math API</span></td>
-                <td><code>math.sin(power)</code></td>
-                <td>Cast sine attack via math library</td>
+                <td><code>math.sin(power)</code> / <code>math.sin_wave()</code></td>
+                <td>Cast sine attack via math library (default power 45)</td>
                 <td><code>import math<br>math.sin(45)</code></td>
             </tr>
             <tr>
