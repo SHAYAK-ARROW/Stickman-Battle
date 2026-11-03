@@ -36,16 +36,16 @@
             </h1>
 
             <p class="hero-copy">
-                Build a combat strategy in Python, invite an opponent to a private 1v1 arena,
-                and watch real-time physics, melee swordplay, and math spells determine the victor.
+                Build a combat strategy in Python, duel in a private 1v1 arena,
+                or practice solo against autonomous AI bots with human-like pacing and trigonometric physics.
             </p>
 
             <div class="welcome-card" aria-labelledby="welcome-title">
                 <div class="room-actions-split">
                     <div class="action-block host-block">
-                        <span class="action-label">START A NEW MATCH</span>
+                        <span class="action-label">MULTIPLAYER 1V1</span>
                         <h3>Host a Battle</h3>
-                        <p>Generate a private room and get an instant invite link to share with your opponent.</p>
+                        <p>Generate a private room and get an instant invite link to duel a friend.</p>
                         <button class="button button-primary button-large" onclick="start_game()">
                             <span>Create battle room</span>
                             <span class="btn-arrow" aria-hidden="true">→</span>
@@ -59,13 +59,42 @@
                     <div class="action-block join-block">
                         <span class="action-label">ENTER AN EXISTING MATCH</span>
                         <h3>Join a Friend</h3>
-                        <p>Paste the room code or invite link shared by Player 1 to jump straight into the arena.</p>
+                        <p>Paste the room code or invite link shared by Player 1 to jump into the fight.</p>
                         <form class="join-form" onsubmit="event.preventDefault(); join_custom_room();">
                             <div class="join-controls">
                                 <input type="text" id="room_input" placeholder="e.g. room_a1b2c3 or invite URL" autocomplete="off" aria-label="Room code or invite link">
                                 <button class="button button-secondary" type="submit">Join</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+
+                <div class="solo-bot-divider">
+                    <span>SOLO PRACTICE VS AI</span>
+                </div>
+
+                <div class="solo-bot-section">
+                    <div class="solo-bot-header">
+                        <p class="solo-bot-lead">Test loops, counters, and spell combos with human-like reaction pacing:</p>
+                    </div>
+                    <div class="bot-buttons-row">
+                        <button type="button" class="button button-bot button-easy" onclick="play_bot('easy')">
+                            <span class="bot-badge-icon">🌱</span>
+                            <div class="bot-btn-content">
+                                <span class="bot-btn-title">Play vs Bot (Easy)</span>
+                                <span class="bot-btn-desc">Relaxed pacing · ~45% mistake rate</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+
+                        <button type="button" class="button button-bot button-hard" onclick="play_bot('hard')">
+                            <span class="bot-badge-icon">🔥</span>
+                            <div class="bot-btn-content">
+                                <span class="bot-btn-title">Play vs Bot (Hard)</span>
+                                <span class="bot-btn-desc">Tactical parries · Math spell combos</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -83,9 +112,9 @@
                     <p>Cast <code>sin_wave()</code>, <code>cos_wave()</code>, and <code>tan_spike()</code> energy waves using math as your weapon.</p>
                 </div>
                 <div class="feature-item">
-                    <div class="feature-icon">⚔️</div>
-                    <h4>Instant 1v1 PvP</h4>
-                    <p>Zero installation required. Share a room link with any friend to duel directly in browser.</p>
+                    <div class="feature-icon">🤖</div>
+                    <h4>Autonomous AI Practice</h4>
+                    <p>Duel humanized AI bots calibrated with realistic decision delays so every victory feels earned.</p>
                 </div>
             </div>
         </section>

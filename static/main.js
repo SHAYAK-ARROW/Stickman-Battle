@@ -46,6 +46,11 @@ function start_game() {
     window.location.href = "/player1";
 }
 
+function play_bot(difficulty) {
+    const diff = (difficulty === 'hard') ? 'hard' : 'easy';
+    window.location.href = "/bot/" + diff;
+}
+
 function join_custom_room() {
     const input = document.getElementById("room_input");
     const value = input ? input.value.trim() : "";

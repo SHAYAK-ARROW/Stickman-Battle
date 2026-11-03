@@ -1166,3 +1166,151 @@ button { color: inherit; }
     letter-spacing: .3px;
     vertical-align: middle;
 }
+
+
+/* ── Solo Bot Practice Mode ───────────────────────────────── */
+.solo-bot-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 26px 0 16px;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+}
+.solo-bot-divider::before, .solo-bot-divider::after {
+    height: 1px;
+    flex: 1;
+    content: '';
+    background: var(--border);
+}
+
+.solo-bot-section {
+    padding-top: 2px;
+}
+.solo-bot-header {
+    margin-bottom: 14px;
+}
+.solo-bot-lead {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.bot-buttons-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+.button-bot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    min-height: 60px;
+    border-radius: 10px;
+    text-align: left;
+    background: rgba(26, 27, 34, 0.85);
+    border: 1px solid var(--border-light);
+    color: var(--text);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.button-bot:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+
+.button-easy {
+    border-color: rgba(74, 222, 128, 0.25);
+}
+.button-easy:hover {
+    border-color: rgba(74, 222, 128, 0.6);
+    background: rgba(74, 222, 128, 0.08);
+}
+.button-easy .bot-btn-title {
+    color: #4ade80;
+}
+
+.button-hard {
+    border-color: rgba(244, 63, 94, 0.25);
+}
+.button-hard:hover {
+    border-color: rgba(244, 63, 94, 0.6);
+    background: rgba(244, 63, 94, 0.08);
+}
+.button-hard .bot-btn-title {
+    color: #f43f5e;
+}
+
+.bot-badge-icon {
+    font-size: 22px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.bot-btn-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.bot-btn-title {
+    font: 600 13.5px var(--heading);
+    letter-spacing: -0.2px;
+}
+.bot-btn-desc {
+    font-size: 11px;
+    color: var(--muted);
+}
+.button-bot .btn-arrow {
+    font-size: 16px;
+    color: var(--muted);
+    transition: transform var(--transition), color var(--transition);
+}
+.button-bot:hover .btn-arrow {
+    transform: translateX(4px);
+    color: var(--text);
+}
+
+/* Fallback bot links on invite screen */
+.bot-fallback-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    flex-wrap: wrap;
+}
+.bot-fallback-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    background: var(--surface-soft);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 11.5px;
+    font-weight: 500;
+    transition: all var(--transition);
+}
+.bot-fallback-btn:hover {
+    color: #fff;
+    border-color: var(--accent);
+    background: rgba(184, 160, 224, 0.12);
+}
+
+@media (max-width: 640px) {
+    .bot-buttons-row {
+        grid-template-columns: 1fr;
+    }
+}

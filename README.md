@@ -42,6 +42,10 @@ Watch your Python logic come to life on an HTML5 canvas as stickmen run, leap wi
   - `cot_wall(power)`: Stationary vertical firewall with high pushback.
 - [x] **Tactical Sensors & Intelligence**:
   - `get_enemy_distance()`, `is_enemy_attacking()`, `get_my_health()`, and `get_enemy_health()`.
+- [x] **Autonomous AI Solo Practice**:
+  - `Play vs Bot (Easy)`: Beginner-friendly sparring partner with ~45% intentional mistake rate and relaxed 1.6s–2.4s decision pacing.
+  - `Play vs Bot (Hard)`: Tactical competitor with quick shield parries, shield-breaking heavy attacks, math spell combos, and ~20% mistake rate.
+  - Zero instant-reaction cheating: bots observe the exact same physics and action queue limits as human players.
 - [x] **Interactive Banter & Dialogue**:
   - `print("text")`: Live speech bubbles with player-colored identity tags.
   - `input("prompt")`: Triggers real-time challenge modal with one-click quick-banter response chips (`⚔️ Bring it on!`, `🛡️ Never!`, `🔥 Watch this!`, `GG`).

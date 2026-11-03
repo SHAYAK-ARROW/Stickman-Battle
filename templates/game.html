@@ -33,6 +33,11 @@
         <button id="copy_btn" class="button button-secondary" onclick="copy_link()">Copy invite link</button>
     </div>
     <p class="invite-hint">Waiting for Player 2 to join…</p>
+    <div class="bot-fallback-row">
+        <span>Friend taking too long?</span>
+        <a href="/bot/easy" class="bot-fallback-btn">🌱 Play vs Easy Bot</a>
+        <a href="/bot/hard" class="bot-fallback-btn">🔥 Play vs Hard Bot</a>
+    </div>
 </section>
 
 <section id="battle_layout" aria-label="Battle arena and code editor">
@@ -350,6 +355,8 @@ else:
     const ROOM_ID = {{ room_id|tojson }};
     const ROOM_TOKEN = {{ room_token|tojson }};
     const PLAYER2_TOKEN = {{ player2_token|tojson }};
+    const IS_BOT_ROOM = {{ is_bot_room|tojson if is_bot_room is defined else false }};
+    const BOT_DIFFICULTY = {{ bot_difficulty|tojson if bot_difficulty is defined else "" }};
 
 const p2_url = window.location.origin + "/room/" + encodeURIComponent(ROOM_ID) + "?token=" + encodeURIComponent(PLAYER2_TOKEN);
 
@@ -401,7 +408,7 @@ function showToast({ title, message, type = 'info', duration = 3500 }) {
 }
 
 function copy_link() {
-    navigator.clipboard.writeText(p2_url).then(() => {
+    const onCopied = () => {
         const btn = document.getElementById('copy_btn');
         if (btn) {
             const originalText = btn.innerHTML;
@@ -420,17 +427,45 @@ function copy_link() {
             message: "Share the link or room code with Player 2 to start the match.",
             type: "success"
         });
-    }).catch(() => {
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(p2_url).then(onCopied).catch(() => {
+            fallbackCopy(onCopied);
+        });
+    } else {
+        fallbackCopy(onCopied);
+    }
+}
+
+function fallbackCopy(callback) {
+    try {
+        const tempInput = document.createElement("textarea");
+        tempInput.value = p2_url;
+        tempInput.style.position = "fixed";
+        tempInput.style.opacity = "0";
+        document.body.appendChild(tempInput);
+        tempInput.focus();
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+        callback();
+    } catch (err) {
         showToast({
             title: "Copy Failed",
             message: "Could not copy automatically. Please select and copy the link above.",
             type: "warning"
         });
-    });
+    }
 }
 
-if (MY_PLAYER_ID === 2) {
-    document.getElementById('wait_screen').style.display = 'none';
+if (MY_PLAYER_ID === 2 || IS_BOT_ROOM) {
+    const ws = document.getElementById('wait_screen');
+    if (ws) ws.style.display = 'none';
+}
+if (IS_BOT_ROOM) {
+    const st = document.getElementById('status_text');
+    if (st) st.innerText = 'Solo vs Bot (' + (BOT_DIFFICULTY === 'hard' ? 'Hard' : 'Easy') + ')';
 }
 
 function open_commands_dialog() {

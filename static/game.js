@@ -455,8 +455,11 @@ function draw_on_camvas(data) {
         }
         ctx.restore();
     }
+    const p2Label = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM)
+        ? ("BOT" + (typeof BOT_DIFFICULTY !== 'undefined' && BOT_DIFFICULTY ? " (" + BOT_DIFFICULTY.toUpperCase() + ")" : ""))
+        : "P2";
     draw_health_bar(data.player1, "P1", 20, "left");
-    draw_health_bar(data.player2, "P2", canvas.width - 20, "right");
+    draw_health_bar(data.player2, p2Label, canvas.width - 20, "right");
 
     // --- SPELLS & RANGED PROJECTILES RENDER ---
     if (data.spells && Array.isArray(data.spells)) {
@@ -598,12 +601,12 @@ function draw_on_camvas(data) {
     let winnerText = "";
     let winnerColor = "";
     if (data.player1 && data.player1.heart <= 0) {
-        winnerText = "PLAYER 2 WINS! 🏆";
+        winnerText = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? "BOT WINS! 🤖" : "PLAYER 2 WINS! 🏆";
         winnerColor = "#38bdf8";
         is_game_over = true;
     } else if (data.player2 && data.player2.heart <= 0) {
-        winnerText = "PLAYER 1 WINS! 🏆";
-        winnerColor = "#ff5c5c";
+        winnerText = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? "YOU WIN! 🏆" : "PLAYER 1 WINS! 🏆";
+        winnerColor = "#4ade80";
         is_game_over = true;
     }
 
@@ -652,9 +655,12 @@ function run() {
     const runBtn = document.getElementById("run_btn");
     if (runBtn && runBtn.disabled) {
         if (typeof showToast === 'function') {
+            const hintMsg = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM)
+                ? "The match is over. Click Rematch below to duel the bot again!"
+                : "The match is over or Player 2 has not joined yet. Start a rematch or wait for Player 2.";
             showToast({
                 title: "Player Not Ready",
-                message: "The match is over or Player 2 has not joined yet. Start a rematch or wait for Player 2.",
+                message: hintMsg,
                 type: "warning"
             });
         } else {

@@ -3,6 +3,7 @@ from flask_socketio import SocketIO, join_room, leave_room
 from char import Body, MAX_HEALTH
 import compiler
 from engine import GameEngine
+from bot import BattleBot
 import os
 import time 
 import threading
@@ -57,6 +58,9 @@ class GameRoom:
             1: secrets.token_urlsafe(24),
             2: secrets.token_urlsafe(24),
         }
+        self.is_bot_room = False
+        self.bot_difficulty = None
+        self.bot = None
         self.engine.add_player(self.player1, self.player2)
 
     def reset_match(self):
@@ -132,6 +136,8 @@ class GameRoom:
         self.player2.pending_question = None
         self.pending_disconnects.clear()
         self.engine.spells = []
+        if getattr(self, 'is_bot_room', False) and getattr(self, 'bot', None):
+            self.bot.reset()
 
 rooms = {}
 sid_auth = {} # sid -> {'room_id': str, 'player_id': int}
@@ -169,6 +175,20 @@ def get_player_for_token(room, token):
 @app.route('/')
 def lobby_menu():
     return render_template('index.html')
+
+@app.route('/bot/<difficulty>')
+def play_vs_bot(difficulty):
+    diff = 'hard' if str(difficulty).lower() == 'hard' else 'easy'
+    room = create_private_room()
+    if room is None:
+        abort(503, "Server room limit reached. Please try again later.")
+    room.is_bot_room = True
+    room.bot_difficulty = diff
+    room.bot = BattleBot(diff)
+    room.player2.name = f"Bot ({diff.capitalize()})"
+    room.connected_players.add(2)
+    return redirect(url_for('join_room_game', room_id=room.room_id,
+                            token=room.player_tokens[1]))
 
 @app.route('/player1')
 def host_game():
@@ -214,6 +234,8 @@ def join_room_game(room_id):
         player_id=assigned_player,
         room_token=room_token,
         player2_token=room.player_tokens[2],
+        is_bot_room=getattr(room, 'is_bot_room', False),
+        bot_difficulty=getattr(room, 'bot_difficulty', '') or '',
     )
 
 # --- SOCKET.IO EVENT HANDLERS WITH STRICT AUTHENTICATION ---
@@ -260,7 +282,12 @@ def handle_player_join(data):
         
     logger.info(f"Room [{room_id}] -> Player {player_id} authenticated and joined. Connected: {room.connected_players}")
     
-    if 1 in room.connected_players and 2 in room.connected_players:
+    if getattr(room, 'is_bot_room', False):
+        room.connected_players.add(2)
+        room.is_match_active = True
+        logger.info(f"Room [{room_id}] -> Solo match started against {room.bot_difficulty} bot!")
+        socketio.emit('match_start', to=room_id)
+    elif 1 in room.connected_players and 2 in room.connected_players:
         room.is_match_active = True
         logger.info(f"Room [{room_id}] -> Both players connected! Starting match...")
         socketio.emit('match_start', to=room_id)
@@ -315,6 +342,9 @@ def handle_restart_game(data=None):
     room.last_activity = time.time()
     logger.info(f"Room [{room_id}] -> Authorized rematch requested by Player {auth['player_id']}.")
     room.reset_match()
+    if getattr(room, 'is_bot_room', False):
+        room.connected_players.add(2)
+        room.is_match_active = True
     socketio.emit('game_restarted', to=room_id)
 
 @socketio.on('reply_input')
@@ -377,6 +407,11 @@ def game_loop():
             # Update all active rooms
             for room in list(rooms.values()):
                 if room.is_match_active or room.connected_players or room.pending_disconnects:
+                    if getattr(room, 'is_bot_room', False) and room.is_match_active and getattr(room, 'bot', None):
+                        try:
+                            room.bot.tick(room)
+                        except Exception as be:
+                            logger.error(f"Bot tick error in room {room.room_id}: {be}")
                     room.engine.update()
                     
                     # Opponent dialogue question dispatch
