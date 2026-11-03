@@ -133,9 +133,15 @@ Have an idea for a new trigonometric spell, balance tweak, or found a bug? We we
 
 ---
 
-## 📄 License & Credits
+## 📄 License & Commercial Distribution
 
 * **Creator & Lead Designer:** Shayak Sadhukhan ([Arrows Development Hub](https://github.com/SHAYAK-ARROW))
 * **Development Workflow:** Architected & built using modern AI-assisted pair programming (Google Antigravity) with rigorous algorithmic verification and physics modeling.
 * **Audio Engineering:** Procedural Web Audio API synthesis (dual-channel BGM with parallel drone pad + SFX).
-* **License:** Released under a Custom Source-Available (View-Only) License. See [`LICENSE`](LICENSE) for terms. All Rights Reserved.
+* **Public Repository License:** Released under a **Custom Source-Available (View-Only) License** for evaluation, personal study, and peer review. See [`LICENSE`](LICENSE) for complete terms. All Rights Reserved.
+
+### 💼 Commercial Developer License (Source Code Purchase)
+Looking to modify the codebase, introduce your own spells/fighter classes, submit it for school/college computer science projects, or host your own multiplayer game server?
+* **Full Developer Edition:** Available as an official purchase package on **itch.io** or via direct developer inquiry.
+* **Buyer Privileges:** Authorized purchasers receive a perpetual, royalty-free **Commercial Developer License** granting full rights to edit, refactor, self-host, and integrate into personal, educational, or commercial projects.
+* **Direct Licensing & Academic Inquiries:** Contact [`shayaksadhukhan402@gmail.com`](mailto:shayaksadhukhan402@gmail.com).
