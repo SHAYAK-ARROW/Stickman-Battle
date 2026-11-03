@@ -48,6 +48,12 @@
     <div class="panel-heading">
         <div><p class="eyebrow">LIVE MATCH</p><h2>Battle arena</h2></div>
         <div class="heading-controls-row">
+            <button id="bgm_toggle_btn" type="button" class="action-chip-btn audio-toggle-btn is-active" onclick="window.AudioEngine && window.AudioEngine.toggleBGM()" title="Toggle relaxing ambient coding music">
+                <span id="bgm_icon">🎵</span> <span id="bgm_text">Music</span>
+            </button>
+            <button id="sfx_toggle_btn" type="button" class="action-chip-btn audio-toggle-btn is-active" onclick="window.AudioEngine && window.AudioEngine.toggleSFX()" title="Toggle battle combat sound effects">
+                <span id="sfx_icon">🔊</span> <span id="sfx_text">SFX</span>
+            </button>
             <button id="invite_friend_btn" type="button" class="action-chip-btn" onclick="copy_link()" title="Copy Player 2 invite link to duel a friend">
                 <span>🔗 Invite Friend</span>
             </button>
@@ -536,6 +542,7 @@ function close_commands_dialog() {
     document.getElementById('commands_dialog').close();
 }
 </script>
+<script src="/static/audio.js"></script>
 <script src="/static/game.js"></script>
 
 </body>

@@ -1320,7 +1320,8 @@ button { color: inherit; }
 .heading-controls-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 .action-chip-btn {
     display: inline-flex;
@@ -1340,6 +1341,21 @@ button { color: inherit; }
     color: #fff;
     background: rgba(184, 160, 224, 0.14);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.audio-toggle-btn {
+    user-select: none;
+    -webkit-user-select: none;
+}
+.audio-toggle-btn.is-active {
+    border-color: rgba(184, 160, 224, 0.45);
+    background: rgba(184, 160, 224, 0.1);
+    color: #f1f5f9;
+}
+.audio-toggle-btn.is-muted {
+    opacity: 0.6;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
 }
 
 

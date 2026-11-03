@@ -87,6 +87,7 @@ function drawTrigCurve(context, options) {
 
 socket.on('match_start', () => {
     console.log("Match started!");
+    if (window.AudioEngine) window.AudioEngine.playMatchStart();
     const waitScreen = document.getElementById('wait_screen');
     if (waitScreen) {
         waitScreen.style.display = 'none';
@@ -113,8 +114,74 @@ socket.on('player_left', (data) => {
     }
 });
 
+// --- PROCEDURAL AUDIO SFX STATE TRACKING ---
+let prevP1Heart = null;
+let prevP2Heart = null;
+let prevP1Blocking = false;
+let prevP2Blocking = false;
+let prevP1Crouching = false;
+let prevP2Crouching = false;
+let prevP1Attacking = false;
+let prevP2Attacking = false;
+let activeSpellKeys = new Set();
+let prevGameOver = false;
+
 function draw_on_camvas(data) {
     if (!data || !data.player1 || !data.player2) return;
+
+    // --- PROCEDURAL AUDIO SFX EVENT TRIGGERS ---
+    if (window.AudioEngine) {
+        // 1. Damage Hit
+        if (prevP1Heart !== null && data.player1.heart < prevP1Heart) {
+            window.AudioEngine.playDamageHit();
+        }
+        if (prevP2Heart !== null && data.player2.heart < prevP2Heart) {
+            window.AudioEngine.playDamageHit();
+        }
+        prevP1Heart = data.player1.heart;
+        prevP2Heart = data.player2.heart;
+
+        // 2. Sword Swing & Dynamic Clash
+        const p1Swinging = data.player1.has_sword && data.player1.sword_angle !== undefined && (data.player1.sword_angle < -25 || data.player1.sword_angle > 25);
+        const p2Swinging = data.player2.has_sword && data.player2.sword_angle !== undefined && (data.player2.sword_angle < -25 || data.player2.sword_angle > 25);
+        const fightersClose = Math.abs(data.player1.x - data.player2.x) <= 140;
+
+        if (p1Swinging && p2Swinging && fightersClose && (!prevP1Attacking || !prevP2Attacking)) {
+            window.AudioEngine.playSwordClash();
+        } else {
+            if (p1Swinging && !prevP1Attacking) window.AudioEngine.playSwordSwing();
+            if (p2Swinging && !prevP2Attacking) window.AudioEngine.playSwordSwing();
+        }
+        prevP1Attacking = p1Swinging;
+        prevP2Attacking = p2Swinging;
+
+        // 3. Shield Block
+        if ((data.player1.is_blocking && !prevP1Blocking) || (data.player2.is_blocking && !prevP2Blocking)) {
+            window.AudioEngine.playShieldBlock();
+        }
+        prevP1Blocking = !!data.player1.is_blocking;
+        prevP2Blocking = !!data.player2.is_blocking;
+
+        // 4. Dodge / Crouch
+        if ((data.player1.is_crouching && !prevP1Crouching) || (data.player2.is_crouching && !prevP2Crouching)) {
+            window.AudioEngine.playDodge();
+        }
+        prevP1Crouching = !!data.player1.is_crouching;
+        prevP2Crouching = !!data.player2.is_crouching;
+
+        // 5. Trig Spells (trigger once on spell creation)
+        if (data.spells && Array.isArray(data.spells)) {
+            data.spells.forEach(s => {
+                const sKey = `${s.type}_${s.owner || 0}_${s.origin_x || s.x || 0}`;
+                if (!activeSpellKeys.has(sKey) && (s.t === undefined || s.t <= 2)) {
+                    activeSpellKeys.add(sKey);
+                    window.AudioEngine.playSpell(s.type);
+                }
+            });
+            if (activeSpellKeys.size > 150) activeSpellKeys.clear();
+        }
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // --- GROUND (Bhumi) ---
@@ -687,6 +754,14 @@ function draw_on_camvas(data) {
         ctx.restore();
     }
 
+    if (is_game_over && !prevGameOver) {
+        if (window.AudioEngine) {
+            const iWon = (MY_PLAYER_ID === 1 && data.player2.heart <= 0) || (MY_PLAYER_ID === 2 && data.player1.heart <= 0);
+            window.AudioEngine.playGameOver(iWon);
+        }
+    }
+    prevGameOver = is_game_over;
+
     const restartBtn = document.getElementById('restart_btn');
     if (restartBtn) {
         restartBtn.style.display = is_game_over ? 'inline-block' : 'none';
@@ -709,6 +784,7 @@ function draw_on_camvas(data) {
 
 function run() {
     dismissDiagnostics();
+    if (window.AudioEngine) window.AudioEngine.playClick();
     const runBtn = document.getElementById("run_btn");
     if (runBtn && runBtn.disabled) {
         if (typeof showToast === 'function') {
@@ -746,6 +822,7 @@ function request_restart() {
 
 socket.on('game_restarted', () => {
     console.log("Game restarted!");
+    prevGameOver = false;
     const restartBtn = document.getElementById('restart_btn');
     if (restartBtn) {
         restartBtn.style.display = 'none';
@@ -828,6 +905,10 @@ function triggerEmergency(action) {
         const rem = Math.ceil((emergencyCooldowns[action] - now) / 1000);
         showEmergencyFeedback(`Cooling down... (${rem}s)`, 'warning');
         return;
+    }
+    if (window.AudioEngine) {
+        if (action === 'shield') window.AudioEngine.playShieldBlock();
+        else if (action === 'dodge') window.AudioEngine.playDodge();
     }
     socket.emit('emergency_action', { action: action });
 }
@@ -1051,17 +1132,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sendInputReply();
         }
     });
-});
-document.getElementById('input_modal_send')?.addEventListener('click', sendInputReply);
-document.getElementById('input_modal_close')?.addEventListener('click', () => {
-    let modal = document.getElementById('opponent_input_modal');
-    if (modal) modal.style.display = "none";
-});
-document.getElementById('input_modal_field')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        sendInputReply();
-    }
 });
 
 
