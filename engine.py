@@ -156,8 +156,9 @@ class GameEngine:
             p1_facing_p2 = (p1.direction == 1 and p2.x > p1.x) or (p1.direction == -1 and p2.x < p1.x)
             p2_facing_p1 = (p2.direction == 1 and p1.x > p2.x) or (p2.direction == -1 and p1.x < p2.x)
             
-            p1_slashing = (hasattr(p1, 'sword') and p1.sword.attack_state == 2 and not getattr(p1.sword, 'has_hit', False))
-            p2_slashing = (hasattr(p2, 'sword') and p2.sword.attack_state == 2 and not getattr(p2.sword, 'has_hit', False))
+            # Attacking only if fighter actually has sword in hand!
+            p1_slashing = (hasattr(p1, 'sword') and getattr(p1, 'has_sword', True) and p1.sword.attack_state == 2 and not getattr(p1.sword, 'has_hit', False))
+            p2_slashing = (hasattr(p2, 'sword') and getattr(p2, 'has_sword', True) and p2.sword.attack_state == 2 and not getattr(p2.sword, 'has_hit', False))
             
             # Case 1: Dujon eksathe attack korle -> SWORD CLASH!
             if sword_range and p1_slashing and p2_slashing and p1_facing_p2 and p2_facing_p1:
@@ -236,21 +237,45 @@ class GameEngine:
                 remove_spell = False
                 
                 if stype == 'throw_sword':
-                    s['x'] += 12 * s['dir']
-                    if abs(s['x'] - enemy.x) <= 35 and abs(s['y'] - enemy.y) <= 65:
-                        if getattr(enemy, 'barrier_timer', 0) > 0:
-                            print("--- THROWN SWORD ABSORBED BY SEC_BARRIER! ---")
-                        elif getattr(enemy, 'crouch_timer', 0) > 0:
-                            print("--- THROWN SWORD FLEW OVER DUCKED OPPONENT! ---")
-                        elif hasattr(enemy, 'shield') and enemy.shield.block_timer > 0:
-                            print("--- THROWN SWORD DEFLECTED BY SHIELD! ---")
+                    if not s.get('returning', False):
+                        # Outward flight (max 280px range, balanced combat distance)
+                        s['x'] += 14 * s['dir']
+                        s['distance_traveled'] = s.get('distance_traveled', 0) + 14
+                        
+                        # Check collision with enemy
+                        if abs(s['x'] - enemy.x) <= 35 and abs(s['y'] - enemy.y) <= 65:
+                            if getattr(enemy, 'barrier_timer', 0) > 0:
+                                print("--- THROWN SWORD ABSORBED BY SEC_BARRIER! ---")
+                            elif getattr(enemy, 'crouch_timer', 0) > 0:
+                                print("--- THROWN SWORD FLEW OVER DUCKED OPPONENT! ---")
+                            elif hasattr(enemy, 'shield') and enemy.shield.block_timer > 0:
+                                print("--- THROWN SWORD DEFLECTED BY SHIELD! ---")
+                            else:
+                                enemy.heart -= 1
+                                enemy.target_x += 30 * s['dir']
+                                enemy.speed_x = 4
+                                print(f"--- THROWN SWORD HIT! Enemy hearts: {enemy.heart} ---")
+                            # Reverses on impact and returns to owner!
+                            s['returning'] = True
+                        elif s['distance_traveled'] >= 280 or s['x'] < 20 or s['x'] > 780:
+                            # Reached max fair range -> starts returning like a boomerang!
+                            s['returning'] = True
+                    else:
+                        # Returning flight: Flies back into owner's hand!
+                        return_x = owner.x + (25 * owner.direction)
+                        dx = return_x - s['x']
+                        ret_speed = 16
+                        if abs(dx) <= ret_speed:
+                            s['x'] = return_x
+                            owner.has_sword = True  # Caught back in hand!
+                            remove_spell = True
+                            print("--- THROWN SWORD RETURNED TO OWNER'S HAND! ---")
                         else:
-                            enemy.heart -= 1
-                            enemy.target_x += 30 * s['dir']
-                            enemy.speed_x = 4
-                            print(f"--- THROWN SWORD HIT! Enemy hearts: {enemy.heart} ---")
-                        remove_spell = True
-                    elif s['x'] < 0 or s['x'] > 800 or s['t'] > 80:
+                            s['x'] += ret_speed * (1 if dx > 0 else -1)
+                            
+                    if s['t'] > 80:
+                        # Safety fallback: always give sword back if timeout
+                        owner.has_sword = True
                         remove_spell = True
 
                 elif stype == 'sin_wave':

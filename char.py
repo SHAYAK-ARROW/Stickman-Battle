@@ -14,17 +14,14 @@ class Character:
     
     # 1 step amra 10 pixel dhorchi - command gulo action queue te append hocche
     def move(self, step=1):
-        # Action queue te move pathano holo (1 step = 10 pixel)
         if len(self.action_queue) < 100:
             self.action_queue.append(('move', step))
     
     def run_to(self, step=1):
-        # Action queue te run pathano holo (druto dauranor jonno)
         if len(self.action_queue) < 100:
             self.action_queue.append(('run', step))
 
     def flip(self):
-        # Action queue te flip pathano holo (mukh ghoranor jonno)
         if len(self.action_queue) < 100:
             self.action_queue.append(('flip',))
 
@@ -41,15 +38,18 @@ class Body(Character):
         self.barrier_timer = 0
         self.dome_timer = 0
         self.cast_timer = 0
+        self.has_sword = True
         self.pending_spells = []
         self.sword  = Sword(length=50, angle=0)
         self.shield = Shield(length=40)
        
     def set_right_hand(self, x, y):
-        ...
+        self.right_hand_x = x
+        self.right_hand_y = y
       
     def set_left_hand(self, x, y):
-        ...
+        self.left_hand_x = x
+        self.left_hand_y = y
 
     def move_right_hand(self, dx, dy):
         self.right_hand_x += dx
@@ -59,67 +59,77 @@ class Body(Character):
         self.left_hand_x += dx
         self.left_hand_y += dy
 
+    # Custom Weapon & Shield Setters (fully functional)
+    def set_sword(self, length=50, angle=0):
+        if hasattr(self, 'sword'):
+            self.sword.set_sword(length, angle)
+
+    def swing(self, dx=0, dy=0):
+        if not getattr(self, 'has_sword', True):
+            self.say("No sword to swing!")
+            return
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('attack',))
+
+    def set_shield(self, length=40, angle=45):
+        if hasattr(self, 'shield'):
+            self.shield.set_shield(length, angle)
+
     def bend(self, angle=0):
         if len(self.action_queue) < 100:
             self.action_queue.append(('bend', angle))
 
     def crouch(self):
-        # Action queue te crouch pathano holo (matha nichu kore toloyar er koper niche bacha)
         if len(self.action_queue) < 100:
             self.action_queue.append(('crouch',))
 
     def duck(self):
-        # crouch er synonym
         self.crouch()
 
     def dash(self, step=3):
-        # Action queue te dash pathano holo (druto samne jhapano)
         if len(self.action_queue) < 100:
             self.action_queue.append(('dash', step))
 
     def dodge(self, step=3):
-        # Action queue te dodge pathano holo (druto pichone sore jawya)
         if len(self.action_queue) < 100:
             self.action_queue.append(('dodge', step))
 
     def heavy_attack(self):
-        # Action queue te heavy attack pathano holo (dhire kintu 2 damage ba dhal bhenge dewa)
+        if not getattr(self, 'has_sword', True):
+            self.say("No sword in hand!")
+            return
         if len(self.action_queue) < 100:
             self.action_queue.append(('heavy_attack',))
 
     def throw_sword(self):
-        # Action queue te toloyar chhunre marar ranged attack
+        if not getattr(self, 'has_sword', True):
+            self.say("No sword to throw!")
+            return
         if len(self.action_queue) < 100:
             self.action_queue.append(('throw_sword',))
 
     # --- Trigonometric Magic Spells ---
     def sin_wave(self):
-        # sin(x) dheuer moto opore niche oscillator energy projectile
         if len(self.action_queue) < 100:
             self.action_queue.append(('spell', 'sin_wave'))
 
     def cos_wave(self):
-        # cos(x) er moto overhead unchu theke suru howa bhari shockwave
         if len(self.action_queue) < 100:
             self.action_queue.append(('spell', 'cos_wave'))
 
     def tan_spike(self):
-        # tan(x) asymptote er moto mati funre khara opore uthe jaoya energy spike
         if len(self.action_queue) < 100:
             self.action_queue.append(('spell', 'tan_spike'))
 
     def sec_barrier(self):
-        # sec(x) er moto curved defensive force shield
         if len(self.action_queue) < 100:
             self.action_queue.append(('spell', 'sec_barrier'))
 
     def cosec_dome(self):
-        # csc(x) er moto protective energy dome
         if len(self.action_queue) < 100:
             self.action_queue.append(('spell', 'cosec_dome'))
 
     def cot_wall(self):
-        # cot(x) energy barricade ja sotru ke pushback debe
         if len(self.action_queue) < 100:
             self.action_queue.append(('spell', 'cot_wall'))
 
@@ -136,6 +146,9 @@ class Body(Character):
             self.action_queue.append(('project', angle, power))
 
     def attack(self):
+        if not getattr(self, 'has_sword', True):
+            self.say("No sword in hand!")
+            return
         if len(self.action_queue) < 100:
             self.action_queue.append(('attack',))
 
@@ -180,7 +193,7 @@ class Body(Character):
             self.speed_x = 10
             self.target_x -= (10 * step * self.direction)
         elif action_type == 'crouch':
-            self.crouch_timer = 30  # 30 frames crouch thakbe (~0.5 sec)
+            self.crouch_timer = 30
         elif action_type == 'jump':
             power = action[1]
             pixel = power * 5
@@ -212,14 +225,20 @@ class Body(Character):
             else:
                 self.speed_x = 2
         elif action_type == 'attack':
-            if hasattr(self, 'shield') and self.shield.block_timer > 0:
+            if not getattr(self, 'has_sword', True):
+                self.speech_text = "No sword!"
+                self.speech_timer = 40
+            elif hasattr(self, 'shield') and self.shield.block_timer > 0:
                 self.sword.attack_queued = True
                 self.sword.is_heavy = False
             elif hasattr(self, 'sword') and self.sword.attack_state == 0:
                 self.sword.is_heavy = False
                 self.sword.attack()
         elif action_type == 'heavy_attack':
-            if hasattr(self, 'shield') and self.shield.block_timer > 0:
+            if not getattr(self, 'has_sword', True):
+                self.speech_text = "No sword!"
+                self.speech_timer = 40
+            elif hasattr(self, 'shield') and self.shield.block_timer > 0:
                 self.sword.attack_queued = True
                 self.sword.is_heavy = True
             elif hasattr(self, 'sword') and self.sword.attack_state == 0:
@@ -227,14 +246,22 @@ class Body(Character):
                 self.sword.attack_state = 1
                 self.sword.target_angle = -70
         elif action_type == 'throw_sword':
-            self.pending_spells.append({
-                'type': 'throw_sword',
-                'x': self.x + (35 * self.direction),
-                'y': self.y + 45,
-                'dir': self.direction,
-                'owner': self
-            })
-            self.cast_timer = 12
+            if getattr(self, 'has_sword', True):
+                self.has_sword = False # Disarmed until sword returns!
+                self.pending_spells.append({
+                    'type': 'throw_sword',
+                    'x': self.x + (35 * self.direction),
+                    'y': self.y + 45,
+                    'dir': self.direction,
+                    'owner': self,
+                    'origin_x': self.x,
+                    'distance_traveled': 0,
+                    'returning': False
+                })
+                self.cast_timer = 12
+            else:
+                self.speech_text = "No sword to throw!"
+                self.speech_timer = 40
         elif action_type == 'spell':
             spell_name = action[1]
             if spell_name == 'sec_barrier':
@@ -271,8 +298,9 @@ class Shield:
         self.shield_angel = 45
         self.block_timer=0
 
-    def set_shield(self, length, angle):
-        ...
+    def set_shield(self, length=40, angle=45):
+        self.shield_lenght = max(20, min(70, int(length)))
+        self.shield_angel = int(angle)
 
     def block(self):
         self.shield_angel=0
@@ -288,11 +316,13 @@ class Sword:
         self.has_hit = False
         self.is_heavy = False
         
-    def set_sword(self, length, angle):
-        pass
+    def set_sword(self, length=50, angle=0):
+        self.sword_length = max(25, min(80, int(length)))
+        self.sword_angle = int(angle)
+        self.target_angle = int(angle)
         
-    def swing(self, dx, dy):
-        pass
+    def swing(self, dx=0, dy=0):
+        self.attack()
         
     def attack(self):
         if self.attack_state == 0:

@@ -44,6 +44,7 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         self.player1.barrier_timer = 0
         self.player1.dome_timer = 0
         self.player1.cast_timer = 0
+        self.player1.has_sword = True
         self.player1.pending_spells = []
         if hasattr(self.player1, 'action_queue') and self.player1.action_queue:
             self.player1.action_queue.clear()
@@ -75,6 +76,7 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         self.player2.barrier_timer = 0
         self.player2.dome_timer = 0
         self.player2.cast_timer = 0
+        self.player2.has_sword = True
         self.player2.pending_spells = []
         if hasattr(self.player2, 'action_queue') and self.player2.action_queue:
             self.player2.action_queue.clear()
@@ -262,6 +264,7 @@ def game_loop():
                             'is_crouching': getattr(room.player1, 'crouch_timer', 0) > 0,
                             'has_barrier': getattr(room.player1, 'barrier_timer', 0) > 0,
                             'has_dome': getattr(room.player1, 'dome_timer', 0) > 0,
+                            'has_sword': getattr(room.player1, 'has_sword', True),
                             'is_heavy': getattr(room.player1.sword, 'is_heavy', False),
                             'heart': room.player1.heart,
                             'speech': getattr(room.player1, 'speech_text', '') if getattr(room.player1, 'speech_timer', 0) > 0 else ""
@@ -276,6 +279,7 @@ def game_loop():
                             'is_crouching': getattr(room.player2, 'crouch_timer', 0) > 0,
                             'has_barrier': getattr(room.player2, 'barrier_timer', 0) > 0,
                             'has_dome': getattr(room.player2, 'dome_timer', 0) > 0,
+                            'has_sword': getattr(room.player2, 'has_sword', True),
                             'is_heavy': getattr(room.player2.sword, 'is_heavy', False),
                             'heart': room.player2.heart,
                             'speech': getattr(room.player2, 'speech_text', '') if getattr(room.player2, 'speech_timer', 0) > 0 else ""

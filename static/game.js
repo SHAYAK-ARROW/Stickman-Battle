@@ -190,7 +190,8 @@ function draw_on_camvas(data) {
         ctx.stroke(); // Shorir aaka sesh
         
         // --- SWORD ---
-        if (player.sword_angle !== undefined) {
+        let has_sword = player.has_sword !== undefined ? player.has_sword : true;
+        if (has_sword && player.sword_angle !== undefined) {
             ctx.save();
             ctx.translate(sword_hand_x, sword_hand_y);
             let rad = ((player.sword_angle + 45) * dir) * (Math.PI / 180);
