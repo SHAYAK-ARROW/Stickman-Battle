@@ -10,6 +10,9 @@
 > 🎮 **Play Live:** [https://stickman-battle.onrender.com](https://stickman-battle.onrender.com)  
 > Made with precision by **Arrows Development Hub**.
 
+> [!NOTE]
+> **Free Tier Cold Starts:** The live demo is hosted on Render's free tier. If the server has been idle, it may take ~30–50 seconds to spin up on the initial visit. Once active, all WebSocket matchmaking and physics simulations run at silky-smooth 60 FPS.
+
 ---
 
 ## 🌟 Executive Summary
