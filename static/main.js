@@ -14,6 +14,6 @@ function join_custom_room() {
         const roomCode = value.split('/').pop().split('?')[0].trim();
         window.location.href = "/room/" + encodeURIComponent(roomCode);
     } else {
-        alert("Room code ba Player 1-er private invite link paste koro!");
+        alert("Enter a room code or paste Player 1's invite link.");
     }
 }

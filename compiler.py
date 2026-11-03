@@ -1,15 +1,18 @@
 import ast
 import logging
+import math
 import multiprocessing
-import sys
-import time
+import threading
 
 logger = logging.getLogger("stickman_battle.compiler")
 
 MAX_CODE_LENGTH = 2000
-MAX_EXECUTION_SECONDS = 0.3
+MAX_EXECUTION_SECONDS = 1.0
 MAX_ACTIONS = 100
-PROCESS_STARTUP_GRACE_SECONDS = 1.0
+PROCESS_STARTUP_GRACE_SECONDS = 5.0
+_SANDBOX_LOCK = threading.Lock()
+_SANDBOX_PROCESS = None
+_SANDBOX_CONNECTION = None
 
 
 def _record_command(commands, name, args):
@@ -21,8 +24,8 @@ def _record_command(commands, name, args):
     commands.append((name, tuple(args)))
 
 
-def _sandbox_worker(code, sensors, result_conn):
-    """Run untrusted code in a killable process with command-only proxies."""
+def _sandbox_execute(code, sensors):
+    """Run one untrusted script and return only recorded game commands."""
     commands = []
     print_count = 0
     input_count = 0
@@ -104,6 +107,41 @@ def _sandbox_worker(code, sensors, result_conn):
     for public_name, command_name in command_aliases.items():
         safe_env[public_name] = command(command_name)
 
+    def trig_spell(name):
+        def invoke(*args):
+            if len(args) != 1:
+                raise TypeError(f"math.{name}() requires one power argument (1-90)")
+            power = args[0]
+            if (isinstance(power, bool) or not isinstance(power, (int, float))
+                    or (isinstance(power, float) and not math.isfinite(power))):
+                raise ValueError("Spell power must be a number from 1 to 90")
+            power = max(1, min(90, power))
+            _record_command(commands, name, (power,))
+            return None
+        return staticmethod(invoke)
+
+    math_api = type("SafeMath", (), {
+        "sin": trig_spell("sin_wave"),
+        "cos": trig_spell("cos_wave"),
+        "tan": trig_spell("tan_spike"),
+        "cot": trig_spell("cot_wall"),
+        "sec": trig_spell("sec_barrier"),
+        "cosec": trig_spell("cosec_dome"),
+        "sin_value": staticmethod(math.sin),
+        "cos_value": staticmethod(math.cos),
+        "tan_value": staticmethod(math.tan),
+        "cot_value": staticmethod(lambda value: math.cos(value) / math.sin(value)),
+        "sec_value": staticmethod(lambda value: 1 / math.cos(value)),
+        "cosec_value": staticmethod(lambda value: 1 / math.sin(value)),
+    })()
+
+    def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "math" and level == 0 and not fromlist:
+            return math_api
+        raise ImportError("Only 'import math' is allowed")
+
+    safe_builtins["__import__"] = restricted_import
+
     safe_env.update({
         "get_enemy_distance": lambda: sensors["enemy_distance"],
         "is_enemy_attacking": lambda: sensors["enemy_attacking"],
@@ -114,27 +152,81 @@ def _sandbox_worker(code, sensors, result_conn):
         "Input": game_input,
     })
 
-    previous_trace = sys.gettrace()
-    deadline = time.monotonic() + MAX_EXECUTION_SECONDS
-
-    def timeout_trace(frame, event, arg):
-        if time.monotonic() >= deadline:
-            raise TimeoutError(
-                f"Execution timed out (max {MAX_EXECUTION_SECONDS}s)!"
-            )
-        return timeout_trace
-
     try:
-        sys.settrace(timeout_trace)
         exec(code, safe_env)
-        result_conn.send(("ok", commands))
-    except TimeoutError as exc:
-        result_conn.send(("timeout", str(exc)))
     except Exception as exc:
-        result_conn.send(("error", type(exc).__name__, str(exc)[:120]))
+        return ("error", type(exc).__name__, str(exc)[:120])
+    return ("ok", commands)
+
+
+def _sandbox_worker(connection):
+    """Keep one isolated process warm and execute scripts on request."""
+    try:
+        connection.send(("ready",))
+        while True:
+            request = connection.recv()
+            if request is None:
+                break
+            code, sensors = request
+            connection.send(_sandbox_execute(code, sensors))
+    except (EOFError, BrokenPipeError, OSError):
+        pass
     finally:
-        sys.settrace(previous_trace)
-        result_conn.close()
+        connection.close()
+
+
+def _discard_sandbox_worker():
+    global _SANDBOX_PROCESS, _SANDBOX_CONNECTION
+    process, connection = _SANDBOX_PROCESS, _SANDBOX_CONNECTION
+    _SANDBOX_PROCESS = None
+    _SANDBOX_CONNECTION = None
+    if connection is not None:
+        connection.close()
+    if process is not None and process.is_alive():
+        process.terminate()
+        process.join(0.2)
+        if process.is_alive():
+            process.kill()
+            process.join()
+
+
+def _ensure_sandbox_worker():
+    global _SANDBOX_PROCESS, _SANDBOX_CONNECTION
+    if _SANDBOX_PROCESS is not None and _SANDBOX_PROCESS.is_alive():
+        return
+
+    _discard_sandbox_worker()
+    context = multiprocessing.get_context("spawn")
+    parent_conn, child_conn = context.Pipe(duplex=True)
+    process = context.Process(
+        target=_sandbox_worker,
+        args=(child_conn,),
+        daemon=True,
+    )
+    process.start()
+    child_conn.close()
+    if not parent_conn.poll(PROCESS_STARTUP_GRACE_SECONDS):
+        process.terminate()
+        process.join(0.2)
+        if process.is_alive():
+            process.kill()
+            process.join()
+        parent_conn.close()
+        raise TimeoutError("Sandbox worker failed to start in time!")
+    if parent_conn.recv() != ("ready",):
+        process.terminate()
+        process.join(0.2)
+        parent_conn.close()
+        raise RuntimeError("Sandbox worker failed during startup")
+
+    _SANDBOX_PROCESS = process
+    _SANDBOX_CONNECTION = parent_conn
+
+
+def warm_sandbox():
+    """Start the sandbox before accepting players to avoid first-run delay."""
+    with _SANDBOX_LOCK:
+        _ensure_sandbox_worker()
 
 
 def _apply_commands(commands, current_player):
@@ -157,7 +249,8 @@ class SecurityValidator(ast.NodeVisitor):
         self.current_function = None
 
     def visit_Import(self, node):
-        raise ValueError("Importing modules ('import') is forbidden!")
+        if len(node.names) != 1 or node.names[0].name != 'math':
+            raise ValueError("Only 'import math' is allowed!")
 
     def visit_ImportFrom(self, node):
         raise ValueError("Importing modules ('from ... import') is forbidden!")
@@ -378,6 +471,11 @@ def compiler(code, current_player, enemy_player=None):
         "is_enemy_attacking": is_enemy_attacking,
         "get_my_health": get_my_health,
         "get_enemy_health": get_enemy_health,
+        "math": type("SafeMath", (), {
+            "sin": staticmethod(math.sin),
+            "cos": staticmethod(math.cos),
+            "tan": staticmethod(math.tan),
+        })(),
 
         # Direct print and input access
         "print": game_print,
@@ -391,40 +489,25 @@ def compiler(code, current_player, enemy_player=None):
         validator = SecurityValidator()
         validator.visit(parsed_tree)
 
-        # Step 2: Execute untrusted code in a killable child process. The
-        # child receives snapshots and command proxies, never live game
-        # objects. Only recorded primitive commands are replayed in parent.
+        # Step 2: Execute in the warm isolated worker. It receives sensor
+        # snapshots and returns only primitive command records, never objects.
         sensors = {
             "enemy_distance": get_enemy_distance(),
             "enemy_attacking": is_enemy_attacking(),
             "my_health": get_my_health(),
             "enemy_health": get_enemy_health(),
         }
-        context = multiprocessing.get_context("spawn")
-        result_conn, worker_conn = context.Pipe(duplex=False)
-        worker = context.Process(
-            target=_sandbox_worker,
-            args=(code, sensors, worker_conn),
-        )
-        worker.start()
-        worker_conn.close()
-        # Process startup is separate from the user-code deadline enforced by
-        # timeout_trace inside the child.
-        worker.join(MAX_EXECUTION_SECONDS + PROCESS_STARTUP_GRACE_SECONDS)
+        with _SANDBOX_LOCK:
+            _ensure_sandbox_worker()
+            connection = _SANDBOX_CONNECTION
+            connection.send((code, sensors))
+            if not connection.poll(MAX_EXECUTION_SECONDS):
+                _discard_sandbox_worker()
+                raise TimeoutError(
+                    f"Execution timed out (max {MAX_EXECUTION_SECONDS}s)!"
+                )
+            result = connection.recv()
 
-        if worker.is_alive():
-            worker.terminate()
-            worker.join(0.2)
-            raise TimeoutError(
-                f"Execution timed out (max {MAX_EXECUTION_SECONDS}s)!"
-            )
-
-        if not result_conn.poll():
-            raise RuntimeError("Sandbox worker exited without a result")
-        result = result_conn.recv()
-        result_conn.close()
-        if result[0] == "timeout":
-            raise TimeoutError(result[1])
         if result[0] == "error":
             raise RuntimeError(f"{result[1]}: {result[2]}")
 

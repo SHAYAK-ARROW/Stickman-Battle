@@ -1,7 +1,12 @@
+import math
+
+MAX_HEALTH = 10
+
+
 class Character:
     def __init__(self, name, x=0, y=0, direction=1):
         self.name = name
-        self.heart = 5
+        self.heart = MAX_HEALTH
         self.x = x
         self.y = y
         self.direction = direction
@@ -36,6 +41,8 @@ class Body(Character):
         self.crouch_timer = 0
         self.barrier_timer = 0
         self.dome_timer = 0
+        self.barrier_power = 1
+        self.dome_power = 1
         self.cast_timer = 0
         self.has_sword = True
         self.pending_spells = []
@@ -109,29 +116,33 @@ class Body(Character):
             self.action_queue.append(('throw_sword',))
 
     # --- Trigonometric Magic Spells ---
-    def sin_wave(self):
+    def _queue_power_spell(self, spell_name, power=1):
+        if (isinstance(power, bool) or not isinstance(power, (int, float))
+                or (isinstance(power, float) and not math.isfinite(power))):
+            self.say("Spell power must be a number from 1 to 90")
+            return
+        raw_power = max(1, min(90, power))
+        power_tier = int(math.floor(1 + ((raw_power - 1) * 9 / 89) + 0.5))
         if len(self.action_queue) < 100:
-            self.action_queue.append(('spell', 'sin_wave'))
+            self.action_queue.append(('spell', spell_name, power_tier))
 
-    def cos_wave(self):
-        if len(self.action_queue) < 100:
-            self.action_queue.append(('spell', 'cos_wave'))
+    def sin_wave(self, power=1):
+        self._queue_power_spell('sin_wave', power)
 
-    def tan_spike(self):
-        if len(self.action_queue) < 100:
-            self.action_queue.append(('spell', 'tan_spike'))
+    def cos_wave(self, power=1):
+        self._queue_power_spell('cos_wave', power)
 
-    def sec_barrier(self):
-        if len(self.action_queue) < 100:
-            self.action_queue.append(('spell', 'sec_barrier'))
+    def tan_spike(self, power=1):
+        self._queue_power_spell('tan_spike', power)
 
-    def cosec_dome(self):
-        if len(self.action_queue) < 100:
-            self.action_queue.append(('spell', 'cosec_dome'))
+    def sec_barrier(self, power=1):
+        self._queue_power_spell('sec_barrier', power)
 
-    def cot_wall(self):
-        if len(self.action_queue) < 100:
-            self.action_queue.append(('spell', 'cot_wall'))
+    def cosec_dome(self, power=1):
+        self._queue_power_spell('cosec_dome', power)
+
+    def cot_wall(self, power=1):
+        self._queue_power_spell('cot_wall', power)
 
     def jump(self, power=5):
         if len(self.action_queue) < 100:
@@ -281,17 +292,21 @@ class Body(Character):
                 self.speech_timer = 40
         elif action_type == 'spell':
             spell_name = action[1]
+            power = action[2] if len(action) > 2 else 1
             if spell_name == 'sec_barrier':
-                self.barrier_timer = 50
+                self.barrier_power = power
+                self.barrier_timer = 40 + (10 * power)
             elif spell_name == 'cosec_dome':
-                self.dome_timer = 50
+                self.dome_power = power
+                self.dome_timer = 40 + (10 * power)
             else:
                 self.pending_spells.append({
                     'type': spell_name,
                     'x': self.x,
                     'y': self.y,
                     'dir': self.direction,
-                    'owner': self
+                    'owner': self,
+                    'power': power
                 })
             self.cast_timer = 12
         elif action_type == 'block':

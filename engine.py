@@ -3,6 +3,16 @@ import logging
 
 logger = logging.getLogger("stickman_battle.engine")
 
+WAVE_DURATION_FRAMES = 120  # Two seconds at the 60 FPS simulation rate.
+WAVE_SPEED = 3
+WAVE_AMPLITUDE = 55
+
+
+def _spell_damage(power):
+    """Map 1-10 spell intensity to a balanced 1-3 hearts of damage."""
+    return max(1, min(3, (int(power) + 3) // 4))
+
+
 class GameEngine:
     def __init__(self):
         self.players = []
@@ -161,6 +171,10 @@ class GameEngine:
                 for sp in player.pending_spells:
                     sp['t'] = 0
                     sp['origin_y'] = player.y + 45
+                    if sp.get('type') in ('sin_wave', 'cos_wave'):
+                        sp['origin_x'] = player.x + (35 * player.direction)
+                        sp['x'] = sp['origin_x']
+                        sp['y'] = sp['origin_y']
                     self.spells.append(sp)
                 player.pending_spells.clear()
         
@@ -285,8 +299,9 @@ class GameEngine:
                         
                         # Check collision with enemy
                         if abs(s['x'] - enemy.x) <= 35 and abs(s['y'] - enemy.y) <= 65:
-                            if getattr(enemy, 'barrier_timer', 0) > 0:
-                                logger.info("--- THROWN SWORD ABSORBED BY SEC_BARRIER! ---")
+                            if (getattr(enemy, 'barrier_timer', 0) > 0
+                                    or getattr(enemy, 'dome_timer', 0) > 0):
+                                logger.info("--- THROWN SWORD ABSORBED BY TRIG DEFENSE! ---")
                             elif getattr(enemy, 'crouch_timer', 0) > 0:
                                 logger.info("--- THROWN SWORD FLEW OVER DUCKED OPPONENT! ---")
                             elif hasattr(enemy, 'shield') and enemy.shield.block_timer > 0:
@@ -317,67 +332,87 @@ class GameEngine:
                         remove_spell = True
 
                 elif stype == 'sin_wave':
-                    s['x'] += 9 * s['dir']
-                    s['y'] = s.get('origin_y', 515) - 35 * math.sin(s['t'] * 0.25)
-                    if abs(s['x'] - enemy.x) <= 35 and abs(s['y'] - enemy.y) <= 65:
-                        if getattr(enemy, 'barrier_timer', 0) > 0:
-                            logger.info("--- SIN_WAVE ABSORBED BY SEC_BARRIER! ---")
+                    phase = (2 * math.pi * s['t']) / WAVE_DURATION_FRAMES
+                    s['x'] = s['origin_x'] + (WAVE_SPEED * s['t'] * s['dir'])
+                    amplitude = WAVE_AMPLITUDE * (0.3 + 0.07 * s.get('power', 1))
+                    s['y'] = s['origin_y'] - amplitude * math.sin(phase)
+                    if (not s.get('has_hit') and abs(s['x'] - enemy.x) <= 35
+                            and abs(s['y'] - enemy.y) <= 65):
+                        s['has_hit'] = True
+                        if (getattr(enemy, 'barrier_timer', 0) > 0
+                                or getattr(enemy, 'dome_timer', 0) > 0):
+                            logger.info("--- SIN_WAVE ABSORBED BY TRIG DEFENSE! ---")
                         elif getattr(enemy, 'crouch_timer', 0) > 0 and s['y'] < enemy.y + 35:
                             logger.info("--- SIN_WAVE PASSED OVER CROUCHING OPPONENT! ---")
                         elif hasattr(enemy, 'shield') and enemy.shield.block_timer > 0:
                             logger.info("--- SIN_WAVE BLOCKED BY SHIELD! ---")
                         else:
-                            enemy.heart -= 1
-                            enemy.target_x += 30 * s['dir']
+                            power = s.get('power', 1)
+                            enemy.heart -= _spell_damage(power)
+                            enemy.target_x += (30 + 10 * (power - 1)) * s['dir']
                             enemy.speed_x = 4
-                            logger.info(f"--- SIN_WAVE HIT! Enemy hearts: {enemy.heart} ---")
-                        remove_spell = True
-                    elif s['x'] < 0 or s['x'] > 800 or s['t'] > 90:
+                            logger.info(f"--- SIN_WAVE POWER {power} HIT! Enemy hearts: {enemy.heart} ---")
+                    if s['t'] >= WAVE_DURATION_FRAMES:
                         remove_spell = True
 
                 elif stype == 'cos_wave':
-                    s['x'] += 8 * s['dir']
-                    s['y'] = s.get('origin_y', 515) - 75 + 45 * abs(math.cos(s['t'] * 0.15))
-                    if abs(s['x'] - enemy.x) <= 40 and abs(s['y'] - enemy.y) <= 75:
-                        if getattr(enemy, 'dome_timer', 0) > 0:
-                            logger.info("--- OVERHEAD COS_WAVE ABSORBED BY COSEC_DOME! ---")
-                        elif getattr(enemy, 'barrier_timer', 0) > 0:
-                            logger.info("--- COS_WAVE ABSORBED BY SEC_BARRIER! ---")
+                    phase = (2 * math.pi * s['t']) / WAVE_DURATION_FRAMES
+                    s['x'] = s['origin_x'] + (WAVE_SPEED * s['t'] * s['dir'])
+                    amplitude = WAVE_AMPLITUDE * (0.3 + 0.07 * s.get('power', 1))
+                    s['y'] = s['origin_y'] - amplitude * math.cos(phase)
+                    if (not s.get('has_hit') and abs(s['x'] - enemy.x) <= 40
+                            and abs(s['y'] - enemy.y) <= 75):
+                        s['has_hit'] = True
+                        if (getattr(enemy, 'dome_timer', 0) > 0
+                                or getattr(enemy, 'barrier_timer', 0) > 0):
+                            logger.info("--- COS_WAVE ABSORBED BY TRIG DEFENSE! ---")
                         else:
-                            enemy.heart -= 1
-                            enemy.target_x += 35 * s['dir']
+                            power = s.get('power', 1)
+                            enemy.heart -= _spell_damage(power)
+                            enemy.target_x += (35 + 10 * (power - 1)) * s['dir']
                             enemy.speed_x = 4
-                            logger.info(f"--- COS_WAVE CRUSHED ENEMY! Hearts: {enemy.heart} ---")
-                        remove_spell = True
-                    elif s['x'] < 0 or s['x'] > 800 or s['t'] > 90:
+                            logger.info(f"--- COS_WAVE POWER {power} HIT! Enemy hearts: {enemy.heart} ---")
+                    if s['t'] >= WAVE_DURATION_FRAMES:
                         remove_spell = True
 
                 elif stype == 'tan_spike':
                     if 'target_x' not in s:
-                        s['target_x'] = owner.x + (100 * s['dir'])
+                        # Aim at the opponent's position when the spell is cast.
+                        # The fixed 100px offset made this attack miss at normal
+                        # starting distances and made it feel non-functional.
+                        s['target_x'] = enemy.x
                         s['x'] = s['target_x']
-                        s['y'] = 600
-                    if 6 <= s['t'] <= 18 and not s.get('has_hit'):
+                        s['y'] = 560
+                    if 10 <= s['t'] <= 45 and not s.get('has_hit'):
                         if abs(enemy.x - s['target_x']) <= 45 and enemy.y >= 440:
                             s['has_hit'] = True
-                            enemy.heart -= 1
-                            enemy.jump_pixel = -12
-                            logger.info(f"--- TAN_SPIKE PIERCED FROM GROUND! Hearts: {enemy.heart} ---")
-                    elif s['t'] > 25:
+                            if (getattr(enemy, 'barrier_timer', 0) > 0
+                                    or getattr(enemy, 'dome_timer', 0) > 0
+                                    or (hasattr(enemy, 'shield') and enemy.shield.block_timer > 0)):
+                                logger.info("--- TAN_SPIKE BLOCKED BY DEFENSE! ---")
+                            else:
+                                enemy.heart -= _spell_damage(s.get('power', 1))
+                                enemy.jump_pixel = -12
+                                logger.info(f"--- TAN_SPIKE PIERCED! Hearts: {enemy.heart} ---")
+                    elif s['t'] > 60:
                         remove_spell = True
 
                 elif stype == 'cot_wall':
                     if 'x' not in s:
                         s['x'] = owner.x + (70 * s['dir'])
                         s['y'] = 530
-                    if abs(enemy.x - s['x']) <= 30 and not s.get('hit_cooldown'):
-                        enemy.heart -= 1
-                        enemy.target_x += 45 * s['dir']
-                        enemy.speed_x = 5
-                        s['hit_cooldown'] = 25
-                        logger.info(f"--- ENEMY HIT COT_WALL! Pushback! Hearts: {enemy.heart} ---")
-                    if s.get('hit_cooldown', 0) > 0:
-                        s['hit_cooldown'] -= 1
+                    if abs(enemy.x - s['x']) <= 30 and not s.get('has_hit'):
+                        s['has_hit'] = True
+                        if (getattr(enemy, 'barrier_timer', 0) > 0
+                                or getattr(enemy, 'dome_timer', 0) > 0
+                                or (hasattr(enemy, 'shield') and enemy.shield.block_timer > 0)):
+                            logger.info("--- COT_WALL BLOCKED BY DEFENSE! ---")
+                        else:
+                            power = s.get('power', 1)
+                            enemy.heart -= _spell_damage(power)
+                            enemy.target_x += (45 + 10 * (power - 1)) * s['dir']
+                            enemy.speed_x = 5
+                            logger.info(f"--- COT_WALL POWER {power} HIT! Hearts: {enemy.heart} ---")
                     if s['t'] > 60:
                         remove_spell = True
 

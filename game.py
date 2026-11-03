@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, abort
 from flask_socketio import SocketIO, join_room, leave_room
-from char import Body
+from char import Body, MAX_HEALTH
 import compiler
 from engine import GameEngine
 import os
@@ -58,7 +58,7 @@ class GameRoom:
     def reset_match(self):
         self.last_activity = time.time()
         # Reset Player 1
-        self.player1.heart = 5
+        self.player1.heart = MAX_HEALTH
         self.player1.x = 200
         self.player1.target_x = 200
         self.player1.y = 300
@@ -69,6 +69,8 @@ class GameRoom:
         self.player1.crouch_timer = 0
         self.player1.barrier_timer = 0
         self.player1.dome_timer = 0
+        self.player1.barrier_power = 1
+        self.player1.dome_power = 1
         self.player1.cast_timer = 0
         self.player1.has_sword = True
         self.player1.pending_spells = []
@@ -91,7 +93,7 @@ class GameRoom:
         self.player1.pending_question = None
 
         # Reset Player 2
-        self.player2.heart = 5
+        self.player2.heart = MAX_HEALTH
         self.player2.x = 600
         self.player2.target_x = 600
         self.player2.y = 300
@@ -102,6 +104,8 @@ class GameRoom:
         self.player2.crouch_timer = 0
         self.player2.barrier_timer = 0
         self.player2.dome_timer = 0
+        self.player2.barrier_power = 1
+        self.player2.dome_power = 1
         self.player2.cast_timer = 0
         self.player2.has_sword = True
         self.player2.pending_spells = []
@@ -407,10 +411,13 @@ def game_loop():
                             'is_crouching': getattr(room.player1, 'crouch_timer', 0) > 0,
                             'has_barrier': getattr(room.player1, 'barrier_timer', 0) > 0,
                             'has_dome': getattr(room.player1, 'dome_timer', 0) > 0,
+                            'barrier_power': getattr(room.player1, 'barrier_power', 1),
+                            'dome_power': getattr(room.player1, 'dome_power', 1),
                             'has_sword': getattr(room.player1, 'has_sword', True),
                             'is_heavy': getattr(room.player1.sword, 'is_heavy', False),
                             'is_swing': getattr(room.player1.sword, 'is_swing', False),
                             'heart': room.player1.heart,
+                            'max_health': MAX_HEALTH,
                             'speech': getattr(room.player1, 'speech_text', '') if getattr(room.player1, 'speech_timer', 0) > 0 else ""
                         },
                         'player2': {
@@ -425,10 +432,13 @@ def game_loop():
                             'is_crouching': getattr(room.player2, 'crouch_timer', 0) > 0,
                             'has_barrier': getattr(room.player2, 'barrier_timer', 0) > 0,
                             'has_dome': getattr(room.player2, 'dome_timer', 0) > 0,
+                            'barrier_power': getattr(room.player2, 'barrier_power', 1),
+                            'dome_power': getattr(room.player2, 'dome_power', 1),
                             'has_sword': getattr(room.player2, 'has_sword', True),
                             'is_heavy': getattr(room.player2.sword, 'is_heavy', False),
                             'is_swing': getattr(room.player2.sword, 'is_swing', False),
                             'heart': room.player2.heart,
+                            'max_health': MAX_HEALTH,
                             'speech': getattr(room.player2, 'speech_text', '') if getattr(room.player2, 'speech_timer', 0) > 0 else ""
                         },
                         'spells': [
@@ -437,7 +447,10 @@ def game_loop():
                                 'x': round(s.get('x', s.get('target_x', 0)), 1),
                                 'y': round(s.get('y', 470), 1),
                                 'dir': s.get('dir', 1),
-                                't': s.get('t', 0)
+                                't': s.get('t', 0),
+                                'power': s.get('power', 1),
+                                'origin_x': round(s.get('origin_x', s.get('x', 0)), 1),
+                                'origin_y': round(s.get('origin_y', s.get('y', 470)), 1)
                             }
                             for s in getattr(room.engine, 'spells', [])
                         ]
@@ -457,8 +470,8 @@ def ensure_game_loop():
 def handle_connect():
     ensure_game_loop()
 
-ensure_game_loop()
-
 if __name__ == '__main__':
+    compiler.warm_sandbox()
+    ensure_game_loop()
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)

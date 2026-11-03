@@ -1,6 +1,6 @@
 import unittest
 import time
-from char import Body
+from char import Body, MAX_HEALTH
 import compiler
 import game
 
@@ -54,7 +54,7 @@ class TestTwoPlayerLifecycleSimulation(unittest.TestCase):
 
         # Thrown sword hit P2 and returned to P1's hand
         self.assertTrue(p1.has_sword)
-        self.assertLess(p2.heart, 5)
+        self.assertLess(p2.heart, MAX_HEALTH)
 
         # 4. Game over simulation
         p2.heart = 0
@@ -62,8 +62,8 @@ class TestTwoPlayerLifecycleSimulation(unittest.TestCase):
 
         # 5. Rematch simulation
         room.reset_match()
-        self.assertEqual(p1.heart, 5)
-        self.assertEqual(p2.heart, 5)
+        self.assertEqual(p1.heart, MAX_HEALTH)
+        self.assertEqual(p2.heart, MAX_HEALTH)
         self.assertTrue(p1.has_sword)
         self.assertTrue(p2.has_sword)
         self.assertEqual(len(room.engine.spells), 0)

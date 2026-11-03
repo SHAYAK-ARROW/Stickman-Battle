@@ -47,6 +47,21 @@ socket.on('player_reconnecting', (data) => {
 const canvas = document.getElementById('gui_screen');
 const ctx = canvas.getContext('2d');
 
+function drawTrigCurve(context, options) {
+    const { centerX, centerY, width, start, end, samples, fn, scale, direction, ySign } = options;
+    context.beginPath();
+    for (let i = 0; i <= samples; i++) {
+        const ratio = i / samples;
+        const angle = start + ((end - start) * ratio);
+        const value = Math.max(-3, Math.min(3, fn(angle)));
+        const px = centerX + (direction * ((ratio - 0.5) * width));
+        const py = centerY + (ySign * value * scale);
+        if (i === 0) context.moveTo(px, py);
+        else context.lineTo(px, py);
+    }
+    context.stroke();
+}
+
 socket.on('match_start', () => {
     console.log("Match started!");
     const waitScreen = document.getElementById('wait_screen');
@@ -95,40 +110,37 @@ function draw_on_camvas(data) {
         let is_crouching = player.is_crouching || false;
         let crouchY = is_crouching ? 35 : 0;
         
-        // mathar opore koyta heart ache dekhanor jono
-        if (player.heart !== undefined) {
-            ctx.font = "16px Arial";
-            ctx.textAlign = "center";
-            let heart_text = player.heart > 0 ? "❤️".repeat(player.heart) : "💀 DEAD";
-            ctx.fillText(heart_text, x, y - 30 + crouchY);
-        }
-        
-        // Defensive Spell: cosec_dome (protective dome over head)
+        // Defensive cosecant curve projected in front of the fighter.
         if (player.has_dome) {
             ctx.save();
             ctx.strokeStyle = "#ffd700";
             ctx.shadowColor = "#ffd700";
             ctx.shadowBlur = 18;
             ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(x, y + 35 + crouchY, 65, Math.PI, 0);
-            ctx.stroke();
+            const domePower = player.dome_power || 1;
+            drawTrigCurve(ctx, {
+                centerX: x + (62 * dir), centerY: y + 15 + crouchY,
+                width: 82, start: 0.4, end: Math.PI - 0.4, samples: 40,
+                fn: angle => 1 / Math.sin(angle),
+                scale: 8 + (1.5 * domePower), direction: dir, ySign: 1
+            });
             ctx.restore();
         }
 
-        // Defensive Spell: sec_barrier (curved force field in front)
+        // Defensive secant curve projected in front of the fighter.
         if (player.has_barrier) {
             ctx.save();
             ctx.strokeStyle = "#00f0ff";
             ctx.shadowColor = "#00f0ff";
             ctx.shadowBlur = 16;
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            let barX = x + (45 * dir);
-            let startA = dir === 1 ? -Math.PI / 3 : (2 * Math.PI / 3);
-            let endA = dir === 1 ? Math.PI / 3 : (4 * Math.PI / 3);
-            ctx.arc(barX, y + 55 + crouchY, 55, startA, endA);
-            ctx.stroke();
+            ctx.lineWidth = 4;
+            const barrierPower = player.barrier_power || 1;
+            drawTrigCurve(ctx, {
+                centerX: x + (55 * dir), centerY: y + 40 + crouchY,
+                width: 72, start: -1.05, end: 1.05, samples: 40,
+                fn: angle => 1 / Math.cos(angle),
+                scale: 8 + (1.5 * barrierPower), direction: dir, ySign: 1
+            });
             ctx.restore();
         }
 
@@ -297,6 +309,34 @@ function draw_on_camvas(data) {
     draw_player(data.player1, "red");
     draw_player(data.player2, "blue");
 
+    // Fixed HUD health bars keep health readable without crowding the fighters.
+    function draw_health_bar(player, label, x, align) {
+        const maxHealth = player.max_health || 10;
+        const health = Math.max(0, Math.min(maxHealth, player.heart || 0));
+        const width = 150;
+        const height = 12;
+        const left = align === "right" ? x - width : x;
+        const ratio = health / maxHealth;
+        const color = ratio > 0.5 ? "#4ade80" : ratio > 0.25 ? "#facc15" : "#ef4444";
+
+        ctx.save();
+        ctx.textAlign = align === "right" ? "right" : "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.font = "bold 13px Arial";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(`${label}  HP ${health}/${maxHealth}`, align === "right" ? x : x, 24);
+        ctx.fillStyle = "#333333";
+        ctx.fillRect(left, 30, width, height);
+        ctx.fillStyle = color;
+        ctx.fillRect(left, 30, width * ratio, height);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(left, 30, width, height);
+        ctx.restore();
+    }
+    draw_health_bar(data.player1, "P1", 20, "left");
+    draw_health_bar(data.player2, "P2", canvas.width - 20, "right");
+
     // --- SPELLS & RANGED PROJECTILES RENDER ---
     if (data.spells && Array.isArray(data.spells)) {
         data.spells.forEach(spell => {
@@ -304,6 +344,7 @@ function draw_on_camvas(data) {
             let sy = spell.y;
             let sdir = spell.dir || 1;
             let st = spell.t || 0;
+            let spellPower = spell.power || 1;
             
             if (spell.type === 'throw_sword') {
                 ctx.save();
@@ -325,65 +366,79 @@ function draw_on_camvas(data) {
                 ctx.strokeStyle = "#00ffff";
                 ctx.fillStyle = "#00ffff";
                 ctx.shadowColor = "#00ffff";
-                ctx.shadowBlur = 16;
-                ctx.lineWidth = 4;
+                ctx.shadowBlur = 18;
+                ctx.lineWidth = 5;
+                const duration = 120;
+                const amplitude = 55 * (0.3 + 0.07 * spellPower);
+                const originX = spell.origin_x ?? sx;
+                const originY = spell.origin_y ?? sy;
                 ctx.beginPath();
-                ctx.arc(sx, sy, 9, 0, Math.PI * 2);
-                ctx.fill();
-                // Trail wave
-                ctx.beginPath();
-                for (let i = 0; i < 6; i++) {
-                    let tx = sx - (i * 9 * sdir);
-                    let ty = sy + Math.sin((st - i) * 0.25) * 16;
-                    if (i === 0) ctx.moveTo(tx, ty);
+                for (let age = 0; age <= st; age += 2) {
+                    const phase = (2 * Math.PI * age) / duration;
+                    const tx = originX + (3 * age * sdir);
+                    const ty = originY - amplitude * Math.sin(phase);
+                    if (age === 0) ctx.moveTo(tx, ty);
                     else ctx.lineTo(tx, ty);
                 }
                 ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(sx, sy, 9, 0, Math.PI * 2);
+                ctx.fill();
                 ctx.restore();
             } else if (spell.type === 'cos_wave') {
                 ctx.save();
                 ctx.strokeStyle = "#ffd700";
-                ctx.fillStyle = "rgba(255, 215, 0, 0.25)";
                 ctx.shadowColor = "#ffd700";
-                ctx.shadowBlur = 18;
+                ctx.shadowBlur = 20;
                 ctx.lineWidth = 5;
+                const duration = 120;
+                const amplitude = 55 * (0.3 + 0.07 * spellPower);
+                const originX = spell.origin_x ?? sx;
+                const originY = spell.origin_y ?? sy;
                 ctx.beginPath();
-                ctx.arc(sx, sy, 24, -Math.PI / 2, Math.PI / 2, sdir === -1);
+                for (let age = 0; age <= st; age += 2) {
+                    const phase = (2 * Math.PI * age) / duration;
+                    const tx = originX + (3 * age * sdir);
+                    const ty = originY - amplitude * Math.cos(phase);
+                    if (age === 0) ctx.moveTo(tx, ty);
+                    else ctx.lineTo(tx, ty);
+                }
                 ctx.stroke();
+                ctx.fillStyle = "#ffd700";
+                ctx.beginPath();
+                ctx.arc(sx, sy, 9, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
             } else if (spell.type === 'tan_spike') {
                 ctx.save();
-                let progress = Math.sin(Math.min(st / 25, 1) * Math.PI);
-                let h = progress * 135;
-                ctx.fillStyle = "#e040fb";
+                const rise = Math.min(st / 20, 1);
+                const fade = st > 45 ? Math.max(0, (60 - st) / 15) : 1;
+                const progress = rise * fade;
+                ctx.globalAlpha = fade;
+                ctx.strokeStyle = "#e040fb";
                 ctx.shadowColor = "#e040fb";
-                ctx.shadowBlur = 20;
-                ctx.beginPath();
-                ctx.moveTo(sx - 15, 600);
-                ctx.lineTo(sx + 15, 600);
-                ctx.lineTo(sx, 600 - h);
-                ctx.closePath();
-                ctx.fill();
+                ctx.shadowBlur = 24;
+                ctx.lineWidth = 6;
+                drawTrigCurve(ctx, {
+                    centerX: sx, centerY: 555 - (35 * rise), width: 130,
+                    start: -1.35, end: 1.35, samples: 72,
+                    fn: angle => Math.tan(angle),
+                    scale: (10 + (1.5 * spellPower)) * progress,
+                    direction: sdir, ySign: -1
+                });
                 ctx.restore();
             } else if (spell.type === 'cot_wall') {
                 ctx.save();
                 ctx.strokeStyle = "#ff3d00";
                 ctx.shadowColor = "#ff3d00";
                 ctx.shadowBlur = 16;
-                ctx.lineWidth = 8;
-                ctx.beginPath();
-                ctx.moveTo(sx, 600);
-                ctx.lineTo(sx, 460);
-                ctx.stroke();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = "#ffff00";
-                for (let gy = 480; gy < 600; gy += 25) {
-                    ctx.beginPath();
-                    ctx.moveTo(sx - 12, gy);
-                    ctx.lineTo(sx + 12, gy);
-                    ctx.stroke();
-                }
+                ctx.lineWidth = 5;
+                drawTrigCurve(ctx, {
+                    centerX: sx, centerY: 520, width: 60,
+                    start: 0.38, end: Math.PI - 0.38, samples: 48,
+                    fn: angle => Math.cos(angle) / Math.sin(angle),
+                    scale: 12 + (2 * spellPower), direction: sdir, ySign: -1
+                });
                 ctx.restore();
             }
         });
@@ -418,7 +473,7 @@ function draw_on_camvas(data) {
 function run() {
     const runBtn = document.getElementById("run_btn");
     if (runBtn && runBtn.disabled) {
-        alert("Match sesh ba player ready na thakle code run kora jabe na! Rematch koro.");
+        alert("The match is over or Player 2 is not ready. Start a rematch or wait for Player 2.");
         return;
     }
     let code = document.getElementById("ide").value;

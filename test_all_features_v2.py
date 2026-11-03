@@ -211,6 +211,22 @@ class TestAllFeaturesV2(unittest.TestCase):
         self.assertEqual(self.p1.pending_spells[0]['type'], 'cot_wall')
         self.p1.pending_spells.clear()
 
+    def test_tan_spike_targets_opponent_and_remains_active_for_graph(self):
+        self.p1.x = self.p1.target_x = 200
+        self.p2.x = self.p2.target_x = 600
+        self.p1.tan_spike(45)
+        self.p1.execute_next_action()
+
+        self.engine.update()
+        self.assertEqual(self.engine.spells[0]['target_x'], 600)
+        for _ in range(9):
+            self.engine.update()
+        self.assertLess(self.p2.heart, 10)
+
+        for _ in range(15):
+            self.engine.update()
+        self.assertTrue(any(spell['type'] == 'tan_spike' for spell in self.engine.spells))
+
     def test_compiler_code_execution(self):
         user_code = '''
 set_sword(65, 5)
