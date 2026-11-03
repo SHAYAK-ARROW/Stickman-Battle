@@ -125,6 +125,16 @@ python -m unittest discover -p "test_*.py"
 
 ---
 
+## 📬 Suggestions, Feedback & Bug Reports
+
+Have an idea for a new trigonometric spell, balance tweak, or found a bug? We welcome all feedback and community contributions:
+
+* **Direct Email:** [`shayaksadhukhan402@gmail.com`](mailto:shayaksadhukhan402@gmail.com)
+* **GitHub Issues:** [Open an Issue or Suggestion](https://github.com/SHAYAK-ARROW/Stickman-Battle/issues)
+* **Live Game Info Page:** Visit [`/info`](https://stickman-battle.onrender.com/info) for project details and release metadata.
+
+---
+
 ## 📄 License & Credits
 
 Developed with ❤️ by **Arrows Development Hub**.  

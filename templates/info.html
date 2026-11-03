@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0e0f12">
+    <title>Game Info & Feedback · Stickman Battle</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="home-page info-page">
+    <main class="home-shell info-shell">
+        <header class="site-header">
+            <a class="brand" href="/" aria-label="Stickman Battle home">
+                <span class="brand-mark" aria-hidden="true">SB</span>
+                <div class="brand-text-wrap">
+                    <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v1.0</span></span>
+                    <span class="brand-subtitle">Made by Arrows Development Hub</span>
+                </div>
+            </a>
+            <div class="header-right">
+                <a href="/" class="button button-secondary action-chip-btn">← Back to Arena</a>
+            </div>
+        </header>
+
+        <section class="info-hero">
+            <div class="hub-badge">
+                <span class="hub-badge-dot"></span>
+                <span>PROJECT INFO &amp; COMMUNITY FEEDBACK</span>
+            </div>
+
+            <h1 class="hero-title">
+                Game Info &amp;<br>
+                <span>Feedback Hub.</span>
+            </h1>
+
+            <p class="hero-copy">
+                Release specifications, technical architecture, and direct developer communication channels for bug reports and feature ideas.
+            </p>
+        </section>
+
+        <!-- Feedback & Support Spotlight Card -->
+        <section class="info-feedback-card" aria-labelledby="feedback-title">
+            <div class="feedback-badge-row">
+                <span class="feedback-icon">📬</span>
+                <span class="action-label">WE WANT YOUR IDEAS &amp; BUG REPORTS</span>
+            </div>
+            <h2 id="feedback-title">Got a suggestion or found a bug?</h2>
+            <p class="feedback-desc">
+                Whether you have an idea for a new trigonometric spell, balance tweak, or encountered an unexpected glitch, we'd love to hear from you directly!
+            </p>
+
+            <div class="feedback-email-box">
+                <div class="email-details">
+                    <span class="email-label">DIRECT DEVELOPER EMAIL</span>
+                    <span id="dev_email" class="email-address">shayaksadhukhan402@gmail.com</span>
+                </div>
+                <div class="email-actions">
+                    <a href="mailto:shayaksadhukhan402@gmail.com?subject=Stickman%20Battle%20Feedback%20/%20Bug%20Report" class="button button-primary">
+                        <span>✉️ Send Email</span>
+                    </a>
+                    <button id="copy_email_btn" type="button" class="button button-secondary" onclick="copyDeveloperEmail()">
+                        <span>📋 Copy Email</span>
+                    </button>
+                    <a href="https://github.com/SHAYAK-ARROW/Stickman-Battle/issues" target="_blank" rel="noopener" class="button button-secondary">
+                        <span>🐙 GitHub Issue</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Info Grid -->
+        <section class="info-grid">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <span class="info-icon">⚔️</span>
+                    <h3>Release Metadata</h3>
+                </div>
+                <ul class="meta-list">
+                    <li><span class="meta-key">Product</span><span class="meta-val">Stickman Battle</span></li>
+                    <li><span class="meta-key">Version</span><span class="meta-val highlight-val">v1.0.0 (Release)</span></li>
+                    <li><span class="meta-key">Studio</span><span class="meta-val">Arrows Development Hub</span></li>
+                    <li><span class="meta-key">Lead Developer</span><span class="meta-val">Shayak Sadhukhan</span></li>
+                    <li><span class="meta-key">Engine Architecture</span><span class="meta-val">Flask-SocketIO 60 FPS</span></li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <div class="info-card-header">
+                    <span class="info-icon">🛡️</span>
+                    <h3>Security &amp; Sandboxing</h3>
+                </div>
+                <p class="info-card-text">
+                    User scripts execute in an isolated Python subprocess worker guarded by an Abstract Syntax Tree (AST) visitor. System primitives (<code>eval</code>, <code>exec</code>, <code>open</code>) and deep nested loops are strictly prohibited to prevent denial-of-service.
+                </p>
+            </div>
+
+            <div class="info-card">
+                <div class="info-card-header">
+                    <span class="info-icon">📐</span>
+                    <h3>Trigonometric Physics</h3>
+                </div>
+                <p class="info-card-text">
+                    Projectile spells trace genuine mathematical curves ($\sin, \cos, \tan, \sec, \csc, \cot$) rendered dynamically in 60 FPS on HTML5 Canvas with weapon length hitboxes and mutual sword parries.
+                </p>
+            </div>
+        </section>
+
+        <footer class="home-footer">
+            <span>Stickman Battle</span> · <span>Made with precision by <b>Arrows Development Hub</b></span> · <span>Contact: <b>shayaksadhukhan402@gmail.com</b></span>
+        </footer>
+    </main>
+
+    <script>
+    function copyDeveloperEmail() {
+        const email = "shayaksadhukhan402@gmail.com";
+        const btn = document.getElementById("copy_email_btn");
+        
+        const notify = () => {
+            if (btn) {
+                const orig = btn.innerHTML;
+                btn.innerHTML = "<span>✓ Copied!</span>";
+                btn.style.borderColor = "#4ade80";
+                btn.style.color = "#4ade80";
+                setTimeout(() => {
+                    btn.innerHTML = orig;
+                    btn.style.borderColor = "";
+                    btn.style.color = "";
+                }, 2400);
+            }
+            showToast({
+                title: "Email Copied!",
+                message: "shayaksadhukhan402@gmail.com copied to clipboard.",
+                type: "success"
+            });
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(email).then(notify).catch(() => fallbackCopyEmail(email, notify));
+        } else {
+            fallbackCopyEmail(email, notify);
+        }
+    }
+
+    function fallbackCopyEmail(email, callback) {
+        try {
+            const ta = document.createElement("textarea");
+            ta.value = email;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            callback();
+        } catch(e) {
+            showToast({
+                title: "Copy Failed",
+                message: "Please manually copy: " + email,
+                type: "warning"
+            });
+        }
+    }
+
+    function showToast({ title, message, type = 'info', duration = 3500 }) {
+        let container = document.getElementById('toast_container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast_container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        const iconSymbols = { success: '✓', warning: '!', info: 'ℹ' };
+        const iconChar = iconSymbols[type] || 'ℹ';
+
+        toast.innerHTML = `
+            <div class="toast-icon ${type}">${iconChar}</div>
+            <div class="toast-content">
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" title="Close">&times;</button>
+        `;
+
+        const closeToast = () => {
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 250);
+        };
+
+        toast.querySelector('.toast-close').addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeToast();
+        });
+        toast.addEventListener('click', closeToast);
+
+        container.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('show'));
+
+        if (duration > 0) {
+            setTimeout(closeToast, duration);
+        }
+    }
+    </script>
+</body>
+</html>

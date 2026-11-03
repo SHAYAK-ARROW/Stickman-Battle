@@ -5,6 +5,7 @@ import compiler
 from engine import GameEngine
 from bot import BattleBot
 import os
+import json
 import time 
 import threading
 import re
@@ -175,6 +176,18 @@ def get_player_for_token(room, token):
 @app.route('/')
 def lobby_menu():
     return render_template('index.html')
+
+@app.route('/info')
+def game_info():
+    info_data = {}
+    info_path = os.path.join(os.path.dirname(__file__), 'info.json')
+    if os.path.exists(info_path):
+        try:
+            with open(info_path, 'r', encoding='utf-8') as f:
+                info_data = json.load(f)
+        except Exception as e:
+            logger.error(f"Failed to read info.json: {e}")
+    return render_template('info.html', info=info_data)
 
 @app.route('/bot/<difficulty>')
 def play_vs_bot(difficulty):

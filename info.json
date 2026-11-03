@@ -1,11 +1,10 @@
 {
   "product_name": "Stickman Battle",
-  "studio": "Arrow Development Hub",
-  "manager": "Shayak",
+  "studio": "Arrows Development Hub",
+  "manager": "Shayak Sadhukhan",
   "manager_email": "shayaksadhukhan402@gmail.com",
-  "status": "Under Development",
-  "version": "2.0.0",
-  "release_type": "v2.0 Combat & Arena Update",
-  "description": "A real-time 1v1 multiplayer combat game where players write Python code to battle."
+  "status": "Production Release",
+  "version": "1.0.0",
+  "release_type": "v1.0 Combat & Arena Release",
+  "description": "A real-time 1v1 multiplayer combat arena where players battle by writing Python code."
 }
-
