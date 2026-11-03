@@ -7,11 +7,13 @@ function join_custom_room() {
     const input = document.getElementById("room_input");
     const value = input ? input.value.trim() : "";
     if (value && value.includes("?token=")) {
-        // Only private invite links carry a valid player token.
+        // Private invite link: preserve the tokenized URL.
         window.location.href = value;
     } else if (value) {
-        alert("Room code alone is not enough. Player 1-er private invite link use koro.");
+        // Public room-code join: the server assigns the open Player 2 slot.
+        const roomCode = value.split('/').pop().split('?')[0].trim();
+        window.location.href = "/room/" + encodeURIComponent(roomCode);
     } else {
-        alert("Player 1-er private invite link paste koro!");
+        alert("Room code ba Player 1-er private invite link paste koro!");
     }
 }

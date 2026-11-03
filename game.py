@@ -181,19 +181,30 @@ def join_room_game(room_id):
     room = rooms.get(room_id)
     token = request.args.get('token', '')
 
-    # Existing rooms require a valid private token; player query parameters are ignored.
+    # A private token identifies either reserved slot. For convenience, a bare
+    # room code is also allowed to join the open Player 2 slot. Explicit role
+    # query parameters are never trusted and remain rejected without a token.
     if room is None:
         abort(403, "Unknown room. Create a room from the lobby or use a private invite link.")
 
-    assigned_player = get_player_for_token(room, token)
-    if assigned_player is None:
+    if token:
+        assigned_player = get_player_for_token(room, token)
+        if assigned_player is None:
+            abort(403, "This room requires a valid private invite link.")
+        room_token = token
+    elif request.args.get('player'):
         abort(403, "This room requires a valid private invite link.")
+    else:
+        # Public room-code join always targets Player 2. The real slot is
+        # still enforced by the Socket.IO SID/token authorization below.
+        assigned_player = 2
+        room_token = room.player_tokens[2]
 
     return render_template(
         'game.html',
         room_id=room_id,
         player_id=assigned_player,
-        room_token=token,
+        room_token=room_token,
         player2_token=room.player_tokens[2],
     )
 

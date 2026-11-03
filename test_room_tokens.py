@@ -21,10 +21,13 @@ class TestPrivateRoomTokens(unittest.TestCase):
         self.assertNotIn('player=', location)
         self.assertEqual(self.client.get(location).status_code, 200)
 
-    def test_existing_room_rejects_role_spoof_without_token(self):
+    def test_existing_room_accepts_bare_code_for_player_two(self):
         room = game.get_or_create_room('private2')
         owner_url = f"/room/private2?token={room.player_tokens[1]}"
         self.assertEqual(self.client.get(owner_url).status_code, 200)
+        bare_code = self.client.get('/room/private2')
+        self.assertEqual(bare_code.status_code, 200)
+        self.assertIn(room.player_tokens[2], bare_code.get_data(as_text=True))
         self.assertEqual(self.client.get('/room/private2?player=2').status_code, 403)
         self.assertEqual(self.client.get('/room/private2?token=wrong').status_code, 403)
 
