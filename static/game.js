@@ -142,18 +142,18 @@ function draw_on_camvas(data) {
         prevP2Heart = data.player2.heart;
 
         // 2. Sword Swing & Dynamic Clash
-        const p1Swinging = data.player1.has_sword && data.player1.sword_angle !== undefined && (data.player1.sword_angle < -25 || data.player1.sword_angle > 25);
-        const p2Swinging = data.player2.has_sword && data.player2.sword_angle !== undefined && (data.player2.sword_angle < -25 || data.player2.sword_angle > 25);
+        const p1Slashing = data.player1.has_sword && data.player1.attack_state === 2;
+        const p2Slashing = data.player2.has_sword && data.player2.attack_state === 2;
         const fightersClose = Math.abs(data.player1.x - data.player2.x) <= 140;
 
-        if (p1Swinging && p2Swinging && fightersClose && (!prevP1Attacking || !prevP2Attacking)) {
+        if (p1Slashing && p2Slashing && fightersClose && (!prevP1Attacking || !prevP2Attacking)) {
             window.AudioEngine.playSwordClash();
         } else {
-            if (p1Swinging && !prevP1Attacking) window.AudioEngine.playSwordSwing();
-            if (p2Swinging && !prevP2Attacking) window.AudioEngine.playSwordSwing();
+            if (p1Slashing && !prevP1Attacking) window.AudioEngine.playSwordSwing();
+            if (p2Slashing && !prevP2Attacking) window.AudioEngine.playSwordSwing();
         }
-        prevP1Attacking = p1Swinging;
-        prevP2Attacking = p2Swinging;
+        prevP1Attacking = p1Slashing;
+        prevP2Attacking = p2Slashing;
 
         // 3. Shield Block
         if ((data.player1.is_blocking && !prevP1Blocking) || (data.player2.is_blocking && !prevP2Blocking)) {

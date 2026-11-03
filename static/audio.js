@@ -59,8 +59,13 @@
     // Ambient Sparkle Bell scale (C pentatonic higher register)
     const SPARKLE_NOTES = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
 
-    function getAudioContext() {
+    let hasUserInteracted = false;
+
+    function getAudioContext(forceCreate) {
         if (!audioCtx) {
+            if (!hasUserInteracted && !forceCreate) {
+                return null; // Avoid browser autoplay warning before first user gesture
+            }
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (!AudioContextClass) return null;
             audioCtx = new AudioContextClass();
@@ -75,8 +80,8 @@
             masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.22 : 0.0, audioCtx.currentTime);
             masterSfxGain.connect(audioCtx.destination);
         }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
+        if (audioCtx.state === 'suspended' && (hasUserInteracted || forceCreate)) {
+            audioCtx.resume().catch(() => {});
         }
         return audioCtx;
     }
@@ -456,9 +461,10 @@
     }
 
     function toggleBGM() {
-        const ctx = getAudioContext();
+        hasUserInteracted = true;
+        const ctx = getAudioContext(true);
         if (ctx && ctx.state === 'suspended') {
-            ctx.resume();
+            ctx.resume().catch(() => {});
         }
         bgmEnabled = !bgmEnabled;
         safeSet('sb_bgm_enabled', bgmEnabled ? '1' : '0');
@@ -473,9 +479,10 @@
     }
 
     function toggleSFX() {
-        const ctx = getAudioContext();
+        hasUserInteracted = true;
+        const ctx = getAudioContext(true);
         if (ctx && ctx.state === 'suspended') {
-            ctx.resume();
+            ctx.resume().catch(() => {});
         }
         sfxEnabled = !sfxEnabled;
         safeSet('sb_sfx_enabled', sfxEnabled ? '1' : '0');
@@ -491,10 +498,12 @@
 
     // Browser Autoplay Policy: resume AudioContext and start BGM on first user touch/click/key
     function handleFirstUserGesture() {
-        const ctx = getAudioContext();
+        hasUserInteracted = true;
+        const ctx = getAudioContext(true);
         if (ctx) {
             if (ctx.state === 'suspended') {
                 ctx.resume().then(() => {
+                    console.log("🔊 AudioContext successfully unlocked!");
                     if (bgmEnabled && !isBgmPlaying) {
                         startBGM();
                     }
