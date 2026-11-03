@@ -575,16 +575,16 @@ def game_loop():
                             room.player2.pending_question = None
                             socketio.emit('prompt_opponent_input', {'from_player': 2, 'prompt': q}, to=room.room_id)
                         
-                        # Grace period expiration
+                        # Grace period expiration (120 seconds / 2 minutes to tolerate weak mobile networks)
                         for pid, disc_time in list(room.pending_disconnects.items()):
                             if pid in room.sid_to_player.values():
                                 del room.pending_disconnects[pid]
-                            elif now - disc_time > 30.0:
+                            elif now - disc_time > 120.0:
                                 del room.pending_disconnects[pid]
                                 room.connected_players.discard(pid)
                                 room.is_match_active = False
                                 room.reset_match()
-                                logger.info(f"Room [{room.room_id}] -> Player {pid} grace period expired.")
+                                logger.info(f"Room [{room.room_id}] -> Player {pid} grace period (2m) expired.")
                                 socketio.emit('player_left', {'player_id': pid}, to=room.room_id)
                         
                         # 60 FPS state broadcast with dynamic weapon lengths & states
