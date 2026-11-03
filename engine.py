@@ -347,16 +347,19 @@ class GameEngine:
                         if (getattr(enemy, 'barrier_timer', 0) > 0
                                 or getattr(enemy, 'dome_timer', 0) > 0):
                             logger.info("--- SIN_WAVE ABSORBED BY TRIG DEFENSE! ---")
+                            remove_spell = True
                         elif getattr(enemy, 'crouch_timer', 0) > 0 and s['y'] < enemy.y + 35:
                             logger.info("--- SIN_WAVE PASSED OVER CROUCHING OPPONENT! ---")
                         elif hasattr(enemy, 'shield') and enemy.shield.block_timer > 0:
                             logger.info("--- SIN_WAVE BLOCKED BY SHIELD! ---")
+                            remove_spell = True
                         else:
                             power = s.get('power', 1)
                             enemy.heart -= _spell_damage(power)
                             enemy.target_x += (30 + 10 * (power - 1)) * s['dir']
                             enemy.speed_x = 4
                             logger.info(f"--- SIN_WAVE POWER {power} HIT! Enemy hearts: {enemy.heart} ---")
+                            remove_spell = True
                     if s['t'] >= WAVE_DURATION_FRAMES:
                         remove_spell = True
 
@@ -371,12 +374,14 @@ class GameEngine:
                         if (getattr(enemy, 'dome_timer', 0) > 0
                                 or getattr(enemy, 'barrier_timer', 0) > 0):
                             logger.info("--- COS_WAVE ABSORBED BY TRIG DEFENSE! ---")
+                            remove_spell = True
                         else:
                             power = s.get('power', 1)
                             enemy.heart -= _spell_damage(power)
                             enemy.target_x += (35 + 10 * (power - 1)) * s['dir']
                             enemy.speed_x = 4
                             logger.info(f"--- COS_WAVE POWER {power} HIT! Enemy hearts: {enemy.heart} ---")
+                            remove_spell = True
                     if s['t'] >= WAVE_DURATION_FRAMES:
                         remove_spell = True
 

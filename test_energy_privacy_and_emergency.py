@@ -94,3 +94,4 @@ if get_enemy_energy() < 50:
 
 if __name__ == '__main__':
     unittest.main()
+

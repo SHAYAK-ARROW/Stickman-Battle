@@ -277,16 +277,12 @@ def handle_player_join(data):
         logger.warning(f"Rejected join with invalid room token from {request.sid}")
         return
 
-    # A player slot can have one active socket. Reconnects are allowed after
-    # the previous socket has left and entered the grace-period map.
-    occupied_by = next(
-        (sid for sid, pid in room.sid_to_player.items()
-         if pid == player_id and sid != request.sid),
-        None,
-    )
-    if occupied_by is not None:
-        logger.warning(f"Rejected duplicate Player {player_id} slot claim in room {room_id}")
-        return
+    # Evict any previous/stale socket for this authenticated player slot (seamless reconnects/tab switch)
+    for old_sid, pid in list(room.sid_to_player.items()):
+        if pid == player_id and old_sid != request.sid:
+            logger.info(f"Room [{room_id}] -> Evicting stale socket {old_sid} for Player {player_id} in favor of new connection {request.sid}")
+            sid_auth.pop(old_sid, None)
+            room.sid_to_player.pop(old_sid, None)
 
     join_room(room_id)
     # Register SID authentication binding
@@ -322,6 +318,10 @@ def handle_player_join(data):
             logger.info(f"Room [{room_id}] -> Solo match started against {room.bot_difficulty} bot!")
             socketio.emit('match_start', to=room_id)
             return
+    elif room.is_match_active:
+        # Match is already active; immediately unlock the returning/reconnecting player's Run button
+        logger.info(f"Room [{room_id}] -> Reconnected Player {player_id} receiving match_start immediately.")
+        socketio.emit('match_start', to=request.sid)
     elif 1 in room.connected_players and 2 in room.connected_players:
         room.is_match_active = True
         logger.info(f"Room [{room_id}] -> Both players connected! Starting match...")
@@ -487,7 +487,7 @@ def handle_disconnect():
     room.sid_to_player.pop(sid, None)
     if player_id not in room.sid_to_player.values():
         room.pending_disconnects[player_id] = time.time()
-        logger.info(f"Room [{room_id}] -> Player {player_id} disconnected. Grace period (6s) started...")
+        logger.info(f"Room [{room_id}] -> Player {player_id} disconnected. Grace period (30s) started...")
         socketio.emit('player_reconnecting', {'player_id': player_id}, to=room_id)
 
 # --- 60 FPS BACKGROUND GAME SIMULATION & GARBAGE COLLECTION LOOP ---
@@ -542,7 +542,7 @@ def game_loop():
                     for pid, disc_time in list(room.pending_disconnects.items()):
                         if pid in room.sid_to_player.values():
                             del room.pending_disconnects[pid]
-                        elif now - disc_time > 6.0:
+                        elif now - disc_time > 30.0:
                             del room.pending_disconnects[pid]
                             room.connected_players.discard(pid)
                             room.is_match_active = False
@@ -552,6 +552,7 @@ def game_loop():
                     
                     # 60 FPS state broadcast with dynamic weapon lengths & states
                     data_to_send = {
+                        'is_match_active': getattr(room, 'is_match_active', False),
                         'player1': {
                             'x': room.player1.x,
                             'y': room.player1.y,

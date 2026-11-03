@@ -1,5 +1,10 @@
 // ami js jani na ai bujhiye diche tai korchi vnaila js
-const socket = io(); // Connect to the server using Socket.IO
+const socket = io({
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 30,
+    reconnectionDelay: 1000
+}); // Connect to the server using Socket.IO (prioritize WebSocket for low latency)
 
 // Connection Status Helpers
 const statusDot = document.getElementById('status_dot');
@@ -688,9 +693,17 @@ function draw_on_camvas(data) {
     }
 
     const runBtn = document.getElementById('run_btn');
-    if (runBtn && is_game_over) {
-        runBtn.disabled = true;
-        runBtn.innerText = "Match Over (Play Again to Rematch)";
+    if (runBtn) {
+        if (is_game_over) {
+            runBtn.disabled = true;
+            runBtn.innerText = "Match Over (Play Again to Rematch)";
+        } else if (data.is_match_active && runBtn.disabled) {
+            // Self-healing: if server reports active match, ensure button is ready
+            runBtn.disabled = false;
+            runBtn.innerText = "Run";
+            const waitScreen = document.getElementById('wait_screen');
+            if (waitScreen) waitScreen.style.display = 'none';
+        }
     }
 }
 
