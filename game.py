@@ -283,10 +283,26 @@ def handle_player_join(data):
     logger.info(f"Room [{room_id}] -> Player {player_id} authenticated and joined. Connected: {room.connected_players}")
     
     if getattr(room, 'is_bot_room', False):
-        room.connected_players.add(2)
-        room.is_match_active = True
-        logger.info(f"Room [{room_id}] -> Solo match started against {room.bot_difficulty} bot!")
-        socketio.emit('match_start', to=room_id)
+        if player_id == 2:
+            # A real human connected as Player 2!
+            # Seamlessly retire the bot and promote this match to a 1v1 PvP duel!
+            logger.info(f"Room [{room_id}] -> Human Player 2 joined! Converting bot room to 1v1 PvP duel.")
+            room.is_bot_room = False
+            room.bot = None
+            room.player2.name = "Fighter2"
+            room.reset_match()
+            room.is_match_active = True
+            socketio.emit('bot_replaced_by_human', {
+                'message': 'A friend joined the arena! The bot has stepped aside. Match converted to 1v1 PvP duel!'
+            }, to=room_id)
+            socketio.emit('match_start', to=room_id)
+            return
+        else:
+            room.connected_players.add(2)
+            room.is_match_active = True
+            logger.info(f"Room [{room_id}] -> Solo match started against {room.bot_difficulty} bot!")
+            socketio.emit('match_start', to=room_id)
+            return
     elif 1 in room.connected_players and 2 in room.connected_players:
         room.is_match_active = True
         logger.info(f"Room [{room_id}] -> Both players connected! Starting match...")

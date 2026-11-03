@@ -44,9 +44,14 @@
 <div id="battle_stage" class="panel arena-panel">
     <div class="panel-heading">
         <div><p class="eyebrow">LIVE MATCH</p><h2>Battle arena</h2></div>
-        <div id="connection_status" class="connection-status" role="status" aria-live="polite">
-            <span id="status_dot" class="status-dot"></span>
-            <span id="status_text">Online</span>
+        <div class="heading-controls-row">
+            <button id="invite_friend_btn" type="button" class="action-chip-btn" onclick="copy_link()" title="Copy Player 2 invite link to duel a friend">
+                <span>🔗 Invite Friend</span>
+            </button>
+            <div id="connection_status" class="connection-status" role="status" aria-live="polite">
+                <span id="status_dot" class="status-dot"></span>
+                <span id="status_text">Online</span>
+            </div>
         </div>
     </div>
     <div class="arena-wrap">
@@ -355,7 +360,7 @@ else:
     const ROOM_ID = {{ room_id|tojson }};
     const ROOM_TOKEN = {{ room_token|tojson }};
     const PLAYER2_TOKEN = {{ player2_token|tojson }};
-    const IS_BOT_ROOM = {{ is_bot_room|tojson if is_bot_room is defined else false }};
+    let IS_BOT_ROOM = {{ is_bot_room|tojson if is_bot_room is defined else false }};
     const BOT_DIFFICULTY = {{ bot_difficulty|tojson if bot_difficulty is defined else "" }};
 
 const p2_url = window.location.origin + "/room/" + encodeURIComponent(ROOM_ID) + "?token=" + encodeURIComponent(PLAYER2_TOKEN);
@@ -463,7 +468,8 @@ if (MY_PLAYER_ID === 2 || IS_BOT_ROOM) {
     const ws = document.getElementById('wait_screen');
     if (ws) ws.style.display = 'none';
 }
-if (IS_BOT_ROOM) {
+let currentIsBotRoom = IS_BOT_ROOM;
+if (currentIsBotRoom) {
     const st = document.getElementById('status_text');
     if (st) st.innerText = 'Solo vs Bot (' + (BOT_DIFFICULTY === 'hard' ? 'Hard' : 'Easy') + ')';
 }

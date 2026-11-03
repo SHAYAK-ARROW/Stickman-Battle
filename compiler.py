@@ -109,9 +109,12 @@ def _sandbox_execute(code, sensors):
 
     def trig_spell(name):
         def invoke(*args):
-            if len(args) != 1:
-                raise TypeError(f"math.{name}() requires one power argument (1-90)")
-            power = args[0]
+            if len(args) == 0:
+                power = 45
+            elif len(args) == 1:
+                power = args[0]
+            else:
+                raise TypeError(f"math.{name}() takes at most 1 power argument (1-90)")
             if (isinstance(power, bool) or not isinstance(power, (int, float))
                     or (isinstance(power, float) and not math.isfinite(power))):
                 raise ValueError("Spell power must be a number from 1 to 90")
@@ -127,6 +130,14 @@ def _sandbox_execute(code, sensors):
         "cot": trig_spell("cot_wall"),
         "sec": trig_spell("sec_barrier"),
         "cosec": trig_spell("cosec_dome"),
+        "sin_wave": trig_spell("sin_wave"),
+        "cos_wave": trig_spell("cos_wave"),
+        "tan_spike": trig_spell("tan_spike"),
+        "cot_wall": trig_spell("cot_wall"),
+        "sec_barrier": trig_spell("sec_barrier"),
+        "cosec_dome": trig_spell("cosec_dome"),
+        "pi": math.pi,
+        "e": math.e,
         "sin_value": staticmethod(math.sin),
         "cos_value": staticmethod(math.cos),
         "tan_value": staticmethod(math.tan),

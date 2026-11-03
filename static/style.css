@@ -1314,3 +1314,30 @@ button { color: inherit; }
         grid-template-columns: 1fr;
     }
 }
+
+
+/* ── Arena Header Actions ─────────────────────────────────── */
+.heading-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.action-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    background: var(--surface-soft);
+    color: var(--text-secondary);
+    font: 600 11.5px/1.4 var(--sans);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.action-chip-btn:hover {
+    border-color: var(--accent);
+    color: #fff;
+    background: rgba(184, 160, 224, 0.14);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}

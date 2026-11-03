@@ -44,6 +44,24 @@ socket.on('player_reconnecting', (data) => {
     console.log("Player temporary disconnect (grace period):", data);
 });
 
+socket.on('bot_replaced_by_human', (data) => {
+    if (typeof IS_BOT_ROOM !== 'undefined') {
+        IS_BOT_ROOM = false;
+    }
+    const st = document.getElementById('status_text');
+    if (st) st.innerText = 'Online PvP';
+    const rb = document.getElementById('run_btn');
+    if (rb) rb.disabled = false;
+    if (typeof showToast === 'function') {
+        showToast({
+            title: "Friend Joined!",
+            message: (data && data.message) ? data.message : "A friend joined the arena! The bot has stepped aside. Match converted to 1v1 PvP duel!",
+            type: "success",
+            duration: 5000
+        });
+    }
+});
+
 const canvas = document.getElementById('gui_screen');
 const ctx = canvas.getContext('2d');
 

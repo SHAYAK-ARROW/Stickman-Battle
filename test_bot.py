@@ -1,6 +1,7 @@
 import unittest
 import game
 import bot
+import compiler
 import char
 
 class TestBotMode(unittest.TestCase):
@@ -88,6 +89,49 @@ class TestBotMode(unittest.TestCase):
         self.assertTrue(len(room.player2.action_queue) > 0)
         action = room.player2.action_queue[0][0]
         self.assertEqual(action, 'heavy_attack')
+
+    def test_math_spell_variants_all_execute(self):
+        compiler._discard_sandbox_worker()
+        p1 = char.Body('P1', 200, 470, 1)
+        p2 = char.Body('P2', 600, 470, -1)
+
+        # math.sin_wave() without args
+        p1.action_queue.clear()
+        compiler.compiler("import math\nmath.sin_wave()", p1, p2)
+        self.assertEqual(len(p1.action_queue), 1)
+        self.assertEqual(p1.action_queue[0][1], 'sin_wave')
+
+        # math.sin() without args
+        p1.action_queue.clear()
+        compiler.compiler("import math\nmath.sin()", p1, p2)
+        self.assertEqual(len(p1.action_queue), 1)
+        self.assertEqual(p1.action_queue[0][1], 'sin_wave')
+
+        # Global sin_wave() without import math
+        p1.action_queue.clear()
+        compiler.compiler("sin_wave()", p1, p2)
+        self.assertEqual(len(p1.action_queue), 1)
+        self.assertEqual(p1.action_queue[0][1], 'sin_wave')
+
+    def test_friend_joins_promotes_bot_room_to_pvp(self):
+        room = game.create_private_room()
+        room.is_bot_room = True
+        room.bot_difficulty = 'easy'
+        room.bot = bot.BattleBot('easy')
+        room.player2.name = "Bot (Easy)"
+
+        client = game.socketio.test_client(game.app)
+        client.emit('player_joined', {
+            'room_id': room.room_id,
+            'token': room.player_tokens[2]
+        })
+
+        # Room should now have human player 2 and no bot
+        self.assertFalse(room.is_bot_room)
+        self.assertIsNone(room.bot)
+        self.assertEqual(room.player2.name, "Fighter2")
+        self.assertTrue(room.is_match_active)
+        self.assertIn(2, room.connected_players)
 
 if __name__ == '__main__':
     unittest.main()
