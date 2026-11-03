@@ -17,15 +17,15 @@ class TestEnergyPrivacyAndEmergency(unittest.TestCase):
         self.assertEqual(self.p1.energy, 100)
         self.assertEqual(self.p1.max_energy, 100)
 
-        # Attack costs 8 energy
+        # Attack costs 5 energy
         self.p1.attack()
         self.p1.execute_next_action()
-        self.assertEqual(self.p1.energy, 92)
+        self.assertEqual(self.p1.energy, 95)
 
-        # Heavy attack costs 30 energy
+        # Heavy attack costs 25 energy
         self.p1.heavy_attack()
         self.p1.execute_next_action()
-        self.assertEqual(self.p1.energy, 62)
+        self.assertEqual(self.p1.energy, 70)
 
     def test_insufficient_energy_cancels_heavy_action(self):
         self.p1.energy = 10  # Not enough for heavy attack (needs 30)

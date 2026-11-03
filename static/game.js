@@ -725,13 +725,17 @@ function run() {
         }
         return;
     }
-    let code = document.getElementById("ide").value;
-    data = {
+    const code = document.getElementById("ide").value;
+    if (runBtn) {
+        runBtn.innerText = "Running...";
+        runBtn.style.opacity = "0.75";
+    }
+    const payload = {
         "code": code,
         "player_id": MY_PLAYER_ID,
         "room_id": typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default'
     };
-    socket.emit("run_code", data);
+    socket.emit("run_code", payload);
 }
 
 function request_restart() {
@@ -770,6 +774,11 @@ function dismissDiagnostics() {
 }
 
 socket.on('code_error', (data) => {
+    const runBtn = document.getElementById("run_btn");
+    if (runBtn && !runBtn.disabled) {
+        runBtn.innerText = "Run";
+        runBtn.style.opacity = "1";
+    }
     if (data && data.error) {
         showDiagnostics(data.error);
     }
@@ -777,6 +786,16 @@ socket.on('code_error', (data) => {
 
 socket.on('code_success', () => {
     dismissDiagnostics();
+    const runBtn = document.getElementById("run_btn");
+    if (runBtn && !runBtn.disabled) {
+        runBtn.innerText = "✓ Executed";
+        runBtn.style.opacity = "1";
+        setTimeout(() => {
+            if (runBtn && !runBtn.disabled && runBtn.innerText === "✓ Executed") {
+                runBtn.innerText = "Run";
+            }
+        }, 1200);
+    }
 });
 
 // --- TACTICAL EMERGENCY DEFENSE SYSTEM ---

@@ -190,21 +190,21 @@ class Body(Character):
             power = action[2] if len(action) > 2 else 1
             cost = 12 + (power * 2)
         elif action_type == 'heavy_attack':
-            cost = 30
-        elif action_type == 'throw_sword':
             cost = 25
+        elif action_type == 'throw_sword':
+            cost = 20
         elif action_type in ('block', 'dash', 'dodge'):
-            cost = 12
+            cost = 10
         elif action_type in ('attack', 'swing'):
-            cost = 8
-        elif action_type in ('jump', 'long_jump', 'project', 'crouch'):
             cost = 5
         else:
             cost = 0
 
-        # Stamina / Energy Check: insufficient energy drops the action
+        # Stamina / Energy Check: notify player if energy is too low for heavy moves
         current_energy = getattr(self, 'energy', MAX_ENERGY)
         if current_energy < cost:
+            self.speech_text = f"Low Energy ({int(current_energy)}/{cost}⚡)"
+            self.speech_timer = 40
             return
         
         if cost > 0:

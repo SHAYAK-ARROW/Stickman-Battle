@@ -330,6 +330,9 @@ def safe_range(*args):
 def compiler(code, current_player, enemy_player=None):
     if hasattr(current_player, 'action_queue'):
         current_player.action_queue.clear()
+    if hasattr(current_player, 'x') and hasattr(current_player, 'target_x'):
+        current_player.target_x = current_player.x
+        current_player.speed_x = 2
 
     if not code or not code.strip():
         return

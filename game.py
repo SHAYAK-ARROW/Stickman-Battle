@@ -333,6 +333,7 @@ def code_handler(data):
     auth = sid_auth.get(request.sid)
     if not auth:
         logger.warning(f"Rejected unauthenticated run_code attempt from sid {request.sid}")
+        socketio.emit('code_error', {'error': 'Reconnecting to room... please click Run again in 1s.'}, to=request.sid)
         return
         
     room_id = auth['room_id']
@@ -340,14 +341,23 @@ def code_handler(data):
     
     room = rooms.get(room_id)
     if not room:
+        socketio.emit('code_error', {'error': 'Room not found. Please return to lobby.'}, to=request.sid)
         return
         
+    # Auto-activate match if both players or bot are in the room
     if not room.is_match_active:
-        logger.info(f"Room [{room_id}] -> Match not active. Code run blocked.")
-        return
+        if (1 in room.connected_players and 2 in room.connected_players) or getattr(room, 'is_bot_room', False):
+            logger.info(f"Room [{room_id}] -> Auto-activating match upon code run.")
+            room.is_match_active = True
+            socketio.emit('match_start', to=room_id)
+        else:
+            logger.info(f"Room [{room_id}] -> Match not active (waiting for Player 2). Code run blocked.")
+            socketio.emit('code_error', {'error': 'Waiting for Player 2 to join the duel!'}, to=request.sid)
+            return
         
     if room.player1.heart <= 0 or room.player2.heart <= 0:
         logger.info(f"Room [{room_id}] -> Match game over. Rematch required.")
+        socketio.emit('code_error', {'error': 'Match is over! Click Play Again below to rematch.'}, to=request.sid)
         return
         
     if not isinstance(data, dict):
@@ -451,7 +461,11 @@ def handle_restart_game(data=None):
     if getattr(room, 'is_bot_room', False):
         room.connected_players.add(2)
         room.is_match_active = True
+    elif 1 in room.connected_players and 2 in room.connected_players:
+        room.is_match_active = True
     socketio.emit('game_restarted', to=room_id)
+    if room.is_match_active:
+        socketio.emit('match_start', to=room_id)
 
 @socketio.on('reply_input')
 def handle_reply_input(data):
