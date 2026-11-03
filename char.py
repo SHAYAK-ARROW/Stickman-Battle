@@ -31,13 +31,17 @@ class Character:
 class Body(Character):
     def __init__(self,name,x,y,direction=1):
         super().__init__(name=name,x=x,y=y,direction=direction)
-        # ekhane amder ekta kotha ache amra ekta class banabop dujon player er jono
         self.right_hand_x = x+40
         self.right_hand_y = y
         self.left_hand_x = x+40
         self.left_hand_y = y 
         self.jump_pixel=0
         self.bend_angle=0
+        self.crouch_timer = 0
+        self.barrier_timer = 0
+        self.dome_timer = 0
+        self.cast_timer = 0
+        self.pending_spells = []
         self.sword  = Sword(length=50, angle=0)
         self.shield = Shield(length=40)
        
@@ -56,47 +60,98 @@ class Body(Character):
         self.left_hand_y += dy
 
     def bend(self, angle=0):
-        # Action queue te bend pathano holo
         if len(self.action_queue) < 100:
             self.action_queue.append(('bend', angle))
 
+    def crouch(self):
+        # Action queue te crouch pathano holo (matha nichu kore toloyar er koper niche bacha)
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('crouch',))
+
+    def duck(self):
+        # crouch er synonym
+        self.crouch()
+
+    def dash(self, step=3):
+        # Action queue te dash pathano holo (druto samne jhapano)
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('dash', step))
+
+    def dodge(self, step=3):
+        # Action queue te dodge pathano holo (druto pichone sore jawya)
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('dodge', step))
+
+    def heavy_attack(self):
+        # Action queue te heavy attack pathano holo (dhire kintu 2 damage ba dhal bhenge dewa)
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('heavy_attack',))
+
+    def throw_sword(self):
+        # Action queue te toloyar chhunre marar ranged attack
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('throw_sword',))
+
+    # --- Trigonometric Magic Spells ---
+    def sin_wave(self):
+        # sin(x) dheuer moto opore niche oscillator energy projectile
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('spell', 'sin_wave'))
+
+    def cos_wave(self):
+        # cos(x) er moto overhead unchu theke suru howa bhari shockwave
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('spell', 'cos_wave'))
+
+    def tan_spike(self):
+        # tan(x) asymptote er moto mati funre khara opore uthe jaoya energy spike
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('spell', 'tan_spike'))
+
+    def sec_barrier(self):
+        # sec(x) er moto curved defensive force shield
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('spell', 'sec_barrier'))
+
+    def cosec_dome(self):
+        # csc(x) er moto protective energy dome
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('spell', 'cosec_dome'))
+
+    def cot_wall(self):
+        # cot(x) energy barricade ja sotru ke pushback debe
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('spell', 'cot_wall'))
+
     def jump(self, power=5):
-        # Action queue te jump command pathano holo
         if len(self.action_queue) < 100:
             self.action_queue.append(('jump', power))
 
     def long_jump(self, step=2, power=5):
-        # Action queue te long_jump command pathano holo
         if len(self.action_queue) < 100:
             self.action_queue.append(('long_jump', step, power))
             
     def project(self, angle=45, power=5):
-        # Action queue te project command pathano holo
         if len(self.action_queue) < 100:
             self.action_queue.append(('project', angle, power))
 
     def attack(self):
-        # Action queue te attack command pathano holo
         if len(self.action_queue) < 100:
             self.action_queue.append(('attack',))
 
     def block(self):
-        # Action queue te block command pathano holo
         if len(self.action_queue) < 100:
             self.action_queue.append(('block',))
 
     def say(self, text):
-        # Action queue te dialogue pathano holo (speech bubble)
         if len(self.action_queue) < 100:
             self.action_queue.append(('say', str(text)[:40]))
 
     def ask(self, prompt=""):
-        # Action queue te opponent ke challenge/input prompt pathano holo
         if len(self.action_queue) < 100:
             self.action_queue.append(('ask', str(prompt)[:40]))
 
     def execute_next_action(self):
-        # Action Queue theke porer command ber kore execute kora
         if not self.action_queue:
             return
             
@@ -109,13 +164,23 @@ class Body(Character):
             self.target_x += (10 * step * self.direction)
         elif action_type == 'run':
             step = action[1]
-            self.speed_x = 4  # run korle speed beshi (4px/frame)
+            self.speed_x = 4
             self.target_x += (10 * step * self.direction)
         elif action_type == 'flip':
             if self.direction == 1:
                 self.direction = -1
             elif self.direction == -1:
                 self.direction = 1
+        elif action_type == 'dash':
+            step = action[1]
+            self.speed_x = 10
+            self.target_x += (10 * step * self.direction)
+        elif action_type == 'dodge':
+            step = action[1]
+            self.speed_x = 10
+            self.target_x -= (10 * step * self.direction)
+        elif action_type == 'crouch':
+            self.crouch_timer = 30  # 30 frames crouch thakbe (~0.5 sec)
         elif action_type == 'jump':
             power = action[1]
             pixel = power * 5
@@ -147,18 +212,50 @@ class Body(Character):
             else:
                 self.speed_x = 2
         elif action_type == 'attack':
-            # Shield block cholakale attack queue hobe, nahole direct -40 deg windup shuru hobe
             if hasattr(self, 'shield') and self.shield.block_timer > 0:
                 self.sword.attack_queued = True
+                self.sword.is_heavy = False
             elif hasattr(self, 'sword') and self.sword.attack_state == 0:
+                self.sword.is_heavy = False
                 self.sword.attack()
+        elif action_type == 'heavy_attack':
+            if hasattr(self, 'shield') and self.shield.block_timer > 0:
+                self.sword.attack_queued = True
+                self.sword.is_heavy = True
+            elif hasattr(self, 'sword') and self.sword.attack_state == 0:
+                self.sword.is_heavy = True
+                self.sword.attack_state = 1
+                self.sword.target_angle = -70
+        elif action_type == 'throw_sword':
+            self.pending_spells.append({
+                'type': 'throw_sword',
+                'x': self.x + (35 * self.direction),
+                'y': self.y + 45,
+                'dir': self.direction,
+                'owner': self
+            })
+            self.cast_timer = 12
+        elif action_type == 'spell':
+            spell_name = action[1]
+            if spell_name == 'sec_barrier':
+                self.barrier_timer = 50
+            elif spell_name == 'cosec_dome':
+                self.dome_timer = 50
+            else:
+                self.pending_spells.append({
+                    'type': spell_name,
+                    'x': self.x,
+                    'y': self.y,
+                    'dir': self.direction,
+                    'owner': self
+                })
+            self.cast_timer = 12
         elif action_type == 'block':
             if hasattr(self, 'shield'):
                 self.shield.block()
         elif action_type == 'say':
             self.speech_text = action[1]
-            self.speech_timer = 90  # 90 frames = 1.5 seconds
-            # say action run hoye gele shathe shathe porer action chalu kora
+            self.speech_timer = 90
             if self.action_queue:
                 self.execute_next_action()
         elif action_type == 'ask':
@@ -167,26 +264,20 @@ class Body(Character):
             self.speech_timer = 90
             if self.action_queue:
                 self.execute_next_action()
-        
 
-        
 class Shield:
     def __init__(self,length):
         self.shield_lenght = length
         self.shield_angel = 45
         self.block_timer=0
 
-
     def set_shield(self, length, angle):
-        #problem 1
         ...
-    def block(self):
-        # Move the shield by dx and dy
-        #problem 1
-        self.shield_angel=0
-        self.block_timer=30#30 frame er jono block orbe but eta ektu kom mone hoche namr  predekhhi
 
-        ...
+    def block(self):
+        self.shield_angel=0
+        self.block_timer=30
+
 class Sword:
     def __init__(self, length, angle=0):
         self.sword_length = length
@@ -195,23 +286,19 @@ class Sword:
         self.attack_state = 0 # 0=idle, 1=windup, 2=slash, 3=return
         self.attack_queued = False
         self.has_hit = False
+        self.is_heavy = False
         
     def set_sword(self, length, angle):
-        #problem 1
         pass
         
     def swing(self, dx, dy):
-        # Move the sword by dx and dy
-        #problem 1
         pass
         
     def attack(self):
-        # mathar pichone 40 degree tulbe (Windup)
         if self.attack_state == 0:
+            self.is_heavy = False
             self.attack_state = 1
             self.target_angle = -40
 
-
 def collision(obj1, obj2):
-    # Check if the bounding boxes of obj1 and obj2 overlap
     ...

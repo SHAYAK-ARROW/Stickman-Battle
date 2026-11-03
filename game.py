@@ -40,6 +40,11 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         self.player1.speed_x = 4
         self.player1.jump_pixel = 0
         self.player1.direction = 1
+        self.player1.crouch_timer = 0
+        self.player1.barrier_timer = 0
+        self.player1.dome_timer = 0
+        self.player1.cast_timer = 0
+        self.player1.pending_spells = []
         if hasattr(self.player1, 'action_queue') and self.player1.action_queue:
             self.player1.action_queue.clear()
         else:
@@ -49,6 +54,7 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
             self.player1.sword.sword_angle = 0
             self.player1.sword.target_angle = 0
             self.player1.sword.has_hit = False
+            self.player1.sword.is_heavy = False
         if hasattr(self.player1, 'shield'):
             self.player1.shield.shield_angel = 45
             self.player1.shield.block_timer = 0
@@ -65,6 +71,11 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         self.player2.speed_x = 4
         self.player2.jump_pixel = 0
         self.player2.direction = -1
+        self.player2.crouch_timer = 0
+        self.player2.barrier_timer = 0
+        self.player2.dome_timer = 0
+        self.player2.cast_timer = 0
+        self.player2.pending_spells = []
         if hasattr(self.player2, 'action_queue') and self.player2.action_queue:
             self.player2.action_queue.clear()
         else:
@@ -74,6 +85,7 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
             self.player2.sword.sword_angle = 0
             self.player2.sword.target_angle = 0
             self.player2.sword.has_hit = False
+            self.player2.sword.is_heavy = False
         if hasattr(self.player2, 'shield'):
             self.player2.shield.shield_angel = 45
             self.player2.shield.block_timer = 0
@@ -81,6 +93,7 @@ class GameRoom:# eta ekek ta room  class  eta bsicaly room guro data rajb e ami 
         self.player2.speech_timer = 0
         self.player2.pending_question = None
         self.pending_disconnects.clear()
+        self.engine.spells = []
 
 rooms={}
 def get_or_create_room(room_id):#eta besicaly room banabe mane room an thakle room banabe thakle banabe na 
@@ -246,6 +259,10 @@ def game_loop():
                             'sword_angle': room.player1.sword.sword_angle,
                             'shield_angle': room.player1.shield.shield_angel,
                             'is_blocking': room.player1.shield.block_timer > 0,
+                            'is_crouching': getattr(room.player1, 'crouch_timer', 0) > 0,
+                            'has_barrier': getattr(room.player1, 'barrier_timer', 0) > 0,
+                            'has_dome': getattr(room.player1, 'dome_timer', 0) > 0,
+                            'is_heavy': getattr(room.player1.sword, 'is_heavy', False),
                             'heart': room.player1.heart,
                             'speech': getattr(room.player1, 'speech_text', '') if getattr(room.player1, 'speech_timer', 0) > 0 else ""
                         },
@@ -256,9 +273,23 @@ def game_loop():
                             'sword_angle': room.player2.sword.sword_angle,
                             'shield_angle': room.player2.shield.shield_angel,
                             'is_blocking': room.player2.shield.block_timer > 0,
+                            'is_crouching': getattr(room.player2, 'crouch_timer', 0) > 0,
+                            'has_barrier': getattr(room.player2, 'barrier_timer', 0) > 0,
+                            'has_dome': getattr(room.player2, 'dome_timer', 0) > 0,
+                            'is_heavy': getattr(room.player2.sword, 'is_heavy', False),
                             'heart': room.player2.heart,
                             'speech': getattr(room.player2, 'speech_text', '') if getattr(room.player2, 'speech_timer', 0) > 0 else ""
-                        }
+                        },
+                        'spells': [
+                            {
+                                'type': s['type'],
+                                'x': round(s.get('x', s.get('target_x', 0)), 1),
+                                'y': round(s.get('y', 470), 1),
+                                'dir': s.get('dir', 1),
+                                't': s.get('t', 0)
+                            }
+                            for s in getattr(room.engine, 'spells', [])
+                        ]
                     }
                     socketio.emit('update_game_gui', data_to_send, to=room.room_id)
         except Exception:

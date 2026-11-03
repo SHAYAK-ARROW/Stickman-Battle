@@ -133,17 +133,31 @@ def compiler(code, current_player, enemy_player=None):
         "flip": current_player.flip,
         "Flip": current_player.flip,
         
+        # New Movement & Evasion commands
+        "crouch": getattr(current_player, 'crouch', current_player.bend),
+        "Crouch": getattr(current_player, 'crouch', current_player.bend),
+        "duck": getattr(current_player, 'duck', current_player.bend),
+        "Duck": getattr(current_player, 'duck', current_player.bend),
+        "dash": getattr(current_player, 'dash', current_player.run_to),
+        "Dash": getattr(current_player, 'dash', current_player.run_to),
+        "dodge": getattr(current_player, 'dodge', current_player.move),
+        "Dodge": getattr(current_player, 'dodge', current_player.move),
+        
         # hand
         "set_right_hand": current_player.set_right_hand,
         "set_left_hand": current_player.set_left_hand,
         "move_right_hand": current_player.move_right_hand,
         "move_left_hand": current_player.move_left_hand,
         
-        # sword
+        # sword & attack
         "set_sword": current_player.sword.set_sword,
         "swing": current_player.sword.swing,
         "attack": current_player.attack,
         "Attack": current_player.attack,
+        "heavy_attack": getattr(current_player, 'heavy_attack', current_player.attack),
+        "Heavy_attack": getattr(current_player, 'heavy_attack', current_player.attack),
+        "throw_sword": getattr(current_player, 'throw_sword', current_player.attack),
+        "Throw_sword": getattr(current_player, 'throw_sword', current_player.attack),
         
         # shield
         "set_shield": current_player.shield.set_shield,
@@ -155,6 +169,20 @@ def compiler(code, current_player, enemy_player=None):
         "Project": current_player.project,
         "long_jump": current_player.long_jump,
         "Long_jump": current_player.long_jump,
+
+        # Trigonometric Magic Spells
+        "sin_wave": getattr(current_player, 'sin_wave', None),
+        "Sin_wave": getattr(current_player, 'sin_wave', None),
+        "cos_wave": getattr(current_player, 'cos_wave', None),
+        "Cos_wave": getattr(current_player, 'cos_wave', None),
+        "tan_spike": getattr(current_player, 'tan_spike', None),
+        "Tan_spike": getattr(current_player, 'tan_spike', None),
+        "sec_barrier": getattr(current_player, 'sec_barrier', None),
+        "Sec_barrier": getattr(current_player, 'sec_barrier', None),
+        "cosec_dome": getattr(current_player, 'cosec_dome', None),
+        "Cosec_dome": getattr(current_player, 'cosec_dome', None),
+        "cot_wall": getattr(current_player, 'cot_wall', None),
+        "Cot_wall": getattr(current_player, 'cot_wall', None),
 
         # Sensor / Intel functions
         "get_enemy_distance": get_enemy_distance,

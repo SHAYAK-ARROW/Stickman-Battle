@@ -56,17 +56,19 @@
     </div>
 </div>
 
-<!-- HTML5 Native Popup Dialog (No CSS) -->
-<dialog id="commands_dialog">
-    <h3>Available Commands List</h3>
-    <button onclick="close_commands_dialog()">Close</button><br><br>
-    <table border="1">
-        <tr>
+<!-- HTML5 Native Popup Dialog -->
+<dialog id="commands_dialog" style="max-height: 85vh; overflow-y: auto; padding: 16px; border: 2px solid #333; border-radius: 8px; background: #fff;">
+    <h3>Available Battle Commands Manual</h3>
+    <button onclick="close_commands_dialog()" style="padding: 6px 12px; cursor: pointer; margin-bottom: 12px;">Close</button>
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; font-family: 'Consolas', monospace; font-size: 13px;">
+        <tr style="background: #f0f0f0;">
+            <th>Category</th>
             <th>Command</th>
             <th>Description</th>
             <th>Example</th>
         </tr>
         <tr>
+            <td rowspan="8"><b>Movement & Defense</b></td>
             <td>move(step)</td>
             <td>Samne hete jabe</td>
             <td>move(2)</td>
@@ -75,6 +77,21 @@
             <td>run(step)</td>
             <td>Samne doure jabe</td>
             <td>run(3)</td>
+        </tr>
+        <tr>
+            <td>dash(step)</td>
+            <td>Druto samne jhapano (Dash attack)</td>
+            <td>dash(4)</td>
+        </tr>
+        <tr>
+            <td>dodge(step)</td>
+            <td>Druto pichone sore jawya (Evasion)</td>
+            <td>dodge(3)</td>
+        </tr>
+        <tr>
+            <td>crouch() / duck()</td>
+            <td>Matha nichu kore toloyarer koper niche bacha</td>
+            <td>crouch()</td>
         </tr>
         <tr>
             <td>jump(power)</td>
@@ -87,31 +104,64 @@
             <td>long_jump(3, 5)</td>
         </tr>
         <tr>
-            <td>project(angle, power)</td>
-            <td>Kono kon kore lafano (Math)</td>
-            <td>project(45, 5)</td>
-        </tr>
-        <tr>
             <td>flip()</td>
             <td>Ulto dike mukh ghurano</td>
             <td>flip()</td>
         </tr>
         <tr>
+            <td rowspan="4"><b>Weapons & Combat</b></td>
             <td>attack()</td>
-            <td>Toloyar diye kop mara</td>
+            <td>Toloyar diye kop mara (1 damage)</td>
             <td>attack()</td>
+        </tr>
+        <tr>
+            <td>heavy_attack()</td>
+            <td>Bhari kop mara (2 damage ba dhal bhenge dewa)</td>
+            <td>heavy_attack()</td>
+        </tr>
+        <tr>
+            <td>throw_sword()</td>
+            <td>Dur theke toloyar chhunre mara (Ranged attack)</td>
+            <td>throw_sword()</td>
         </tr>
         <tr>
             <td>block()</td>
-            <td>Dhal diye attack thekano</td>
+            <td>Dhal diye samner attack thekano (30 frame)</td>
             <td>block()</td>
         </tr>
         <tr>
-            <td>range(n)</td>
-            <td>For loop er jono</td>
-            <td>for i in range(5):</td>
+            <td rowspan="6"><b>Trigonometric Magic Spells</b></td>
+            <td>sin_wave()</td>
+            <td>sin(x) dheuer moto opore-niche energy projectile</td>
+            <td>sin_wave()</td>
         </tr>
         <tr>
+            <td>cos_wave()</td>
+            <td>cos(x) er moto overhead unchu theke pora shockwave</td>
+            <td>cos_wave()</td>
+        </tr>
+        <tr>
+            <td>tan_spike()</td>
+            <td>tan(x) asymptote er moto mati funre khara energy spike</td>
+            <td>tan_spike()</td>
+        </tr>
+        <tr>
+            <td>sec_barrier()</td>
+            <td>sec(x) er moto curved force field (absorbs projectiles)</td>
+            <td>sec_barrier()</td>
+        </tr>
+        <tr>
+            <td>cosec_dome()</td>
+            <td>csc(x) er moto protective energy dome (overhead shield)</td>
+            <td>cosec_dome()</td>
+        </tr>
+        <tr>
+            <td>cot_wall()</td>
+            <td>cot(x) vertical energy wall ja sotru ke pushback debe</td>
+            <td>cot_wall()</td>
+        </tr>
+        <tr>
+            <td rowspan="4"><b>Sensors & Intel</b></td>
             <td>get_enemy_distance()</td>
             <td>Sotru koto pixel dure ache mape</td>
             <td>if get_enemy_distance() < 120:</td>
@@ -132,6 +182,7 @@
             <td>if get_enemy_health() == 1:</td>
         </tr>
         <tr>
+            <td rowspan="2"><b>Dialogue & Challenge</b></td>
             <td>print(text)</td>
             <td>Kothar speech bubble toiri kore</td>
             <td>print("Fight me!")</td>
@@ -146,28 +197,23 @@
 
 </div>
 <script>
-    const MY_PLAYER_ID = {{ player_id }};//achj eta jinja bole ai kichu bolo thik bujhlam nna but jeta bujhlam seta holo mu player id er jagay ekta varivale tar value hobe python e thaka oi varable er man eta mone rakhte hobe aro bujhte hobe ami bujhini 
+    const MY_PLAYER_ID = {{ player_id }};
     const ROOM_ID = "{{ room_id if room_id is defined and room_id else 'default' }}";
 
-// ekta variable rakhlam pl2 e rjono no etay room er link thakbe 
 const p2_url = ROOM_ID !== 'default' ? (window.location.origin + "/room/" + ROOM_ID + "?player=2") : (window.location.origin + "/player2");
 
-// scren e link dekhalam
 const linkElem = document.getElementById('p2_link');
 if (linkElem) linkElem.innerText = p2_url;
 
-// copy link buton e click korle clip baord  e copy er functiom 
 function copy_link() {
     navigator.clipboard.writeText(p2_url);
     alert("Room Link copied! Bondhuke share koro: " + p2_url);
 }
 
-// pl2 dhukle wait er drkar nei
 if (MY_PLAYER_ID === 2) {
     document.getElementById('wait_screen').style.display = 'none';
 }
 
-// commands dialog pop up open ba bondho korar native function
 function open_commands_dialog() {
     document.getElementById('commands_dialog').showModal();
 }
@@ -178,9 +224,5 @@ function close_commands_dialog() {
 </script>
 <script src="/static/game.js"></script>
 
-</body >
-
-
-
-
+</body>
 </html>
