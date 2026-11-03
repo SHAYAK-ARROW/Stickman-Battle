@@ -25,6 +25,9 @@ scratch_*.py
 patch_*.py
 update_*.py
 
+# Unit test suites (kept on local machine, untracked from public repo)
+test_*.py
+
 # System & accidental artifacts
 SHAYAK
 .DS_Store
