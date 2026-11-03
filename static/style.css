@@ -1357,6 +1357,61 @@ button { color: inherit; }
     background: rgba(255, 255, 255, 0.03);
     color: var(--text-muted);
 }
+/* Audio Volume Control Group & Sliders */
+.audio-control-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface-soft);
+    border: 1px solid var(--border-light);
+    padding: 3px 10px 3px 6px;
+    border-radius: 999px;
+    transition: all var(--transition);
+}
+.audio-control-group:hover {
+    border-color: rgba(184, 160, 224, 0.35);
+}
+.audio-control-group .audio-toggle-btn {
+    border: none;
+    background: transparent;
+    padding: 2px 4px;
+    box-shadow: none;
+}
+.volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 48px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+    accent-color: var(--accent);
+    transition: width 0.2s ease, background 0.2s ease;
+}
+.volume-slider:hover, .volume-slider:focus {
+    width: 60px;
+    background: rgba(255, 255, 255, 0.3);
+}
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #c084fc;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(192, 132, 252, 0.7);
+}
+.volume-slider::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #c084fc;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 6px rgba(192, 132, 252, 0.7);
+}
 
 
 /* ── Info & Feedback Page ─────────────────────────────────── */

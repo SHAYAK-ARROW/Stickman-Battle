@@ -19,6 +19,12 @@
                 </div>
             </a>
             <div class="header-right">
+                <div class="audio-control-group" title="Relaxing Background Music">
+                    <button id="bgm_toggle_btn" type="button" class="action-chip-btn audio-toggle-btn is-active" onclick="window.AudioEngine &amp;&amp; window.AudioEngine.toggleBGM()" title="Mute/Unmute Music">
+                        <span id="bgm_icon">🎵</span> <span id="bgm_text">Music</span>
+                    </button>
+                    <input id="bgm_volume_slider" type="range" min="0" max="100" value="70" class="volume-slider" oninput="window.AudioEngine &amp;&amp; window.AudioEngine.setBGMVolume(this.value)" title="Music Volume">
+                </div>
                 <a href="/info" class="header-info-link">About &amp; Info</a>
                 <span class="status-pill"><span class="status-pulse"></span>Online PvP</span>
                 <span class="header-note">CODE · FIGHT · OUTPLAY</span>
@@ -124,6 +130,7 @@
             <span>Stickman Battle</span> · <span>Made with precision by <b>Arrows Development Hub</b></span> · <a href="/info" class="header-info-link">Game Info &amp; Feedback</a>
         </footer>
     </main>
+    <script src="/static/audio.js"></script>
     <script src="/static/main.js"></script>
 </body>
 </html>

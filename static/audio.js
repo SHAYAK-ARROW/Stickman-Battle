@@ -1,10 +1,11 @@
 // ==============================================================================
-// ⚔️ STICKMAN BATTLE - PROCEDURAL WEB AUDIO ENGINE (V2 High-Fidelity & Audible)
+// ⚔️ STICKMAN BATTLE - PROCEDURAL WEB AUDIO ENGINE (V3 Seamless & Volume Control)
 // Features:
 // 1. Dual Independent Channels: Audible Relaxing Lo-Fi BGM + Punchy Combat SFX
-// 2. 100% Zero-Dependency Web Audio API (Zero MP3 assets, 0ms latency)
-// 3. Tuned Frequencies for Laptop & Mobile Speakers (300Hz - 2500Hz)
-// 4. Safe Storage (Edge Tracking Prevention Proof) & Instant Autoplay Unlocking
+// 2. Seamless Gapless Crossfade (Zero awkward pauses between chord progressions)
+// 3. Smooth Volume Sliders with localStorage Persistence
+// 4. Global Availability (Home Lobby + Battle Arena)
+// 5. Safe Storage (Edge Tracking Prevention Proof) & Instant Autoplay Unlocking
 // ==============================================================================
 
 (function() {
@@ -37,9 +38,11 @@
     let masterBgmGain = null;
     let masterSfxGain = null;
 
-    // Preferences (Defaults: BGM = true, SFX = true)
+    // Preferences & Volumes (Defaults: BGM = 70%, SFX = 80%)
     let bgmEnabled = safeGet('sb_bgm_enabled', '1') !== '0';
     let sfxEnabled = safeGet('sb_sfx_enabled', '1') !== '0';
+    let bgmVolume = parseFloat(safeGet('sb_bgm_vol', '0.70'));
+    let sfxVolume = parseFloat(safeGet('sb_sfx_vol', '0.80'));
 
     // BGM State
     let isBgmPlaying = false;
@@ -48,7 +51,6 @@
     let hasUserInteracted = false;
 
     // Audible Relaxing Lo-Fi Ambient Chord Progression (Cmaj7 -> Am7 -> Fmaj7 -> G7)
-    // Frequencies tuned between 220Hz and 880Hz so laptop speakers project them clearly
     const CHORD_PROGRESSION = [
         [261.63, 329.63, 392.00, 493.88], // C4, E4, G4, B4 (Cmaj7)
         [220.00, 261.63, 329.63, 392.00], // A3, C4, E4, G4 (Am7)
@@ -67,14 +69,16 @@
             if (!AudioContextClass) return null;
             audioCtx = new AudioContextClass();
 
-            // Master BGM Gain (audible and soothing: 0.30)
+            // Master BGM Gain (volume controlled)
             masterBgmGain = audioCtx.createGain();
-            masterBgmGain.gain.setValueAtTime(bgmEnabled ? 0.30 : 0.0001, audioCtx.currentTime);
+            const initBgmGain = bgmEnabled ? 0.35 * bgmVolume : 0.0001;
+            masterBgmGain.gain.setValueAtTime(initBgmGain, audioCtx.currentTime);
             masterBgmGain.connect(audioCtx.destination);
 
-            // Master SFX Gain (punchy and crisp: 0.55)
+            // Master SFX Gain (volume controlled)
             masterSfxGain = audioCtx.createGain();
-            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.55 : 0.0001, audioCtx.currentTime);
+            const initSfxGain = sfxEnabled ? 0.60 * sfxVolume : 0.0001;
+            masterSfxGain.gain.setValueAtTime(initSfxGain, audioCtx.currentTime);
             masterSfxGain.connect(audioCtx.destination);
         }
         if (audioCtx.state === 'suspended' && (hasUserInteracted || forceCreate)) {
@@ -84,17 +88,19 @@
     }
 
     // --- RELAXING AMBIENT BACKGROUND MUSIC ENGINE ---
+    // Seamless Gapless Crossfading: duration 5.5s, step timer 3.2s
     function playAmbientChord(freqs, duration) {
-        if (!duration) duration = 4.0;
+        if (!duration) duration = 5.5;
         const ctx = getAudioContext(true);
         if (!ctx || !bgmEnabled) return;
 
         const chordGain = ctx.createGain();
         chordGain.gain.setValueAtTime(0.001, ctx.currentTime);
-        chordGain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.8); // Smooth attack
-        chordGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration); // Smooth release
+        chordGain.gain.exponentialRampToValueAtTime(0.24, ctx.currentTime + 1.0); // Gentle 1s swell
+        chordGain.gain.setValueAtTime(0.24, ctx.currentTime + 2.8); // Steady sustain
+        chordGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration); // Smooth decay
 
-        // Lowpass filter at 1200Hz keeps sound warm without muffling out of laptop speaker range
+        // Warm Lowpass Filter (keeps warm chiptune warmth, no harsh high buzz)
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
         filter.frequency.setValueAtTime(1200, ctx.currentTime);
@@ -107,14 +113,14 @@
             const osc = ctx.createOscillator();
             osc.type = idx === 0 ? 'sine' : 'triangle';
             osc.frequency.setValueAtTime(freq, ctx.currentTime);
-            osc.detune.setValueAtTime((idx % 2 === 0 ? -5 : 5), ctx.currentTime);
+            osc.detune.setValueAtTime((idx % 2 === 0 ? -4 : 4), ctx.currentTime);
 
             osc.connect(chordGain);
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + duration);
         });
 
-        // Gentle sparkle chime
+        // Gentle sparkle bell
         if (Math.random() > 0.3) {
             setTimeout(() => {
                 if (!bgmEnabled || !audioCtx) return;
@@ -129,7 +135,7 @@
         const note = SPARKLE_NOTES[Math.floor(Math.random() * SPARKLE_NOTES.length)];
         const bellGain = ctx.createGain();
         bellGain.gain.setValueAtTime(0.001, ctx.currentTime);
-        bellGain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.05);
+        bellGain.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 0.05);
         bellGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.2);
 
         const osc = ctx.createOscillator();
@@ -150,8 +156,9 @@
         isBgmPlaying = true;
         const chord = CHORD_PROGRESSION[bgmStep % CHORD_PROGRESSION.length];
         bgmStep++;
-        playAmbientChord(chord, 4.2);
-        bgmTimer = setTimeout(bgmLoop, 3800);
+        playAmbientChord(chord, 5.5);
+        // Start next chord at 3.2s to smoothly crossfade over the decaying chord! Zero gap!
+        bgmTimer = setTimeout(bgmLoop, 3200);
     }
 
     function startBGM() {
@@ -160,7 +167,7 @@
         if (!ctx) return;
         if (masterBgmGain) {
             masterBgmGain.gain.cancelScheduledValues(ctx.currentTime);
-            masterBgmGain.gain.setValueAtTime(0.30, ctx.currentTime);
+            masterBgmGain.gain.setValueAtTime(0.35 * bgmVolume, ctx.currentTime);
         }
         if (!isBgmPlaying) {
             bgmLoop();
@@ -384,7 +391,7 @@
         });
     }
 
-    // 8. Match Start Chime (440Hz -> 880Hz Ready Bell)
+    // 8. Match Start Chime (523Hz -> 783Hz Ready Bell)
     function playMatchStart() {
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
@@ -429,27 +436,37 @@
         });
     }
 
-    // --- CONTROLS & TOGGLES ---
+    // --- CONTROLS & VOLUME ADJUSTMENT ---
     function updateUI() {
         const bgmBtn = document.getElementById('bgm_toggle_btn');
         const bgmIcon = document.getElementById('bgm_icon');
         const bgmText = document.getElementById('bgm_text');
         if (bgmBtn) {
-            bgmBtn.classList.toggle('is-active', bgmEnabled);
-            bgmBtn.classList.toggle('is-muted', !bgmEnabled);
+            bgmBtn.classList.toggle('is-active', bgmEnabled && bgmVolume > 0);
+            bgmBtn.classList.toggle('is-muted', !bgmEnabled || bgmVolume === 0);
         }
-        if (bgmIcon) bgmIcon.innerText = bgmEnabled ? '🎵' : '🔇';
-        if (bgmText) bgmText.innerText = bgmEnabled ? 'Music' : 'Music: Off';
+        if (bgmIcon) bgmIcon.innerText = (bgmEnabled && bgmVolume > 0) ? '🎵' : '🔇';
+        if (bgmText) bgmText.innerText = (bgmEnabled && bgmVolume > 0) ? 'Music' : 'Music: Off';
+
+        const bgmSlider = document.getElementById('bgm_volume_slider');
+        if (bgmSlider) {
+            bgmSlider.value = bgmEnabled ? Math.round(bgmVolume * 100) : 0;
+        }
 
         const sfxBtn = document.getElementById('sfx_toggle_btn');
         const sfxIcon = document.getElementById('sfx_icon');
         const sfxText = document.getElementById('sfx_text');
         if (sfxBtn) {
-            sfxBtn.classList.toggle('is-active', sfxEnabled);
-            sfxBtn.classList.toggle('is-muted', !sfxEnabled);
+            sfxBtn.classList.toggle('is-active', sfxEnabled && sfxVolume > 0);
+            sfxBtn.classList.toggle('is-muted', !sfxEnabled || sfxVolume === 0);
         }
-        if (sfxIcon) sfxIcon.innerText = sfxEnabled ? '🔊' : '🔈';
-        if (sfxText) sfxText.innerText = sfxEnabled ? 'SFX' : 'SFX: Off';
+        if (sfxIcon) sfxIcon.innerText = (sfxEnabled && sfxVolume > 0) ? '🔊' : '🔈';
+        if (sfxText) sfxText.innerText = (sfxEnabled && sfxVolume > 0) ? 'SFX' : 'SFX: Off';
+
+        const sfxSlider = document.getElementById('sfx_volume_slider');
+        if (sfxSlider) {
+            sfxSlider.value = sfxEnabled ? Math.round(sfxVolume * 100) : 0;
+        }
     }
 
     function toggleBGM() {
@@ -461,6 +478,7 @@
         bgmEnabled = !bgmEnabled;
         safeSet('sb_bgm_enabled', bgmEnabled ? '1' : '0');
         if (bgmEnabled) {
+            if (bgmVolume === 0) bgmVolume = 0.70;
             startBGM();
         } else {
             stopBGM();
@@ -468,6 +486,32 @@
         updateUI();
         playClick();
         console.log("🎵 BGM toggled:", bgmEnabled ? "ON" : "OFF");
+    }
+
+    function setBGMVolume(val) {
+        hasUserInteracted = true;
+        const ctx = getAudioContext(true);
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
+        const numericVal = parseFloat(val);
+        bgmVolume = Math.max(0, Math.min(1, numericVal / 100));
+        safeSet('sb_bgm_vol', bgmVolume.toFixed(2));
+
+        if (bgmVolume > 0 && !bgmEnabled) {
+            bgmEnabled = true;
+            safeSet('sb_bgm_enabled', '1');
+            startBGM();
+        } else if (bgmVolume === 0 && bgmEnabled) {
+            bgmEnabled = false;
+            safeSet('sb_bgm_enabled', '0');
+            stopBGM();
+        } else if (bgmEnabled && masterBgmGain && audioCtx) {
+            masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+            masterBgmGain.gain.setValueAtTime(0.35 * bgmVolume, audioCtx.currentTime);
+            if (!isBgmPlaying) startBGM();
+        }
+        updateUI();
     }
 
     function toggleSFX() {
@@ -479,13 +523,38 @@
         sfxEnabled = !sfxEnabled;
         safeSet('sb_sfx_enabled', sfxEnabled ? '1' : '0');
         if (masterSfxGain && audioCtx) {
-            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.55 : 0.0001, audioCtx.currentTime);
+            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0.0001, audioCtx.currentTime);
         }
         updateUI();
         if (sfxEnabled) {
             playClick();
         }
         console.log("🔊 SFX toggled:", sfxEnabled ? "ON" : "OFF");
+    }
+
+    function setSFXVolume(val) {
+        hasUserInteracted = true;
+        const ctx = getAudioContext(true);
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
+        const numericVal = parseFloat(val);
+        sfxVolume = Math.max(0, Math.min(1, numericVal / 100));
+        safeSet('sb_sfx_vol', sfxVolume.toFixed(2));
+
+        if (sfxVolume > 0 && !sfxEnabled) {
+            sfxEnabled = true;
+            safeSet('sb_sfx_enabled', '1');
+        } else if (sfxVolume === 0 && sfxEnabled) {
+            sfxEnabled = false;
+            safeSet('sb_sfx_enabled', '0');
+        }
+        if (masterSfxGain && audioCtx) {
+            masterSfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
+            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0.0001, audioCtx.currentTime);
+        }
+        updateUI();
+        if (sfxEnabled) playClick();
     }
 
     // Browser Autoplay Policy: resume AudioContext and start BGM on first user gesture
@@ -518,7 +587,9 @@
     // Global Audio Engine API
     window.AudioEngine = {
         toggleBGM: toggleBGM,
+        setBGMVolume: setBGMVolume,
         toggleSFX: toggleSFX,
+        setSFXVolume: setSFXVolume,
         playSwordSwing: playSwordSwing,
         playSwordClash: playSwordClash,
         playShieldBlock: playShieldBlock,

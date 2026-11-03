@@ -48,12 +48,18 @@
     <div class="panel-heading">
         <div><p class="eyebrow">LIVE MATCH</p><h2>Battle arena</h2></div>
         <div class="heading-controls-row">
-            <button id="bgm_toggle_btn" type="button" class="action-chip-btn audio-toggle-btn is-active" onclick="window.AudioEngine && window.AudioEngine.toggleBGM()" title="Toggle relaxing ambient coding music">
-                <span id="bgm_icon">🎵</span> <span id="bgm_text">Music</span>
-            </button>
-            <button id="sfx_toggle_btn" type="button" class="action-chip-btn audio-toggle-btn is-active" onclick="window.AudioEngine && window.AudioEngine.toggleSFX()" title="Toggle battle combat sound effects">
-                <span id="sfx_icon">🔊</span> <span id="sfx_text">SFX</span>
-            </button>
+            <div class="audio-control-group" title="Music Volume">
+                <button id="bgm_toggle_btn" type="button" class="action-chip-btn audio-toggle-btn is-active" onclick="window.AudioEngine && window.AudioEngine.toggleBGM()" title="Mute/Unmute Music">
+                    <span id="bgm_icon">🎵</span> <span id="bgm_text">Music</span>
+                </button>
+                <input id="bgm_volume_slider" type="range" min="0" max="100" value="70" class="volume-slider" oninput="window.AudioEngine && window.AudioEngine.setBGMVolume(this.value)" title="Music Volume">
+            </div>
+            <div class="audio-control-group" title="SFX Volume">
+                <button id="sfx_toggle_btn" type="button" class="action-chip-btn audio-toggle-btn is-active" onclick="window.AudioEngine && window.AudioEngine.toggleSFX()" title="Mute/Unmute SFX">
+                    <span id="sfx_icon">🔊</span> <span id="sfx_text">SFX</span>
+                </button>
+                <input id="sfx_volume_slider" type="range" min="0" max="100" value="80" class="volume-slider" oninput="window.AudioEngine && window.AudioEngine.setSFXVolume(this.value)" title="Combat SFX Volume">
+            </div>
             <button id="invite_friend_btn" type="button" class="action-chip-btn" onclick="copy_link()" title="Copy Player 2 invite link to duel a friend">
                 <span>🔗 Invite Friend</span>
             </button>
