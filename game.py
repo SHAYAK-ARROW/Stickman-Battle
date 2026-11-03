@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, abort
+from flask import Flask, render_template, request, redirect, url_for, abort, send_from_directory
 from flask_socketio import SocketIO, join_room, leave_room
 from char import Body, MAX_HEALTH
 import compiler
@@ -185,7 +185,8 @@ def lobby_menu():
 
 @app.route('/favicon.ico')
 def favicon():
-    return ('', 204)
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.png', mimetype='image/png')
 
 @app.route('/info')
 def game_info():
