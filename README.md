@@ -1,154 +1,128 @@
-# ⚔️ Stickman Battle (v1.0)
+# ⚔️ Stickman Battle
 
-> **A real-time 1v1 multiplayer combat arena where players battle by writing Python code directly in their browser!**
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Play%20Online-6366f1?style=for-the-badge&logo=render&logoColor=white)](https://stickman-battle.onrender.com)
+[![Python](https://img.shields.io/badge/Python-3.12-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![WebSocket](https://img.shields.io/badge/Engine-60%20FPS%20Real--Time-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io)
+[![Tests](https://img.shields.io/badge/Unit%20Tests-37%20Passed-4ade80?style=for-the-badge)]()
 
-Made with ❤️ by **Arrows Development Hub**.
-
----
-
-## 🌟 Overview
-
-**Stickman Battle** combines the excitement of fighting games with the power of learning Python programming. Instead of using a keyboard or controller, each player commands their fighter by writing actual Python code (loops, conditions, and custom battle functions) in an in-browser code editor.
-
-Watch your Python logic come to life on an HTML5 canvas as stickmen run, leap with trigonometric physics, clash swords, block with glowing heater shields, duck under slashes, cast glowing wave spells, and outplay each other in 60 FPS real-time multiplayer!
+> **A real-time 1v1 multiplayer combat arena where fighters battle by writing and executing Python algorithms directly in their browser.**
+> 
+> 🎮 **Play Live:** [https://stickman-battle.onrender.com](https://stickman-battle.onrender.com)  
+> Made with precision by **Arrows Development Hub**.
 
 ---
 
-## 🚀 Key Features (v1.0 Release)
+## 🌟 Executive Summary
 
-- [x] **Real-Time 1v1 Multiplayer**: Powered by Flask-SocketIO at 60 FPS with token-authorized private rooms.
-- [x] **Action Queue Architecture**: Python commands execute sequentially and visibly frame-by-frame instead of collapsing into a single instant.
-- [x] **Combat & Physics Engine**:
-  - Realistic gravity, ground collision, and screen boundaries.
-  - Dynamic weapon length hitboxes and collision detection.
-  - Mutual sword clashes: simultaneous strikes parry each other with dynamic knockback and zero damage!
-  - **Stylized Weaponry**:
-    - **Sword**: Double-edged steel blade with metallic crossguard, handle grip, pommel, and sharp tip.
-    - **Shield**: Curved medieval heater shield with glowing amber rim and active cyan energy barrier shimmer when `block()` is active.
-  - **Special Combat Moves**:
-    - `swing()`: Swift horizontal jab slash.
-    - `heavy_attack()`: High-damage cleave that deals 2 hearts or completely shatters enemy shields.
-    - `throw_sword()`: Ranged boomerang attack that flies up to 280px and magically returns to hand.
-- [x] **Evasive Maneuvers**:
-  - `crouch()` / `duck()`: Lowers stickman body with bent knee stance to evade high sword slashes and flying projectiles.
-  - `dash(step)` / `dodge(step)`: High-speed bursts forward or backward.
-  - `flip()`: Turns around to face the opposite direction.
-- [x] **Trigonometric Magic Spells**:
-  - `sin_wave(power)`: Oscillating sine energy wave.
-  - `cos_wave(power)`: Crashing overhead shockwave.
-  - `tan_spike(power)`: Vertical energy spike surging from the ground that launches enemies into the air.
-  - `sec_barrier(power)`: Hyperbolic curved force field that absorbs incoming projectiles.
-  - `cosec_dome(power)`: Overhead protective dome against jumping strikes and falling shockwaves.
-  - `cot_wall(power)`: Stationary vertical firewall with high pushback.
-- [x] **Tactical Sensors & Intelligence**:
-  - `get_enemy_distance()`, `is_enemy_attacking()`, `get_my_health()`, and `get_enemy_health()`.
-- [x] **Autonomous AI Solo Practice**:
-  - `Play vs Bot (Easy)`: Beginner-friendly sparring partner with ~45% intentional mistake rate and relaxed 1.6s–2.4s decision pacing.
-  - `Play vs Bot (Hard)`: Tactical competitor with quick shield parries, shield-breaking heavy attacks, math spell combos, and ~20% mistake rate.
-  - Zero instant-reaction cheating: bots observe the exact same physics and action queue limits as human players.
-- [x] **Interactive Banter & Dialogue**:
-  - `print("text")`: Live speech bubbles with player-colored identity tags.
-  - `input("prompt")`: Triggers real-time challenge modal with one-click quick-banter response chips (`⚔️ Bring it on!`, `🛡️ Never!`, `🔥 Watch this!`, `GG`).
-- [x] **Modern Dark UI/UX**:
-  - Linear / Vercel-inspired dark theme with ambient lighting and subtle grid.
-  - VS Code-style editor with line numbers, dynamic indent guides, and auto-indent.
-  - Searchable commands manual dialog with live instant filtering and category pills.
-  - Toast notification system replacing jarring browser `alert()` popups.
-- [x] **Security & AST Sandboxing**:
-  - AST security validator blocks forbidden functions, dunder attributes (`__*`), and system calls.
-  - Loop depth and recursion detection prevents CPU denial-of-service.
-  - Isolated subprocess worker with hard execution deadline.
-  - Safe mathematical library access (`import math` allows `math.sin`, `math.cos`, `math.tan`).
-  - Session token verification prevents player impersonation.
+**Stickman Battle** replaces standard controllers and keyboards with actual Python code. Each player programs their fighter's behavior—using loops, conditionals, sensors, and mathematical spell functions—which execute in real time on an HTML5 Canvas at 60 FPS.
+
+Whether dueling friends in private token-authenticated rooms or sparring against autonomous AI bots, victories are earned purely through algorithmic strategy, reaction timing, and tactical mathematics.
 
 ---
 
-## 📖 Fighter Code Manual (Python API Reference)
+## 🏗️ System Architecture & Engineering Highlights
 
-| Category | Command | Description | Example |
-| :--- | :--- | :--- | :--- |
-| **Movement** | `move(step)` | Walk forward | `move(2)` |
-| | `run(step)` | Run forward | `run(3)` |
-| | `dash(step)` | High-speed forward sprint | `dash(4)` |
-| | `dodge(step)` | Rapid evasive backward leap | `dodge(3)` |
-| | `crouch()` / `duck()` | Crouch to evade high sword strikes | `crouch()` |
-| | `bend(angle)` | Bend stickman torso (-45 to 45 deg) | `bend(20)` |
-| | `jump(power)` | Jump vertically upward against gravity | `jump(5)` |
-| | `long_jump(step, power)` | Synchronized forward leap | `long_jump(3, 5)` |
-| | `flip()` | Face opposite direction | `flip()` |
-| **Combat** | `attack()` | Standard sword strike (1 damage) | `attack()` |
-| | `swing()` | Quick horizontal jab slash | `swing()` |
-| | `project(angle, power)` | Propel forward with angled trajectory | `project(45, 5)` |
-| | `heavy_attack()` | Powerful slash (2 damage or breaks shield) | `heavy_attack()` |
-| | `throw_sword()` | Throw sword; returns like a boomerang | `throw_sword()` |
-| | `block()` | Raise shield to block incoming strikes (30 frames) | `block()` |
-| | `set_sword(length, angle)` | Set sword length (30-80 px) and angle | `set_sword(65, 10)` |
-| | `set_shield(length, angle)` | Set shield length (20-70 px) and angle | `set_shield(50, 35)` |
-| **Magic Spells** | `sin_wave(power=1)` | Oscillating $\sin(x)$ magic wave | `sin_wave(45)` |
-| | `cos_wave(power=1)` | Descending overhead $\cos(x)$ shockwave | `cos_wave(45)` |
-| | `tan_spike(power=1)` | Sharp ground $\tan(x)$ spike launching enemies | `tan_spike(45)` |
-| | `sec_barrier(power=1)` | Curved $\sec(x)$ barrier absorbing projectiles | `sec_barrier(45)` |
-| | `cosec_dome(power=1)` | Overhead $\csc(x)$ protective dome | `cosec_dome(45)` |
-| | `cot_wall(power=1)` | Vertical $\cot(x)$ wall delivering knockback | `cot_wall(45)` |
-| **Math Helpers** | `math.sin(power)` | Cast sine attack via math library | `import math`<br>`math.sin(45)` |
-| | `math.cos(power)` | Cast cosine attack via math library | `math.cos(45)` |
-| | `math.tan(power)` | Cast tangent spike via math library | `math.tan(45)` |
-| **Sensors** | `get_enemy_distance()` | Distance to opponent in pixels | `if get_enemy_distance() < 120:` |
-| | `is_enemy_attacking()` | Returns True if enemy is attacking | `if is_enemy_attacking(): block()` |
-| | `get_my_health()` | Returns own remaining hearts | `if get_my_health() <= 2:` |
-| | `get_enemy_health()` | Returns opponent's remaining hearts | `if get_enemy_health() == 1:` |
-| **Dialogue** | `print(text)` | Displays speech bubble above fighter | `print("En garde!")` |
-| | `input(prompt)` | Sends interactive challenge prompt to opponent | `input("Do you surrender?")` |
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        BROWSER CLIENT (HTML5 / JS)                     │
+│  - In-Browser Code Editor   - 60 FPS Canvas Renderer (Curves/Weapons)  │
+│  - Real-Time Sensors        - WebSocket Client (State Interpolation)   │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ WebSockets (Socket.IO)
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                     BACKEND ENGINE (Python / Flask)                    │
+│                                                                        │
+│   ┌─────────────────────┐   RPC   ┌────────────────────────────────┐   │
+│   │ AST Security Worker │ ◄─────► │  60 FPS State Simulation Loop  │   │
+│   │ - AST Parsing       │         │  - Action Queue Processor      │   │
+│   │ - Forbidden Callout │         │  - Hitbox Collision Detection  │   │
+│   │ - Isolated Sandbox  │         │  - Trig Energy Waves Engine    │   │
+│   └─────────────────────┘         │  - Room Token Authorization    │   │
+│                                   └────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 1. AST Security Analysis & Isolated Subprocess Sandboxing
+Executing arbitrary user-submitted Python code in real time is a significant security challenge. Stickman Battle solves this with a two-phase defense:
+* **Static AST Security Analysis ([`compiler.py`](compiler.py)):** Before execution, user code is parsed into an Abstract Syntax Tree (AST). The AST visitor strictly rejects forbidden primitives (`eval`, `exec`, `open`, `__import__`, `globals`, `locals`), enforces a hard loop-nesting limit (max 2 levels) to avoid CPU denial-of-service, and blocks recursive calls.
+* **Process-Isolated Execution Worker:** Validated code runs in an isolated subprocess worker with a hard execution deadline (0.5s). Memory and state leaks are prevented by passing only primitive sensor snapshots into the worker and returning structured action tuples.
+
+### 2. Action Queue Command Pattern
+If standard Python loops (`for i in range(5): attack()`) executed normally, all five attacks would fire instantly in zero milliseconds. Stickman Battle decouples code execution from physics frames using an **Action Queue**:
+* User code queues high-level intents (`move`, `attack`, `sin_wave`, `block`).
+* The 60 FPS simulation loop consumes the queue sequentially frame-by-frame, applying realistic acceleration, gravity, weapon clash hitboxes, and cooldown frames.
+
+### 3. Trigonometric Combat Spells
+Instead of pre-rendered sprites, all projectile spells trace dynamic trigonometric functions:
+* **Sine Wave (`sin_wave` / `math.sin`):** Oscillating transverse wave traveling along the ground plane.
+* **Cosine Shockwave (`cos_wave` / `math.cos`):** Overhead shockwave falling with cosine phase.
+* **Tangent Spike (`tan_spike` / `math.tan`):** Asymptote spike bursting vertically from the ground.
+* **Force Fields (`sec_barrier`, `cosec_dome`, `cot_wall`):** Hyperbolic and reciprocal trigonometric energy shields that absorb incoming projectiles.
+
+### 4. Autonomous AI Sparring Bot ([`bot.py`](bot.py))
+* **Human-Paced Reaction Pacing:** Instead of a 0ms bot that parries every move instantly, the bot is calibrated with realistic human reaction jitter (0.8s–1.3s for Hard, 1.6s–2.4s for Easy).
+* **Intentional Fallibility:** Configured with an intentional mistake rate (20% Hard, 45% Easy) ensuring matches feel competitive and organic.
+* **Seamless Friend Takeover:** If Player 1 is practicing against the bot and a human friend joins via the room link, the bot automatically yields, promoting the room instantly into a fresh 1v1 PvP match.
+
+### 5. Private Token-Authorized Matchmaking
+* Room IDs are unpredictable (`room_<hex12>`).
+* Each participant receives a cryptographically secure URL-safe token. Role spoofing (`?player=2` URL tampering) is strictly rejected by Socket.IO handshake verification.
 
 ---
 
-## 🛠️ Tech Stack
+## 🎮 Fighter API Quick Reference
 
-- **Backend:** Python 3.12, Flask, Flask-SocketIO, Eventlet / Simple-WebSocket, AST Security Validator
-- **Frontend:** Vanilla JavaScript (ES6+), HTML5 Canvas 2D API, Socket.IO Client, DM Sans + Space Grotesk fonts
-- **Architecture:** Subprocess Sandboxing, Action Queue Command Pattern, Physics Simulation Loop, Client-Server State Sync
+The in-browser code editor grants fighters access to an expressive set of commands:
+
+| Domain | Key Commands | Description |
+| :--- | :--- | :--- |
+| **Movement** | `move(step)`, `dash(step)`, `dodge(step)`, `jump(power)`, `long_jump(step, power)`, `crouch()`, `flip()`, `bend(angle)` | Full mobility, high-speed dashes, evasive crouching, and jumping physics. |
+| **Melee Combat** | `attack()`, `heavy_attack()`, `swing()`, `block()`, `throw_sword()` | Dynamic weapon hitboxes, shield parries, shield-breaking heavy slashes, and boomerang throws. |
+| **Magic Spells** | `sin_wave(power)`, `cos_wave(power)`, `tan_spike(power)`, `sec_barrier(power)`, `cosec_dome(power)` | Mathematical energy waves. Supports both direct calls and `import math; math.sin(power)`. |
+| **Tactical Sensors** | `get_enemy_distance()`, `is_enemy_attacking()`, `get_my_health()`, `get_enemy_health()` | Read real-time battle arena metrics to write responsive algorithms. |
+| **Interactive Dialogue** | `print(text)`, `input(prompt)` | Overhead player-colored speech bubbles and interactive challenge modals with quick-reply chips. |
+
+*(Press the **Commands Manual** button inside the game interface for live searchable documentation and code samples).*
 
 ---
 
-## 💻 Running Locally
+## 🛠️ Technology Stack
 
-### 1. Clone the repository
+| Layer | Technologies |
+| :--- | :--- |
+| **Backend & Engine** | Python 3.12, Flask, Flask-SocketIO, Eventlet / Simple-WebSocket, Python AST |
+| **Frontend & Client** | Vanilla JavaScript (ES6+), HTML5 Canvas 2D API, WebSockets, DM Sans, Space Grotesk |
+| **Architecture Patterns** | Subprocess Sandboxing, Command Action Queue, 60 FPS Fixed-Tick Simulation |
+| **Cloud Deployment** | Render.com Web Service (`render.yaml`), Gunicorn / Threading ASGI |
+
+---
+
+## 💻 Local Development & Testing
+
+<details>
+<summary><b>Click to expand setup instructions</b></summary>
+
 ```bash
+# 1. Clone repository
 git clone https://github.com/SHAYAK-ARROW/Stickman-Battle.git
 cd Stickman-Battle
-```
 
-### 2. Install dependencies
-```bash
+# 2. Install dependencies
 pip install -r requirements.txt
-```
 
-### 3. Start the game server
-```bash
+# 3. Launch local game server (runs on http://localhost:5000)
 python game.py
-```
 
-### 4. Open in browser
-- **Home / Lobby:** [http://localhost:5000](http://localhost:5000)
-- Click **"Create battle room"** to host a match as Player 1.
-- Share the generated invite link or room code with a friend to join as Player 2.
-
----
-
-## 🧪 Running Unit Tests
-
-Run the full suite of 37 unit and security tests:
-```bash
+# 4. Run test suite (37 unit & security tests)
 python -m unittest discover -p "test_*.py"
 ```
 
+</details>
+
 ---
 
-## ☁️ Deploying to Render.com
+## 📄 License & Credits
 
-This project is pre-configured with `render.yaml`:
-1. Push your code to GitHub.
-2. In [Render Dashboard](https://dashboard.render.com/), click **New** $\rightarrow$ **Web Service**.
-3. Connect your repository. Render detects `render.yaml` automatically.
-4. Set build command: `pip install -r requirements.txt` and start command: `python game.py`.
-5. Play online with friends anywhere in the world!
+Developed with ❤️ by **Arrows Development Hub**.  
+Released under the MIT License.
