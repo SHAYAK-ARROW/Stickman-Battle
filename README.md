@@ -3,7 +3,6 @@
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Play%20Online-6366f1?style=for-the-badge&logo=render&logoColor=white)](https://stickman-battle.onrender.com)
 [![Python](https://img.shields.io/badge/Python-3.12-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![WebSocket](https://img.shields.io/badge/Engine-60%20FPS%20Real--Time-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io)
-[![Tests](https://img.shields.io/badge/Unit%20Tests-46%20Passed-4ade80?style=for-the-badge)]()
 
 > **A real-time 1v1 multiplayer combat arena where fighters battle by writing and executing Python algorithms directly in their browser.**
 > 
@@ -98,12 +97,12 @@ The in-browser code editor grants fighters access to an expressive set of comman
 | **Backend & Engine** | Python 3.12, Flask, Flask-SocketIO, Eventlet / Simple-WebSocket, Python AST |
 | **Frontend & Client** | Vanilla JavaScript (ES6+), HTML5 Canvas 2D API, WebSockets, DM Sans, Space Grotesk |
 | **Architecture Patterns** | Subprocess Sandboxing, Command Action Queue, 60 FPS Fixed-Tick Simulation |
-| **Workflow & Tooling** | AI-Assisted Pair Programming (Google Antigravity), Automated Test Suite (46 Tests) |
+| **Workflow & Tooling** | AI-Assisted Pair Programming (Google Antigravity) |
 | **Cloud Deployment** | Render.com Web Service (`render.yaml`), Gunicorn / Threading ASGI |
 
 ---
 
-## 💻 Local Development & Testing
+## 💻 Local Development & Quickstart
 
 <details>
 <summary><b>Click to expand setup instructions</b></summary>
@@ -118,9 +117,6 @@ pip install -r requirements.txt
 
 # 3. Launch local game server (runs on http://localhost:5000)
 python game.py
-
-# 4. Run test suite (46 unit & security tests)
-python -m unittest discover -p "test_*.py"
 ```
 
 </details>
@@ -140,6 +136,6 @@ Have an idea for a new trigonometric spell, balance tweak, or found a bug? We we
 ## 📄 License & Credits
 
 * **Creator & Lead Designer:** Shayak Sadhukhan ([Arrows Development Hub](https://github.com/SHAYAK-ARROW))
-* **Development Workflow:** Architected & built using modern AI-assisted pair programming (Google Antigravity) with rigorous algorithmic verification, physics modeling, and security testing.
+* **Development Workflow:** Architected & built using modern AI-assisted pair programming (Google Antigravity) with rigorous algorithmic verification and physics modeling.
 * **Audio Engineering:** Procedural Web Audio API synthesis (dual-channel BGM with parallel drone pad + SFX).
 * **License:** Released under a Custom Source-Available (View-Only) License. See [`LICENSE`](LICENSE) for terms. All Rights Reserved.
