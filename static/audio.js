@@ -89,6 +89,73 @@
 
     // --- RELAXING AMBIENT BACKGROUND MUSIC ENGINE ---
     // Seamless Gapless Crossfading: duration 5.5s, step timer 3.2s
+    let droneOsc1 = null;
+    let droneOsc2 = null;
+    let droneFilter = null;
+    let droneGain = null;
+
+    // Parallel "straight line" ambient drone / synth pad (warm root & fifth grounding bed)
+    function startDronePad() {
+        if (!bgmEnabled) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || droneOsc1) return;
+
+        try {
+            droneFilter = ctx.createBiquadFilter();
+            droneFilter.type = 'lowpass';
+            droneFilter.frequency.setValueAtTime(320, ctx.currentTime);
+            droneFilter.Q.setValueAtTime(0.6, ctx.currentTime);
+
+            droneGain = ctx.createGain();
+            droneGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+            // Gentle fade-in over 2.0s to a subtle background grounding bed
+            droneGain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 2.0);
+
+            droneOsc1 = ctx.createOscillator();
+            droneOsc1.type = 'sine';
+            droneOsc1.frequency.setValueAtTime(130.81, ctx.currentTime); // C3 root
+
+            droneOsc2 = ctx.createOscillator();
+            droneOsc2.type = 'triangle';
+            droneOsc2.frequency.setValueAtTime(196.00, ctx.currentTime); // G3 5th
+            droneOsc2.detune.setValueAtTime(3, ctx.currentTime); // Gentle chorus width
+
+            droneOsc1.connect(droneFilter);
+            droneOsc2.connect(droneFilter);
+            droneFilter.connect(droneGain);
+            droneGain.connect(masterBgmGain);
+
+            droneOsc1.start();
+            droneOsc2.start();
+        } catch (e) {
+            console.warn("Drone pad initialization skipped:", e);
+        }
+    }
+
+    function stopDronePad() {
+        if (droneGain && audioCtx) {
+            const oldOsc1 = droneOsc1;
+            const oldOsc2 = droneOsc2;
+            const oldGain = droneGain;
+            const oldFilter = droneFilter;
+            droneOsc1 = null;
+            droneOsc2 = null;
+            droneGain = null;
+            droneFilter = null;
+
+            try {
+                oldGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                oldGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
+                setTimeout(() => {
+                    try { oldOsc1 && oldOsc1.stop(); oldOsc1 && oldOsc1.disconnect(); } catch (e) {}
+                    try { oldOsc2 && oldOsc2.stop(); oldOsc2 && oldOsc2.disconnect(); } catch (e) {}
+                    try { oldFilter && oldFilter.disconnect(); } catch (e) {}
+                    try { oldGain && oldGain.disconnect(); } catch (e) {}
+                }, 650);
+            } catch (e) {}
+        }
+    }
+
     function playAmbientChord(freqs, duration) {
         if (!duration) duration = 5.5;
         const ctx = getAudioContext(true);
@@ -96,8 +163,8 @@
 
         const chordGain = ctx.createGain();
         chordGain.gain.setValueAtTime(0.001, ctx.currentTime);
-        chordGain.gain.exponentialRampToValueAtTime(0.24, ctx.currentTime + 1.0); // Gentle 1s swell
-        chordGain.gain.setValueAtTime(0.24, ctx.currentTime + 2.8); // Steady sustain
+        chordGain.gain.exponentialRampToValueAtTime(0.30, ctx.currentTime + 1.0); // Gentle 1s swell
+        chordGain.gain.setValueAtTime(0.30, ctx.currentTime + 2.8); // Steady sustain
         chordGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration); // Smooth decay
 
         // Warm Lowpass Filter (keeps warm chiptune warmth, no harsh high buzz)
@@ -167,8 +234,9 @@
         if (!ctx) return;
         if (masterBgmGain) {
             masterBgmGain.gain.cancelScheduledValues(ctx.currentTime);
-            masterBgmGain.gain.setValueAtTime(0.35 * bgmVolume, ctx.currentTime);
+            masterBgmGain.gain.setValueAtTime(0.38 * bgmVolume, ctx.currentTime);
         }
+        startDronePad();
         if (!isBgmPlaying) {
             bgmLoop();
         }
@@ -180,6 +248,7 @@
             clearTimeout(bgmTimer);
             bgmTimer = null;
         }
+        stopDronePad();
         if (audioCtx && masterBgmGain) {
             masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
             masterBgmGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);

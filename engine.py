@@ -28,10 +28,12 @@ class GameEngine:
         # Match game over check
         is_game_over = any(player.heart <= 0 for player in self.players)
     
-        # Gradual Energy Regeneration (0.25 per tick ≈ 15 energy / sec at 60 FPS)
-        for player in self.players:
-            if hasattr(player, 'energy') and player.energy < 100:
-                player.energy = min(100.0, player.energy + 0.25)
+        # Gradual Energy Regeneration (0.08 per tick ≈ 5 energy / sec at 60 FPS)
+        # Energy FREEZES immediately on match over: dead or finished fighters never regenerate!
+        if not is_game_over:
+            for player in self.players:
+                if hasattr(player, 'energy') and player.energy < 100 and player.heart > 0:
+                    player.energy = min(100.0, player.energy + 0.08)
 
         for player in self.players:
             # Game over: clear actions and stop

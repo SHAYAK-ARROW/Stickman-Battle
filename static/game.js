@@ -507,12 +507,12 @@ function draw_on_camvas(data) {
     draw_player(data.player1, "#ff5c5c");
     draw_player(data.player2, "#38bdf8");
 
-    // Fixed HUD health bars - clean, minimal style.
+    // Fixed HUD health bars - clear fighting game style.
     function draw_health_bar(player, label, x, align) {
         const maxHealth = player.max_health || 10;
         const health = Math.max(0, Math.min(maxHealth, player.heart || 0));
-        const width = 140;
-        const height = 6;
+        const width = 180;
+        const height = 10;
         const left = align === "right" ? x - width : x;
         const ratio = health / maxHealth;
         const color = ratio > 0.5 ? "#6ec69a" : ratio > 0.25 ? "#d4b84a" : "#e05a5a";
@@ -520,54 +520,59 @@ function draw_on_camvas(data) {
         ctx.save();
         ctx.textAlign = align === "right" ? "right" : "left";
         ctx.textBaseline = "alphabetic";
-        ctx.font = "600 11px 'Segoe UI', Arial, sans-serif";
         const tagColor = label === "P1" ? "#ff5c5c" : "#38bdf8";
-        ctx.font = "700 11px 'Segoe UI', Arial, sans-serif";
-        ctx.fillStyle = tagColor;
+
         if (align === "right") {
-            ctx.fillText(label, x - 42, 22);
+            const healthStr = `${health}/${maxHealth}`;
+            ctx.font = "500 11.5px 'Segoe UI', Arial, sans-serif";
             ctx.fillStyle = "#8a8b94";
-            ctx.font = "500 11px 'Segoe UI', Arial, sans-serif";
-            ctx.fillText(`${health}/${maxHealth}`, x, 22);
+            ctx.fillText(healthStr, x, 20);
+            const healthWidth = ctx.measureText(healthStr).width;
+
+            ctx.font = "700 11.5px 'Segoe UI', Arial, sans-serif";
+            ctx.fillStyle = tagColor;
+            ctx.fillText(label, x - healthWidth - 10, 20);
         } else {
-            ctx.fillText(label, x, 22);
+            ctx.font = "700 11.5px 'Segoe UI', Arial, sans-serif";
+            ctx.fillStyle = tagColor;
+            ctx.fillText(label, x, 20);
+            const labelWidth = ctx.measureText(label).width;
+
+            ctx.font = "500 11.5px 'Segoe UI', Arial, sans-serif";
             ctx.fillStyle = "#8a8b94";
-            ctx.font = "500 11px 'Segoe UI', Arial, sans-serif";
-            ctx.fillText(` ${health}/${maxHealth}`, x + 20, 22);
-        }
-        ctx.fillStyle = "#1e1f26";
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 28, width, height, 3); ctx.fill(); }
-        else { ctx.fillRect(left, 28, width, height); }
-        if (ratio > 0) {
-            ctx.fillStyle = color;
-            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 28, width * ratio, height, 3); ctx.fill(); }
-            else { ctx.fillRect(left, 28, width * ratio, height); }
+            ctx.fillText(` ${health}/${maxHealth}`, x + labelWidth + 4, 20);
         }
 
-        // Fixed HUD Energy / Stamina Bar (y = 38, height = 4, cyan glow)
+        // Health bar background & fill (180x10px, radius 4)
+        ctx.fillStyle = "#1e1f26";
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 26, width, height, 4); ctx.fill(); }
+        else { ctx.fillRect(left, 26, width, height); }
+        if (ratio > 0) {
+            ctx.fillStyle = color;
+            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 26, width * ratio, height, 4); ctx.fill(); }
+            else { ctx.fillRect(left, 26, width * ratio, height); }
+        }
+
+        // Fixed HUD Energy / Stamina Bar (y = 40, height = 6, cyan glow)
         const maxEnergy = player.max_energy || 100;
         const energy = Math.max(0, Math.min(maxEnergy, player.energy !== undefined ? player.energy : 100));
         const energyRatio = energy / maxEnergy;
         
         ctx.fillStyle = "#16171d";
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 38, width, 4, 2); ctx.fill(); }
-        else { ctx.fillRect(left, 38, width, 4); }
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 40, width, 6, 3); ctx.fill(); }
+        else { ctx.fillRect(left, 40, width, 6); }
         
         if (energyRatio > 0) {
             ctx.fillStyle = energyRatio > 0.35 ? "#38bdf8" : "#f59e0b";
-            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 38, width * energyRatio, 4, 2); ctx.fill(); }
-            else { ctx.fillRect(left, 38, width * energyRatio, 4); }
+            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 40, width * energyRatio, 6, 3); ctx.fill(); }
+            else { ctx.fillRect(left, 40, width * energyRatio, 6); }
         }
 
         // Energy text badge
-        ctx.font = "600 9.5px 'Segoe UI', Arial, sans-serif";
+        ctx.font = "600 10px 'Segoe UI', Arial, sans-serif";
         ctx.fillStyle = "#7dd3fc";
         const energyStr = `${Math.round(energy)}⚡`;
-        if (align === "right") {
-            ctx.fillText(energyStr, x, 49);
-        } else {
-            ctx.fillText(energyStr, x, 49);
-        }
+        ctx.fillText(energyStr, x, 55);
         ctx.restore();
     }
     const p2Label = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM)
@@ -766,6 +771,10 @@ function draw_on_camvas(data) {
     if (restartBtn) {
         restartBtn.style.display = is_game_over ? 'inline-block' : 'none';
     }
+    const exitMatchBtn = document.getElementById('exit_match_btn');
+    if (exitMatchBtn) {
+        exitMatchBtn.style.display = is_game_over ? 'inline-flex' : 'none';
+    }
 
     const runBtn = document.getElementById('run_btn');
     if (runBtn) {
@@ -826,6 +835,10 @@ socket.on('game_restarted', () => {
     const restartBtn = document.getElementById('restart_btn');
     if (restartBtn) {
         restartBtn.style.display = 'none';
+    }
+    const exitMatchBtn = document.getElementById('exit_match_btn');
+    if (exitMatchBtn) {
+        exitMatchBtn.style.display = 'none';
     }
     const runBtn = document.getElementById('run_btn');
     if (runBtn) {

@@ -71,6 +71,43 @@ class BattleBot:
             bot.flip()
             return
 
+        # 0.5. SPELL & PROJECTILE DEFENSE: Incoming enemy wave/projectile detection
+        spells = getattr(room.engine, 'spells', [])
+        incoming_spell = None
+        for s in spells:
+            if s.get('owner') == player and not s.get('returning', False):
+                sx = s.get('x', s.get('origin_x', 0))
+                sdir = s.get('dir', 1)
+                dist_to_bot = abs(bot.x - sx)
+                # Spell is moving towards bot and within reaction distance
+                approaching = (sdir > 0 and bot.x > sx) or (sdir < 0 and bot.x < sx)
+                if approaching and dist_to_bot < 220:
+                    incoming_spell = s
+                    break
+
+        if incoming_spell and not make_mistake:
+            stype = incoming_spell.get('type')
+            if self.difficulty == "hard":
+                bot_energy = getattr(bot, 'energy', 100)
+                if bot_energy >= 25:
+                    roll = random.random()
+                    if roll < 0.45:
+                        bot.sec_barrier(40)
+                    elif roll < 0.80:
+                        bot.cosec_dome(40)
+                    else:
+                        bot.crouch()
+                else:
+                    if stype in ('sin_wave', 'throw_sword'):
+                        bot.crouch()
+                    else:
+                        bot.dodge(3) if bot_energy >= 10 else bot.block()
+                return
+            else:
+                if random.random() < 0.35:
+                    bot.block()
+                    return
+
         # Occasional banter (every 8-15 seconds)
         if now - self.last_banter_time > random.uniform(8, 15):
             self.last_banter_time = now
@@ -79,14 +116,22 @@ class BattleBot:
 
         # 1. DEFENSIVE REACTION: Enemy attacking at close range
         if is_enemy_attacking and dx < 115 and not make_mistake:
+            is_enemy_heavy = getattr(player.sword, 'is_heavy', False)
             if self.difficulty == "hard":
-                roll = random.random()
-                if roll < 0.50:
-                    bot.block()
-                elif roll < 0.80:
-                    bot.crouch()
+                if is_enemy_heavy:
+                    # Heavy attack breaks shields! Hard Bot counterplays with crouch (ducks under swing) or dodge
+                    if random.random() < 0.70:
+                        bot.crouch()
+                    else:
+                        bot.dodge(3)
                 else:
-                    bot.dodge(3)
+                    roll = random.random()
+                    if roll < 0.50:
+                        bot.block()
+                    elif roll < 0.80:
+                        bot.crouch()
+                    else:
+                        bot.dodge(3)
                 return
             else:
                 # Easy bot: 50% chance to block

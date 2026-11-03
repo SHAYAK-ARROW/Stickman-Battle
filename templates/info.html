@@ -18,7 +18,13 @@
                 </div>
             </a>
             <div class="header-right">
-                <a href="/" class="button button-secondary action-chip-btn">← Back to Arena</a>
+                <div class="audio-control-group" title="Music Volume">
+                    <button id="bgm_toggle_btn" type="button" class="action-chip-btn audio-toggle-btn is-active" onclick="window.AudioEngine && window.AudioEngine.toggleBGM()" title="Mute/Unmute Music">
+                        <span id="bgm_icon">🎵</span> <span id="bgm_text">Music</span>
+                    </button>
+                    <input id="bgm_volume_slider" type="range" min="0" max="100" value="70" class="volume-slider" oninput="window.AudioEngine && window.AudioEngine.setBGMVolume(this.value)" title="Music Volume">
+                </div>
+                <a href="/" class="button button-secondary action-chip-btn">← Back to Lobby / Arena</a>
             </div>
         </header>
 
@@ -204,6 +210,7 @@
         }
     }
     </script>
+    <script src="/static/audio.js"></script>
 </body>
 </html>
 
