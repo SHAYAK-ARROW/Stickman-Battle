@@ -49,6 +49,37 @@
             </p>
 
             <div class="welcome-card" aria-labelledby="welcome-title">
+                <div class="solo-bot-section" style="padding-top: 0;">
+                    <div class="solo-bot-header">
+                        <span class="action-label" style="color: var(--accent); font-weight: 700; letter-spacing: 1px; font-size: 11px;">SOLO PRACTICE ARENA</span>
+                        <h3 style="font-size: 19px; font-weight: 700; margin: 6px 0 4px; color: var(--text);">Quick Play vs Autonomous AI Bots</h3>
+                        <p class="solo-bot-lead">Test loops, counters, and trigonometric spells solo against AI with human reaction pacing:</p>
+                    </div>
+                    <div class="bot-buttons-row">
+                        <button type="button" class="button button-bot button-easy" onclick="play_bot('easy')">
+                            <span class="bot-badge-icon">🌱</span>
+                            <div class="bot-btn-content">
+                                <span class="bot-btn-title">Play vs Bot (Easy)</span>
+                                <span class="bot-btn-desc">Relaxed pacing · ~45% mistake rate</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+
+                        <button type="button" class="button button-bot button-hard" onclick="play_bot('hard')">
+                            <span class="bot-badge-icon">🔥</span>
+                            <div class="bot-btn-content">
+                                <span class="bot-btn-title">Play vs Bot (Hard)</span>
+                                <span class="bot-btn-desc">Tactical parries · Math spell combos</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="solo-bot-divider" style="margin: 24px 0 18px;">
+                    <span>OR DUEL A FRIEND IN PRIVATE 1V1</span>
+                </div>
+
                 <div class="room-actions-split">
                     <div class="action-block host-block">
                         <span class="action-label">MULTIPLAYER 1V1</span>
@@ -74,35 +105,6 @@
                                 <button class="button button-secondary" type="submit">Join</button>
                             </div>
                         </form>
-                    </div>
-                </div>
-
-                <div class="solo-bot-divider">
-                    <span>SOLO PRACTICE VS AI</span>
-                </div>
-
-                <div class="solo-bot-section">
-                    <div class="solo-bot-header">
-                        <p class="solo-bot-lead">Test loops, counters, and spell combos with human-like reaction pacing:</p>
-                    </div>
-                    <div class="bot-buttons-row">
-                        <button type="button" class="button button-bot button-easy" onclick="play_bot('easy')">
-                            <span class="bot-badge-icon">🌱</span>
-                            <div class="bot-btn-content">
-                                <span class="bot-btn-title">Play vs Bot (Easy)</span>
-                                <span class="bot-btn-desc">Relaxed pacing · ~45% mistake rate</span>
-                            </div>
-                            <span class="btn-arrow" aria-hidden="true">→</span>
-                        </button>
-
-                        <button type="button" class="button button-bot button-hard" onclick="play_bot('hard')">
-                            <span class="bot-badge-icon">🔥</span>
-                            <div class="bot-btn-content">
-                                <span class="bot-btn-title">Play vs Bot (Hard)</span>
-                                <span class="bot-btn-desc">Tactical parries · Math spell combos</span>
-                            </div>
-                            <span class="btn-arrow" aria-hidden="true">→</span>
-                        </button>
                     </div>
                 </div>
             </div>
