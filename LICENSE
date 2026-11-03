@@ -1,0 +1,29 @@
+Custom Source-Available (View-Only) License
+
+Copyright (c) 2026 Shayak Sadhukhan (Arrows Development Hub).
+All Rights Reserved.
+
+==============================================================================
+TERMS AND CONDITIONS FOR ACCESS, VIEWING, AND EVALUATION
+==============================================================================
+
+1. Permission to View and Inspect
+Permission is hereby granted to any person viewing this repository to inspect, study, and review the source code solely for personal, educational, and peer-review evaluation purposes.
+
+2. Prohibitions and Restrictions
+Except as expressly permitted in Section 1, you are strictly prohibited from:
+- Copying, cloning, mirroring, redistributing, publishing, sublicensing, or distributing the source code or binary assets, in whole or in part.
+- Deploying, hosting, or running a public or private instance or server of this software.
+- Modifying, transforming, adapting, or creating derivative works based on this codebase.
+- Utilizing this software, its algorithms, or game designs for any commercial purpose, monetization, or inclusion in commercial products.
+
+3. Proprietary Rights
+All title, ownership, and intellectual property rights in and to the software, including but not limited to the game loop mechanics, Python AST sandbox architecture, trigonometric spell mechanics, and user interface styling, remain the exclusive property of Shayak Sadhukhan (Arrows Development Hub).
+
+4. Disclaimer of Warranty
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE.
+
+==============================================================================
+For commercial licensing inquiries, permissions, or partnership requests:
+Email: shayaksadhukhan402@gmail.com
+==============================================================================

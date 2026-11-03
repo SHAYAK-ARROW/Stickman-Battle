@@ -139,4 +139,4 @@ Have an idea for a new trigonometric spell, balance tweak, or found a bug? We we
 ## 📄 License & Credits
 
 Developed with ❤️ by **Arrows Development Hub**.  
-Released under the MIT License.
+Released under a Custom Source-Available (View-Only) License. See [`LICENSE`](LICENSE) for terms. All Rights Reserved.
