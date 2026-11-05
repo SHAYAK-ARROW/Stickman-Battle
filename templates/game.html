@@ -904,7 +904,10 @@ else:
 
 
 
-const p2_url = window.location.origin + "/room/" + encodeURIComponent(ROOM_ID) + "?token=" + encodeURIComponent(PLAYER2_TOKEN);
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const p2_url = isLocal 
+    ? (window.location.origin + "/room/" + encodeURIComponent(ROOM_ID) + "?token=" + encodeURIComponent(PLAYER2_TOKEN))
+    : ("https://arrows-dev.itch.io/stickman-battle?room=" + encodeURIComponent(ROOM_ID) + "&token=" + encodeURIComponent(PLAYER2_TOKEN));
 
 
 
