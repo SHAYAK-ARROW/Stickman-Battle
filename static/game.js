@@ -886,6 +886,14 @@ function draw_on_camvas(data) {
 function run() {
     dismissDiagnostics();
     if (window.AudioEngine) window.AudioEngine.playClick();
+
+    // Prevent multi-click spam within 350ms
+    const now = Date.now();
+    if (window._lastCodeRunTime && (now - window._lastCodeRunTime < 350)) {
+        return;
+    }
+    window._lastCodeRunTime = now;
+
     const runBtn = document.getElementById("run_btn");
     if (runBtn && runBtn.disabled) {
         if (typeof showToast === 'function') {
@@ -914,6 +922,7 @@ function run() {
         return;
     }
     if (runBtn) {
+        runBtn.disabled = true;
         runBtn.innerText = "Running...";
         runBtn.style.opacity = "0.75";
     }
@@ -923,6 +932,16 @@ function run() {
         "room_id": typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default'
     };
     socket.emit("run_code", payload);
+
+    // Safety timeout: Auto-recover from "Running..." if network hangs
+    clearTimeout(window._runCodeSafetyTimeout);
+    window._runCodeSafetyTimeout = setTimeout(() => {
+        if (runBtn && runBtn.innerText === "Running...") {
+            runBtn.disabled = false;
+            runBtn.innerText = "Run";
+            runBtn.style.opacity = "1";
+        }
+    }, 2500);
 }
 
 function request_restart() {
@@ -966,8 +985,10 @@ function dismissDiagnostics() {
 }
 
 socket.on('code_error', (data) => {
+    clearTimeout(window._runCodeSafetyTimeout);
     const runBtn = document.getElementById("run_btn");
-    if (runBtn && !runBtn.disabled) {
+    if (runBtn) {
+        runBtn.disabled = false;
         runBtn.innerText = "Run";
         runBtn.style.opacity = "1";
     }
@@ -978,8 +999,10 @@ socket.on('code_error', (data) => {
 
 socket.on('code_success', () => {
     dismissDiagnostics();
+    clearTimeout(window._runCodeSafetyTimeout);
     const runBtn = document.getElementById("run_btn");
-    if (runBtn && !runBtn.disabled) {
+    if (runBtn) {
+        runBtn.disabled = false;
         runBtn.innerText = "✓ Executed";
         runBtn.style.opacity = "1";
         setTimeout(() => {

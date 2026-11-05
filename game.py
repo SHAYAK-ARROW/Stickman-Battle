@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, abort, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, abort, send_from_directory, jsonify
 from flask_socketio import SocketIO, join_room, leave_room
 from char import Body, MAX_HEALTH
 import compiler
@@ -77,6 +77,10 @@ class GameRoom:
         self.is_bot_room = False
         self.bot_difficulty = None
         self.bot = None
+        self.is_paused = False
+        self.paused_by = None
+        self.pause_start_time = None
+        self.pause_timeout = 60.0
         self.engine.add_player(self.player1, self.player2)
 
     def reset_match(self):
@@ -158,6 +162,10 @@ class GameRoom:
         self.player1_emergency_cooldowns = {}
         self.player2_emergency_cooldowns = {}
         self.engine.spells = []
+        self.is_paused = False
+        self.paused_by = None
+        self.pause_start_time = None
+        self.pause_timeout = 60.0
         if getattr(self, 'is_bot_room', False) and getattr(self, 'bot', None):
             self.bot.reset()
 
@@ -215,16 +223,41 @@ def game_info():
             logger.error(f"Failed to read info.json: {e}")
     return render_template('info.html', info=info_data)
 
+BOT_TITLES = {
+    'dummy': '🥋 Training Dummy',
+    'easy': '🌱 Byte Rusher',
+    'rusher': '🌱 Byte Rusher',
+    'turtle': '🛡️ Iron Turtle',
+    'weaver': '📐 Wave Weaver',
+    'duelist': '🗡️ Shadow Duelist',
+    'hard': '🔥 Berserker Ronin',
+    'berserker': '🔥 Berserker Ronin',
+    'apex': '👑 Apex Sovereign',
+}
+
+@app.route('/wardrobe')
+def wardrobe_view():
+    return render_template('wardrobe.html')
+
+@app.route('/api/wardrobe/eval', methods=['POST'])
+def api_wardrobe_eval():
+    data = request.get_json(silent=True) or {}
+    code = data.get('code', '')
+    res = compiler.eval_wardrobe_code(code)
+    return jsonify(res)
+
 @app.route('/bot/<difficulty>')
 def play_vs_bot(difficulty):
-    diff = 'hard' if str(difficulty).lower() == 'hard' else 'easy'
+    req_diff = str(difficulty).lower()
+    valid_diffs = ('easy', 'hard', 'dummy', 'rusher', 'turtle', 'weaver', 'duelist', 'berserker', 'apex')
+    diff = req_diff if req_diff in valid_diffs else 'easy'
     room = create_private_room()
     if room is None:
         abort(503, "Server room limit reached. Please try again later.")
     room.is_bot_room = True
     room.bot_difficulty = diff
     room.bot = BattleBot(diff)
-    room.player2.name = f"Bot ({diff.capitalize()})"
+    room.player2.name = BOT_TITLES.get(diff, f"Bot ({diff.capitalize()})")
     room.connected_players.add(2)
     return redirect(url_for('join_room_game', room_id=room.room_id,
                             token=room.player_tokens[1]))
@@ -348,6 +381,63 @@ def handle_player_join(data):
         room.is_match_active = True
         logger.info(f"Room [{room_id}] -> Both players connected! Starting match...")
         socketio.emit('match_start', to=room_id)
+
+@socketio.on('set_player_customization')
+def handle_player_customization(data):
+    if not isinstance(data, dict):
+        return
+    auth = sid_auth.get(request.sid)
+    if not auth:
+        return
+    room = rooms.get(auth['room_id'])
+    if not room:
+        return
+    player_id = auth['player_id']
+    target_player = room.player1 if player_id == 1 else room.player2
+    if 'body' in data and data['body']:
+        target_player.body_color = compiler.resolve_color(data['body'])
+    if 'shield' in data and data['shield']:
+        target_player.shield_color = compiler.resolve_color(data['shield'])
+    if 'sword' in data and data['sword']:
+        target_player.sword_color = compiler.resolve_color(data['sword'])
+
+@socketio.on('player_tab_state')
+def handle_tab_state(data):
+    auth = sid_auth.get(request.sid)
+    if not auth:
+        return
+    room_id = auth.get('room_id')
+    player_id = auth.get('player_id')
+    room = rooms.get(room_id)
+    if not room or not getattr(room, 'is_match_active', False):
+        return
+
+    hidden = bool(data.get('hidden', False))
+    now = time.time()
+
+    if hidden:
+        if not getattr(room, 'is_paused', False):
+            room.is_paused = True
+            room.paused_by = player_id
+            room.pause_start_time = now
+            room.pause_timeout = 60.0
+            logger.info(f"Room [{room_id}] -> Paused by Player {player_id} (switched tab). 1-minute timeout started.")
+            socketio.emit('game_paused', {
+                'paused': True,
+                'paused_by': player_id,
+                'timeout': 60,
+                'is_bot_room': getattr(room, 'is_bot_room', False)
+            }, to=room_id)
+    else:
+        if getattr(room, 'is_paused', False) and getattr(room, 'paused_by', None) == player_id:
+            room.is_paused = False
+            room.paused_by = None
+            room.pause_start_time = None
+            logger.info(f"Room [{room_id}] -> Resumed by Player {player_id} (returned to tab).")
+            socketio.emit('game_resumed', {
+                'paused': False,
+                'resumed_by': player_id
+            }, to=room_id)
 
 @socketio.on('run_code')
 def code_handler(data):
@@ -558,12 +648,34 @@ def game_loop():
             for room in list(rooms.values()):
                 try:
                     if room.is_match_active or room.connected_players or room.pending_disconnects:
-                        if getattr(room, 'is_bot_room', False) and room.is_match_active and getattr(room, 'bot', None):
-                            try:
-                                room.bot.tick(room)
-                            except Exception as be:
-                                logger.error(f"Bot tick error in room {room.room_id}: {be}")
-                        room.engine.update()
+                        # ⏸️ TAB-CHANGE PAUSE & 1-MINUTE AFK AUTO-EXIT CHECK
+                        if getattr(room, 'is_paused', False):
+                            pause_elapsed = now - getattr(room, 'pause_start_time', now)
+                            timeout_limit = getattr(room, 'pause_timeout', 60.0)
+                            if pause_elapsed > timeout_limit:
+                                afk_pid = getattr(room, 'paused_by', 1)
+                                is_bot = getattr(room, 'is_bot_room', False)
+                                winner_pid = 2 if afk_pid == 1 else 1
+                                logger.info(f"Room [{room.room_id}] -> 1-minute AFK timeout reached for Player {afk_pid}!")
+                                socketio.emit('player_afk_timeout', {
+                                    'afk_player': afk_pid,
+                                    'winner': winner_pid if not is_bot else None,
+                                    'is_bot_room': is_bot,
+                                    'message': f"Match ended: Player {afk_pid} was away for more than 1 minute."
+                                }, to=room.room_id)
+                                room.is_match_active = False
+                                room.is_paused = False
+                                room.paused_by = None
+                                room.pause_start_time = None
+                                room.reset_match()
+                            # Freeze physics and bot updates during pause!
+                        else:
+                            if getattr(room, 'is_bot_room', False) and room.is_match_active and getattr(room, 'bot', None):
+                                try:
+                                    room.bot.tick(room)
+                                except Exception as be:
+                                    logger.error(f"Bot tick error in room {room.room_id}: {be}")
+                            room.engine.update()
                         
                         # Opponent dialogue question dispatch
                         if getattr(room.player1, 'pending_question', None):
@@ -588,8 +700,16 @@ def game_loop():
                                 socketio.emit('player_left', {'player_id': pid}, to=room.room_id)
                         
                         # 60 FPS state broadcast with dynamic weapon lengths & states
+                        pause_secs_left = 0
+                        if getattr(room, 'is_paused', False):
+                            elapsed_p = now - getattr(room, 'pause_start_time', now)
+                            pause_secs_left = max(0, int(getattr(room, 'pause_timeout', 60.0) - elapsed_p))
+
                         data_to_send = {
                             'is_match_active': getattr(room, 'is_match_active', False),
+                            'is_paused': getattr(room, 'is_paused', False),
+                            'paused_by': getattr(room, 'paused_by', None),
+                            'pause_seconds_left': pause_secs_left,
                             'player1': {
                                 'x': room.player1.x,
                                 'y': room.player1.y,
@@ -612,7 +732,10 @@ def game_loop():
                                 'max_health': MAX_HEALTH,
                                 'energy': round(getattr(room.player1, 'energy', 100), 1),
                                 'max_energy': getattr(room.player1, 'max_energy', 100),
-                                'speech': _get_public_speech(room.player1)
+                                'speech': _get_public_speech(room.player1),
+                                'body_color': getattr(room.player1, 'body_color', None),
+                                'shield_color': getattr(room.player1, 'shield_color', None),
+                                'sword_color': getattr(room.player1, 'sword_color', None)
                             },
                             'player2': {
                                 'x': room.player2.x,
@@ -636,7 +759,10 @@ def game_loop():
                                 'max_health': MAX_HEALTH,
                                 'energy': round(getattr(room.player2, 'energy', 100), 1),
                                 'max_energy': getattr(room.player2, 'max_energy', 100),
-                                'speech': _get_public_speech(room.player2)
+                                'speech': _get_public_speech(room.player2),
+                                'body_color': getattr(room.player2, 'body_color', None),
+                                'shield_color': getattr(room.player2, 'shield_color', None),
+                                'sword_color': getattr(room.player2, 'sword_color', None)
                             },
                             'spells': [
                                 {

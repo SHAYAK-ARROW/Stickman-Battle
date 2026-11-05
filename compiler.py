@@ -2,7 +2,9 @@ import ast
 import logging
 import math
 import multiprocessing
+import re
 import threading
+import traceback
 
 logger = logging.getLogger("stickman_battle.compiler")
 
@@ -63,7 +65,14 @@ def _sandbox_execute(code, sensors):
             input_count += 1
             prompt = " ".join(str(a) for a in args)[:40] if args else "Say something:"
             _record_command(commands, "ask", (prompt,))
-        return ""
+        prompt_str = (" ".join(str(a) for a in args) if args else "").lower()
+        if "rush" in prompt_str:
+            return "rush"
+        if "attack" in prompt_str:
+            return "attack"
+        if "defend" in prompt_str or "block" in prompt_str:
+            return "defend"
+        return "yes"
 
     safe_builtins = {
         "range": safe_range,
@@ -172,6 +181,10 @@ def _sandbox_execute(code, sensors):
     safe_env.update({
         "get_enemy_distance": lambda: sensors["enemy_distance"],
         "is_enemy_attacking": lambda: sensors["enemy_attacking"],
+        "is_enemy_blocking": lambda: sensors.get("enemy_blocking", False),
+        "is_enemy_crouching": lambda: sensors.get("enemy_crouching", False),
+        "is_enemy_airborne": lambda: sensors.get("enemy_airborne", False),
+        "get_enemy_direction": lambda: sensors.get("enemy_direction", -1),
         "get_my_health": lambda: sensors["my_health"],
         "get_enemy_health": lambda: sensors["enemy_health"],
         "get_my_energy": lambda: sensors.get("my_energy", 100),
@@ -182,9 +195,21 @@ def _sandbox_execute(code, sensors):
     })
 
     try:
-        exec(code, safe_env)
+        compiled = compile(code, "<strategy.py>", "exec")
+        exec(compiled, safe_env)
     except Exception as exc:
-        return ("error", type(exc).__name__, str(exc)[:120])
+        tb = traceback.extract_tb(exc.__traceback__)
+        strat_frame = next((f for f in reversed(tb) if f.filename == "<strategy.py>"), None)
+        lineno = strat_frame.lineno if strat_frame else (tb[-1].lineno if tb else 1)
+        code_lines = code.splitlines()
+        fault_line = code_lines[lineno - 1].strip() if lineno and 0 < lineno <= len(code_lines) else ""
+        idle_err = (
+            f'Traceback (most recent call last):\n'
+            f'  File "<strategy.py>", line {lineno}, in <module>\n'
+            f'    {fault_line}\n'
+            f'{type(exc).__name__}: {exc}'
+        )
+        return ("error", type(exc).__name__, idle_err)
     return ("ok", commands)
 
 
@@ -365,6 +390,59 @@ def safe_range(*args):
             raise ValueError("Max 100 loop iterations allowed!")
     return range(*args)
 
+
+def format_friendly_error(e) -> str:
+    """Translates raw Python errors into IDLE-style traceback with human-friendly hints."""
+    if isinstance(e, SyntaxError):
+        lines = traceback.format_exception_only(type(e), e)
+        idle_syn = "".join(lines).strip()
+        msg = str(getattr(e, 'msg', e))
+        if "expected ':'" in msg or "invalid syntax" in msg:
+            hint = "\n[Hint]: Check for missing colon ':' or unclosed bracket ')'."
+        else:
+            hint = ""
+        return f"{idle_syn}{hint}"
+
+    s = str(e).strip()
+    if s.startswith("RuntimeError: "):
+        s = s[len("RuntimeError: "):]
+    if s.startswith("Error: "):
+        s = s[len("Error: "):]
+
+    hint = ""
+    # 1. Missing parentheses on sensor function (e.g. get_enemy_distance < 20)
+    if any(k in s for k in ("'<' not supported between instances of 'function'",
+                            "'>' not supported between instances of 'function'",
+                            "'<=' not supported between instances of 'function'",
+                            "'>=' not supported between instances of 'function'")):
+        hint = "\n[Hint]: Missing '()' on sensor! Example: use get_enemy_distance() instead of get_enemy_distance."
+    elif "not supported between instances of 'str' and 'int'" in s:
+        hint = "\n[Hint]: Cannot compare text (str) with number (int). Convert with int() or check your variable."
+    elif "object is not callable" in s:
+        hint = "\n[Hint]: Did you put '()' after a variable that is not a function?"
+    elif "is not defined" in s:
+        m = re.search(r"name '([^']+)' is not defined", s)
+        if m:
+            name = m.group(1)
+            typos = {
+                "atack": "attack()",
+                "attak": "attack()",
+                "blok": "block()",
+                "dashh": "dash(step)",
+                "jamp": "jump(power)",
+                "croch": "crouch()",
+                "dist": "get_enemy_distance()",
+                "distance": "get_enemy_distance()",
+            }
+            if name.lower() in typos:
+                hint = f"\n[Hint]: '{name}' is not recognized. Did you mean {typos[name.lower()]}?"
+            else:
+                hint = f"\n[Hint]: '{name}' is not defined. Check spelling or check Commands Manual."
+    elif "IndentationError" in s or "unindent does not match" in s:
+        hint = "\n[Hint]: Check your spaces! Code inside 'if', 'else', or 'for' must be indented by 4 spaces."
+
+    return f"{s}{hint}"
+
 def compiler(code, current_player, enemy_player=None):
     if hasattr(current_player, 'action_queue'):
         current_player.action_queue.clear()
@@ -387,7 +465,7 @@ def compiler(code, current_player, enemy_player=None):
 
     try:
         # Step 1: AST Static Security Analysis
-        parsed_tree = ast.parse(code)
+        parsed_tree = ast.parse(code, filename="<strategy.py>")
         validator = SecurityValidator()
         validator.visit(parsed_tree)
 
@@ -396,10 +474,14 @@ def compiler(code, current_player, enemy_player=None):
         sensors = {
             "enemy_distance": abs(current_player.x - enemy_player.x) if enemy_player else 999,
             "enemy_attacking": getattr(enemy_player.sword, 'attack_state', 0) != 0 if (enemy_player and hasattr(enemy_player, 'sword')) else False,
+            "enemy_blocking": (hasattr(enemy_player, 'shield') and enemy_player.shield.block_timer > 0) if enemy_player else False,
+            "enemy_crouching": getattr(enemy_player, 'crouch_timer', 0) > 0 if enemy_player else False,
+            "enemy_airborne": (enemy_player.y < 470 or enemy_player.jump_pixel != 0) if enemy_player else False,
+            "enemy_direction": getattr(enemy_player, 'direction', -1) if enemy_player else -1,
             "my_health": current_player.heart,
             "enemy_health": enemy_player.heart if enemy_player else 0,
             "my_energy": round(getattr(current_player, 'energy', 100), 1),
-            "enemy_energy": round(getattr(enemy_player, 'energy', 100), 1),
+            "enemy_energy": round(getattr(enemy_player, 'energy', 100), 1) if enemy_player else 100,
         }
         with _SANDBOX_LOCK:
             _ensure_sandbox_worker()
@@ -413,7 +495,16 @@ def compiler(code, current_player, enemy_player=None):
             result = connection.recv()
 
         if result[0] == "error":
-            raise RuntimeError(f"{result[1]}: {result[2]}")
+            err = format_friendly_error(result[2])
+            logger.warning("Runtime execution error:\n%s", err)
+            current_player.last_error = err
+            if hasattr(current_player, 'say'):
+                err_lines = [l.strip() for l in err.splitlines() if l.strip()]
+                short_say = next((l for l in reversed(err_lines) if "Error" in l or "Exception" in l), err_lines[0] if err_lines else "Error")
+                current_player.say(short_say[:40])
+                if hasattr(current_player, 'execute_next_action'):
+                    current_player.execute_next_action()
+            return {"success": False, "error": err}
 
         _apply_commands(result[1], current_player)
 
@@ -421,29 +512,167 @@ def compiler(code, current_player, enemy_player=None):
         current_player.last_error = None
         return {"success": True, "error": None}
     except SyntaxError as se:
-        err = f"Syntax Error (line {se.lineno})"
-        logger.warning(f"Syntax error: {err}")
+        err = format_friendly_error(se)
+        logger.warning("Syntax error:\n%s", err)
         current_player.last_error = err
         if hasattr(current_player, 'say'):
-            current_player.say(err)
+            err_lines = [l.strip() for l in err.splitlines() if l.strip()]
+            short_say = next((l for l in reversed(err_lines) if "Error" in l or "Exception" in l), err_lines[0] if err_lines else "SyntaxError")
+            current_player.say(short_say[:40])
             if hasattr(current_player, 'execute_next_action'):
                 current_player.execute_next_action()
         return {"success": False, "error": err}
     except (ValueError, TimeoutError) as ve:
-        err = f"Security: {ve}"[:40]
-        logger.warning(f"Security error: {err}")
+        err = f"Security: {ve}"
+        logger.warning("Security error: %s", err)
         current_player.last_error = err
         if hasattr(current_player, 'say'):
-            current_player.say(err)
+            current_player.say(err[:40])
             if hasattr(current_player, 'execute_next_action'):
                 current_player.execute_next_action()
         return {"success": False, "error": err}
     except Exception as e:
-        err = f"Error: {e}"[:40]
-        logger.warning(f"Execution error: {err}")
+        err = format_friendly_error(e)
+        logger.warning("Execution error:\n%s", err)
         current_player.last_error = err
         if hasattr(current_player, 'say'):
-            current_player.say(err)
+            err_lines = [l.strip() for l in err.splitlines() if l.strip()]
+            short_say = next((l for l in reversed(err_lines) if "Error" in l or "Exception" in l), err_lines[0] if err_lines else "Error")
+            current_player.say(short_say[:40])
             if hasattr(current_player, 'execute_next_action'):
                 current_player.execute_next_action()
         return {"success": False, "error": err}
+
+
+# ==========================================
+# 🥋 WARDROBE STUDIO EVALUATOR (Level 1 & 7)
+# ==========================================
+COLOR_RUNES = {
+    "cyan": "#00f0ff",
+    "emerald": "#10b981",
+    "green": "#10b981",
+    "crimson": "#ff4757",
+    "red": "#ff4757",
+    "gold": "#fbbf24",
+    "yellow": "#fbbf24",
+    "amber": "#fbbf24",
+    "violet": "#a855f7",
+    "purple": "#a855f7",
+    "obsidian": "#334155",
+    "black": "#334155",
+    "white": "#ffffff",
+    "orange": "#ff7a00",
+    "pink": "#ec4899",
+    "blue": "#38bdf8",
+    "silver": "#94a3b8",
+}
+
+def resolve_color(val):
+    if not val or not isinstance(val, str):
+        return None
+    val_clean = val.strip().lower()
+    if val_clean in COLOR_RUNES:
+        return COLOR_RUNES[val_clean]
+    if re.match(r"^#[0-9a-fA-F]{3,6}$", val.strip()):
+        return val.strip()
+    return COLOR_RUNES.get(val_clean, "#ffffff")
+
+class _WardrobeItem:
+    def __init__(self, item_name):
+        self.name = item_name
+        self.color = None
+    def change_color(self, c):
+        self.color = c
+    def set_color(self, c):
+        self.color = c
+
+def eval_wardrobe_code(code: str) -> dict:
+    """Evaluates Python code submitted in the Wardrobe Studio.
+    Supports both Level 1 Variable syntax (body = 'emerald')
+    and Level 7 OOP syntax (sword.change_color('crimson')).
+    """
+    if not code or not code.strip():
+        return {"success": False, "error": "Code editor is empty! Write some Python code to equip your stickman."}
+    
+    if len(code) > 1000:
+        return {"success": False, "error": "Wardrobe code exceeds maximum length (1000 characters)."}
+
+    try:
+        # Step 1: Syntax Analysis (IDLE filename strategy)
+        parsed = ast.parse(code, filename="<wardrobe.py>")
+        validator = SecurityValidator()
+        validator.visit(parsed)
+        
+        # Step 2: Build Wardrobe Execution Scope
+        fighter_obj = _WardrobeItem("fighter")
+        sword_obj = _WardrobeItem("sword")
+        shield_obj = _WardrobeItem("shield")
+
+        safe_env = {
+            "__builtins__": {
+                "print": lambda *args: None,
+                "len": len,
+                "str": str,
+                "int": int,
+                "range": safe_range,
+                "True": True,
+                "False": False,
+                "None": None
+            },
+            "fighter": fighter_obj,
+            "player": fighter_obj,
+            "body_item": fighter_obj,
+            "sword": sword_obj,
+            "shield": shield_obj,
+        }
+
+        compiled = compile(code, "<wardrobe.py>", "exec")
+        exec(compiled, safe_env)
+
+        # Extract values: Check variables first, then OOP objects
+        body_val = safe_env.get("body") or safe_env.get("fighter_color") or fighter_obj.color
+        shield_val = safe_env.get("shield") or safe_env.get("shield_color") or shield_obj.color
+        sword_val = safe_env.get("sword") or safe_env.get("sword_color") or sword_obj.color
+
+        # If user wrote sword = "blue" (rebound object with string), handle string
+        if isinstance(sword_val, _WardrobeItem):
+            sword_val = sword_val.color
+        if isinstance(shield_val, _WardrobeItem):
+            shield_val = shield_val.color
+        if isinstance(body_val, _WardrobeItem):
+            body_val = body_val.color
+
+        colors = {}
+        if body_val:
+            colors["body"] = resolve_color(body_val)
+        if shield_val:
+            colors["shield"] = resolve_color(shield_val)
+        if sword_val:
+            colors["sword"] = resolve_color(sword_val)
+
+        if not colors:
+            return {
+                "success": False,
+                "error": "No color changes detected! Assign body, shield, or sword variables (e.g. body = 'emerald')."
+            }
+
+        return {
+            "success": True,
+            "colors": colors,
+            "message": "Equipped successfully!"
+        }
+    except SyntaxError as se:
+        return {"success": False, "error": format_friendly_error(se)}
+    except Exception as e:
+        tb = traceback.extract_tb(e.__traceback__)
+        strat_frame = next((f for f in reversed(tb) if f.filename == "<wardrobe.py>"), None)
+        lineno = strat_frame.lineno if strat_frame else (tb[-1].lineno if tb else 1)
+        code_lines = code.splitlines()
+        fault_line = code_lines[lineno - 1].strip() if lineno and 0 < lineno <= len(code_lines) else ""
+        idle_err = (
+            f'Traceback (most recent call last):\n'
+            f'  File "<wardrobe.py>", line {lineno}, in <module>\n'
+            f'    {fault_line}\n'
+            f'{type(e).__name__}: {e}'
+        )
+        return {"success": False, "error": format_friendly_error(idle_err)}

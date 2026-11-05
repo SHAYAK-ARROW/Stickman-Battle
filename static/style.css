@@ -376,6 +376,14 @@ button { color: inherit; }
     width: 100%;
     height: auto;
     background: #08090b;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+}
+
+/* Mobile Touch Optimization & Pinch Zoom Prevention */
+.button, .button-bot, .quick-chip, .btn-action, .join-controls button {
+    touch-action: manipulation;
 }
 
 /* ── Opponent Modal ────────────────────────────────────────── */
@@ -930,9 +938,10 @@ button { color: inherit; }
 /* ── Features Grid (fills the surrounding space purposefully) ─ */
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-    width: min(100%, 880px);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    width: 92%;
+    max-width: 1360px;
     margin: 32px auto 0;
 }
 
@@ -1758,5 +1767,386 @@ button { color: inherit; }
     font-family: var(--mono);
     line-height: 1.4;
     word-break: break-word;
+    white-space: pre-wrap;
 }
 
+.line-error-highlight {
+    color: #ff4757 !important;
+    font-weight: 800;
+    background: rgba(255, 71, 87, 0.25);
+    border-radius: 3px;
+    padding: 0 4px;
+    box-shadow: 0 0 8px rgba(255, 71, 87, 0.3);
+}
+
+
+/* ==============================================================================
+   ⏸️ 1-MINUTE TAB-CHANGE PAUSE & AFK OVERLAY
+   ============================================================================== */
+.pause-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    background: rgba(10, 11, 16, 0.88);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.pause-card {
+    background: #151823;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(168, 85, 247, 0.15);
+    border-radius: 12px;
+    padding: 24px 28px;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+}
+
+.pause-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #a855f7;
+    background: rgba(168, 85, 247, 0.15);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    padding: 3px 10px;
+    border-radius: 999px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
+.pause-card h3 {
+    margin: 0 0 8px;
+    font-size: 19px;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.pause-card p {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.5;
+}
+
+.pause-timer-wrap {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    padding: 9px 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+}
+
+.pause-hint {
+    font-size: 11px !important;
+    color: #64748b !important;
+    margin: 0 !important;
+}
+
+/* ==============================================================================
+   ⚔️ ARCADE READY TO DUEL / BATTLE START GATE
+   ============================================================================== */
+.battle-start-gate {
+    position: absolute;
+    inset: 0;
+    z-index: 55;
+    background: radial-gradient(circle at center, rgba(17, 19, 29, 0.94) 0%, rgba(8, 9, 14, 0.98) 100%);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1), transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.battle-start-gate.gate-exit {
+    opacity: 0;
+    transform: scale(1.05);
+    pointer-events: none;
+}
+
+.gate-card {
+    background: #141722;
+    border: 1px solid rgba(168, 85, 247, 0.45);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 40px rgba(168, 85, 247, 0.2);
+    border-radius: 14px;
+    padding: 28px 32px;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    animation: gateCardPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes gateCardPop {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.gate-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.12);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 999px;
+    padding: 4px 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.gate-pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 8px #4ade80;
+    animation: pulse 1.5s infinite;
+}
+
+.gate-title {
+    margin: 2px 0 0;
+    font-size: 22px;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: 0.5px;
+}
+
+.gate-desc {
+    margin: 0;
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.5;
+}
+
+.gate-enter-btn {
+    margin-top: 6px;
+    padding: 12px 28px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 18px rgba(168, 85, 247, 0.4), 0 0 15px rgba(236, 72, 153, 0.25);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gate-enter-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 24px rgba(168, 85, 247, 0.6), 0 0 22px rgba(236, 72, 153, 0.45);
+}
+
+.gate-enter-btn:active {
+    transform: translateY(1px) scale(0.98);
+}
+
+.gate-hint {
+    font-size: 11.5px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* ==============================================================================
+   ⚡ QUICK CODE CHIPS & COMMAND INSERT BUTTONS
+   ============================================================================== */
+.quick-code-chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(18, 20, 29, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.chips-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    margin-right: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.code-chip-btn {
+    background: rgba(168, 85, 247, 0.12);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.code-chip-btn:hover {
+    background: rgba(168, 85, 247, 0.25);
+    border-color: #a855f7;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
+}
+
+.code-chip-btn:active {
+    transform: translateY(1px);
+}
+
+.insert-cmd-btn {
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.insert-cmd-btn:hover {
+    background: #38bdf8;
+    color: #0b0f19;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    transform: scale(1.04);
+}
+
+
+/* =====================================================================
+   FLUID PERCENTAGE-BASED DUAL ARENA DASHBOARD & BOT SVG LOGOS
+   ===================================================================== */
+.landing-arena-grid {
+    width: 92%;
+    max-width: 1360px;
+    margin: 28px auto 36px;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 24px;
+    align-items: stretch;
+}
+
+@media (max-width: 1040px) {
+    .landing-arena-grid {
+        grid-template-columns: 1fr;
+        width: 94%;
+        gap: 20px;
+    }
+}
+
+.arena-card {
+    padding: 32px 34px 28px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: linear-gradient(155deg, rgba(30, 31, 38, .95), rgba(20, 21, 26, .97));
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+}
+
+.multiplayer-arena-card .room-actions-split {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.action-divider-horizontal {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--muted);
+    font: 600 10.5px 'DM Sans', sans-serif;
+    letter-spacing: 1.2px;
+    margin: 6px 0;
+}
+.action-divider-horizontal::before,
+.action-divider-horizontal::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+}
+.action-divider-horizontal span {
+    padding: 0 12px;
+}
+
+.pvp-badge-banner {
+    margin-top: auto;
+    padding-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+    color: var(--muted);
+    border-top: 1px dashed var(--border);
+}
+
+.pvp-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+}
+
+/* Custom Vector SVG Bot Badges */
+.bot-logo-badge {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--transition);
+}
+.button-bot:hover .bot-logo-badge {
+    transform: scale(1.12);
+}
+.bot-logo-svg {
+    width: 36px;
+    height: 36px;
+    display: block;
+}
+
+.arcade-ladder-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+@media (max-width: 600px) {
+    .arcade-ladder-grid {
+        grid-template-columns: 1fr;
+    }
+}

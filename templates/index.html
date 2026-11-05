@@ -15,7 +15,7 @@
             <a class="brand" href="/" aria-label="Stickman Battle home">
                 <img class="brand-mark" src="/static/favicon.png" alt="Stickman Battle Icon" width="32" height="32">
                 <div class="brand-text-wrap">
-                    <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v1.0</span></span>
+                    <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v1.1</span></span>
                     <span class="brand-subtitle">Made by Arrows Development Hub</span>
                 </div>
             </a>
@@ -26,7 +26,9 @@
                     </button>
                     <input id="bgm_volume_slider" type="range" min="0" max="100" value="70" class="volume-slider" oninput="window.AudioEngine &amp;&amp; window.AudioEngine.setBGMVolume(this.value)" title="Music Volume">
                 </div>
-                <a href="/info" class="header-info-link">About &amp; Info</a>
+                <a href="/wardrobe" class="button button-secondary" style="padding: 6px 12px; font-size: 12px; border-color: rgba(168, 85, 247, 0.4); color: #d8b4fe;">🥋 Wardrobe</a>
+                <button type="button" class="button button-secondary" onclick="openHandbook()" style="padding: 6px 12px; font-size: 12px; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">📖 Handbook</button>
+                <button type="button" class="header-info-link" onclick="openInfoModal()" style="background: none; border: none; font: inherit; color: var(--text-secondary); cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 4px;" title="About, Release Specs & Feedback">About &amp; Info</button>
                 <span class="status-pill"><span class="status-pulse"></span>Online PvP</span>
                 <span class="header-note">CODE · FIGHT · OUTPLAY</span>
             </div>
@@ -48,65 +50,195 @@
                 or practice solo against autonomous AI bots with human-like pacing and trigonometric physics.
             </p>
 
-            <div class="welcome-card" aria-labelledby="welcome-title">
-                <div class="solo-bot-section" style="padding-top: 0;">
+            <!-- Fluid Percentage-Based Dual Arena Grid (No fixed sizes, fills screen gracefully) -->
+            <div class="landing-arena-grid" aria-labelledby="welcome-title">
+                
+                <!-- LEFT COLUMN: SOLO AI ARCADE ARENA (6 Stages + Practice Dojo) -->
+                <div class="arena-card solo-arena-card">
                     <div class="solo-bot-header">
                         <span class="action-label" style="color: var(--accent); font-weight: 700; letter-spacing: 1px; font-size: 11px;">SOLO PRACTICE ARENA</span>
-                        <h3 style="font-size: 19px; font-weight: 700; margin: 6px 0 4px; color: var(--text);">Quick Play vs Autonomous AI Bots</h3>
-                        <p class="solo-bot-lead">Test loops, counters, and trigonometric spells solo against AI with human reaction pacing:</p>
+                        <h3 style="font-size: 21px; font-weight: 700; margin: 6px 0 4px; color: var(--text);">Quick Play vs Autonomous AI Bots</h3>
+                        <p class="solo-bot-lead">Test loops, counters, and trigonometric spells solo against AI calibrated with human-paced reaction latency:</p>
                     </div>
+                    
+                    <div style="margin: 12px 0 10px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: 11.5px; font-weight: 700; color: #a855f7; letter-spacing: 0.8px; text-transform: uppercase;">⚔️ 6-Stage Arcade Progression Ladder</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Milestones saved in browser</span>
+                    </div>
+
+                    <div class="arcade-ladder-grid">
+                        <!-- Stage 1: Byte Rusher -->
+                        <button type="button" class="button button-bot" onclick="play_bot('rusher')">
+                            <div class="bot-logo-badge" title="Stage 1: Byte Rusher">
+                                <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+                                    <rect width="36" height="36" rx="9" fill="#10b981" fill-opacity="0.14" stroke="#10b981" stroke-opacity="0.35" stroke-width="1.2"/>
+                                    <path d="M19.5 7L10.5 19H17.5L15.5 29L25.5 16.5H18.5L19.5 7Z" fill="#10b981" fill-opacity="0.25" stroke="#10b981" stroke-width="1.8" stroke-linejoin="round"/>
+                                    <circle cx="25" cy="10" r="1.5" fill="#34d399"/>
+                                    <path d="M22 10H16" stroke="#34d399" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="2 1.5"/>
+                                </svg>
+                            </div>
+                            <div class="bot-btn-content">
+                                <span class="bot-btn-title">Stage 1: Byte Rusher</span>
+                                <span class="bot-btn-desc">Direct charges · ~45% error rate</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+
+                        <!-- Stage 2: Iron Turtle -->
+                        <button type="button" class="button button-bot" onclick="play_bot('turtle')">
+                            <div class="bot-logo-badge" title="Stage 2: Iron Turtle">
+                                <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+                                    <rect width="36" height="36" rx="9" fill="#0284c7" fill-opacity="0.14" stroke="#0ea5e9" stroke-opacity="0.35" stroke-width="1.2"/>
+                                    <path d="M18 8L26 12V18.5C26 23.5 22.5 27.5 18 29C13.5 27.5 10 23.5 10 18.5V12L18 8Z" fill="#0284c7" fill-opacity="0.28" stroke="#38bdf8" stroke-width="1.8" stroke-linejoin="round"/>
+                                    <path d="M18 13V24M13.5 17.5L18 15L22.5 17.5" stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div class="bot-btn-content">
+                                <span class="bot-btn-title">Stage 2: Iron Turtle</span>
+                                <span class="bot-btn-desc">Heavy shield · Break with heavy_attack()</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+
+                        <!-- Stage 3: Wave Weaver -->
+                        <button type="button" class="button button-bot" onclick="play_bot('weaver')">
+                            <div class="bot-logo-badge" title="Stage 3: Wave Weaver">
+                                <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+                                    <rect width="36" height="36" rx="9" fill="#7c3aed" fill-opacity="0.14" stroke="#a855f7" stroke-opacity="0.35" stroke-width="1.2"/>
+                                    <path d="M8 18C10.5 12 13 12 15.5 18C18 24 20.5 24 23 18C25.5 12 28 12 30 18" stroke="#c084fc" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M8 18C10.5 24 13 24 15.5 18C18 12 20.5 12 23 18C25.5 24 28 24 30 18" stroke="#f472b6" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2 2"/>
+                                    <circle cx="18" cy="18" r="3" fill="#e879f9" fill-opacity="0.35" stroke="#e879f9" stroke-width="1.2"/>
+                                </svg>
+                            </div>
+                            <div class="bot-btn-content">
+                                <span class="bot-btn-title">Stage 3: Wave Weaver</span>
+                                <span class="bot-btn-desc">Trig spells · Crouch or jump to evade</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+
+                        <!-- Stage 4: Shadow Duelist -->
+                        <button type="button" class="button button-bot" onclick="play_bot('duelist')">
+                            <div class="bot-logo-badge" title="Stage 4: Shadow Duelist">
+                                <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+                                    <rect width="36" height="36" rx="9" fill="#e11d48" fill-opacity="0.14" stroke="#f43f5e" stroke-opacity="0.35" stroke-width="1.2"/>
+                                    <path d="M10 26L23 13M23 13L26 10L24 8L21 11M23 13L21 11" stroke="#fb7185" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M26 26L13 13M13 13L10 10L12 8L15 11M13 13L15 11" stroke="#fda4af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <circle cx="18" cy="18" r="2.2" fill="#f43f5e"/>
+                                </svg>
+                            </div>
+                            <div class="bot-btn-content">
+                                <span class="bot-btn-title">Stage 4: Shadow Duelist</span>
+                                <span class="bot-btn-desc">Agile dashes · Flips behind player</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+
+                        <!-- Stage 5: Berserker Ronin -->
+                        <button type="button" class="button button-bot" onclick="play_bot('berserker')">
+                            <div class="bot-logo-badge" title="Stage 5: Berserker Ronin">
+                                <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+                                    <rect width="36" height="36" rx="9" fill="#ea580c" fill-opacity="0.16" stroke="#f97316" stroke-opacity="0.35" stroke-width="1.2"/>
+                                    <path d="M18 7C18 7 13 14 13 19C13 22.5 15.2 25 18 25C20.8 25 23 22.5 23 19C23 14 18 7 18 7Z" fill="#ea580c" fill-opacity="0.3" stroke="#fb923c" stroke-width="1.8"/>
+                                    <path d="M18 14C18 14 15.5 18 15.5 20.5C15.5 22 16.6 23.5 18 23.5C19.4 23.5 20.5 22 20.5 20.5C20.5 18 18 14 18 14Z" fill="#fdba74"/>
+                                    <line x1="10" y1="28" x2="26" y2="28" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div class="bot-btn-content">
+                                <span class="bot-btn-title">Stage 5: Berserker Ronin</span>
+                                <span class="bot-btn-desc">Combos & counters · Rapid pacing</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+
+                        <!-- Stage 6: Apex Sovereign -->
+                        <button type="button" class="button button-bot" style="border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.05);" onclick="play_bot('apex')">
+                            <div class="bot-logo-badge" title="Stage 6: Apex Sovereign">
+                                <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+                                    <rect width="36" height="36" rx="9" fill="#d97706" fill-opacity="0.16" stroke="#fbbf24" stroke-opacity="0.4" stroke-width="1.2"/>
+                                    <path d="M9 24L11 13L15.5 18L18 11L20.5 18L25 13L27 24H9Z" fill="#d97706" fill-opacity="0.3" stroke="#fbbf24" stroke-width="1.8" stroke-linejoin="round"/>
+                                    <circle cx="18" cy="11" r="1.5" fill="#fef08a"/>
+                                    <circle cx="11" cy="13" r="1.2" fill="#fef08a"/>
+                                    <circle cx="25" cy="13" r="1.2" fill="#fef08a"/>
+                                    <line x1="11" y1="26.5" x2="25" y2="26.5" stroke="#fbbf24" stroke-width="1.8" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div class="bot-btn-content">
+                                <span class="bot-btn-title" style="color: #fbbf24;">Stage 6: Apex Sovereign</span>
+                                <span class="bot-btn-desc">Grandmaster Boss · Sub-second reflex</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+                    </div>
+
+                    <!-- Practice Dojo (Training Dummy) -->
+                    <div style="margin: 18px 0 8px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: 11px; font-weight: 700; color: #38bdf8; letter-spacing: 0.8px; text-transform: uppercase;">🥋 Peaceful Training Ground</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Immortal sparring partner</span>
+                    </div>
+
                     <div class="bot-buttons-row">
-                        <button type="button" class="button button-bot button-easy" onclick="play_bot('easy')">
-                            <span class="bot-badge-icon">🌱</span>
+                        <button type="button" class="button button-bot button-dummy" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.08);" onclick="play_bot('dummy')">
+                            <div class="bot-logo-badge" title="Practice Dojo">
+                                <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+                                    <rect width="36" height="36" rx="9" fill="#0284c7" fill-opacity="0.14" stroke="#38bdf8" stroke-opacity="0.35" stroke-width="1.2"/>
+                                    <circle cx="18" cy="18" r="10" stroke="#38bdf8" stroke-width="1.4" stroke-dasharray="3 2"/>
+                                    <circle cx="18" cy="12" r="3" fill="#38bdf8"/>
+                                    <path d="M18 15V23M13 18.5H23M14 26L18 23L22 26" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
                             <div class="bot-btn-content">
-                                <span class="bot-btn-title">Play vs Bot (Easy)</span>
-                                <span class="bot-btn-desc">Relaxed pacing · ~45% mistake rate</span>
-                            </div>
-                            <span class="btn-arrow" aria-hidden="true">→</span>
-                        </button>
-
-                        <button type="button" class="button button-bot button-hard" onclick="play_bot('hard')">
-                            <span class="bot-badge-icon">🔥</span>
-                            <div class="bot-btn-content">
-                                <span class="bot-btn-title">Play vs Bot (Hard)</span>
-                                <span class="bot-btn-desc">Tactical parries · Math spell combos</span>
+                                <span class="bot-btn-title" style="color: #38bdf8;">Practice Dojo (Training Dummy)</span>
+                                <span class="bot-btn-desc">Infinite Health · Zero Pressure · Peaceful Combat Sandbox</span>
                             </div>
                             <span class="btn-arrow" aria-hidden="true">→</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="solo-bot-divider" style="margin: 24px 0 18px;">
-                    <span>OR DUEL A FRIEND IN PRIVATE 1V1</span>
+                <!-- RIGHT COLUMN: MULTIPLAYER 1V1 DUELING ARENA (Host / Join) -->
+                <div class="arena-card multiplayer-arena-card">
+                    <div class="multiplayer-card-header">
+                        <span class="action-label" style="color: #10b981; font-weight: 700; letter-spacing: 1px; font-size: 11px;">MULTIPLAYER DUELING ARENA</span>
+                        <h3 style="font-size: 21px; font-weight: 700; margin: 6px 0 4px; color: var(--text);">Private 1v1 PvP Match</h3>
+                        <p class="solo-bot-lead">Generate an instant battle room or paste an invite link to duel a friend live:</p>
+                    </div>
+
+                    <div class="room-actions-split">
+                        <div class="action-block host-block">
+                            <span class="action-label">CREATE NEW ROOM</span>
+                            <h3>Host a Battle</h3>
+                            <p>Generate a secure room with instant invite URL and share with Player 2.</p>
+                            <button class="button button-primary button-large" onclick="start_game()" style="width: 100%;">
+                                <span>Create battle room</span>
+                                <span class="btn-arrow" aria-hidden="true">→</span>
+                            </button>
+                        </div>
+
+                        <div class="action-divider-horizontal">
+                            <span>OR ENTER INVITE CODE</span>
+                        </div>
+
+                        <div class="action-block join-block">
+                            <span class="action-label">ENTER AN EXISTING MATCH</span>
+                            <h3>Join a Friend</h3>
+                            <p>Paste the room code or invite link shared by Player 1 to jump into duel.</p>
+                            <form class="join-form" onsubmit="event.preventDefault(); join_custom_room();">
+                                <div class="join-controls">
+                                    <input type="text" id="room_input" placeholder="e.g. room_a1b2c3 or invite URL" autocomplete="off" aria-label="Room code or invite link">
+                                    <button class="button button-secondary" type="submit">Join</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Pro Status Banner -->
+                    <div class="pvp-badge-banner">
+                        <span class="pvp-pulse-dot"></span>
+                        <span>Zero install · WebSockets 60fps physics · Live friend takeover</span>
+                    </div>
                 </div>
 
-                <div class="room-actions-split">
-                    <div class="action-block host-block">
-                        <span class="action-label">MULTIPLAYER 1V1</span>
-                        <h3>Host a Battle</h3>
-                        <p>Generate a private room and get an instant invite link to duel a friend.</p>
-                        <button class="button button-primary button-large" onclick="start_game()">
-                            <span>Create battle room</span>
-                            <span class="btn-arrow" aria-hidden="true">→</span>
-                        </button>
-                    </div>
-
-                    <div class="action-divider-vertical">
-                        <span>OR</span>
-                    </div>
-
-                    <div class="action-block join-block">
-                        <span class="action-label">ENTER AN EXISTING MATCH</span>
-                        <h3>Join a Friend</h3>
-                        <p>Paste the room code or invite link shared by Player 1 to jump into the fight.</p>
-                        <form class="join-form" onsubmit="event.preventDefault(); join_custom_room();">
-                            <div class="join-controls">
-                                <input type="text" id="room_input" placeholder="e.g. room_a1b2c3 or invite URL" autocomplete="off" aria-label="Room code or invite link">
-                                <button class="button button-secondary" type="submit">Join</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
             </div>
 
             <!-- 3 Highlights to fill the screen purposefully -->
@@ -130,10 +262,309 @@
         </section>
 
         <footer class="home-footer">
-            <span>Stickman Battle</span> · <span>Made with precision by <b>Arrows Development Hub</b></span> · <a href="/info" class="header-info-link">Game Info &amp; Feedback</a>
+            <span>Stickman Battle</span> · <span>Made with precision by <b>Arrows Development Hub</b></span> · <button type="button" class="header-info-link" onclick="openInfoModal()" style="background: none; border: none; font: inherit; color: var(--text-secondary); cursor: pointer; text-decoration: underline; padding: 0;" title="Game Info & Feedback">Game Info &amp; Feedback</button>
         </footer>
     </main>
     <script src="/static/audio.js"></script>
     <script src="/static/main.js"></script>
+    <!-- ========================================== -->
+    <!-- 📖 FIGHTER'S HANDBOOK CURRICULUM MODAL     -->
+    <!-- ========================================== -->
+    <div id="handbook_modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99999; backdrop-filter: blur(8px); overflow-y: auto; padding: 20px;">
+        <div style="max-width: 780px; margin: 40px auto; background: #13151b; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; box-shadow: 0 25px 60px rgba(0,0,0,0.8); overflow: hidden;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);">
+                <div>
+                    <h3 style="margin: 0; font-size: 18px; color: #f8fafc; display: flex; align-items: center; gap: 8px;">📖 Fighter's Handbook</h3>
+                    <p style="margin: 2px 0 0; font-size: 12px; color: #94a3b8;">Python Combat Academy · 7 Mastery Milestones</p>
+                </div>
+                <button type="button" onclick="closeHandbook()" style="background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer; padding: 4px 8px;">✕</button>
+            </div>
+            
+            <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px; max-height: 70vh; overflow-y: auto;">
+                
+                <!-- Level 1 -->
+                <div class="lesson-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 13px; font-weight: 700; color: #10b981;">🟢 LEVEL 1: Variables & Identity</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Unlock: Emerald Aura</span>
+                    </div>
+                    <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 10px;">Store values in variables to track distances and color choices:</p>
+                    <pre style="background: #090a0d; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #38bdf8; margin: 0; overflow-x: auto;"><code># Customize equipment in Wardrobe Studio
+body = "emerald"
+shield = "gold"
+sword = "crimson"</code></pre>
+                </div>
+
+                <!-- Level 2 -->
+                <div class="lesson-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 13px; font-weight: 700; color: #00f0ff;">🔵 LEVEL 2: Print & Battle Telemetry</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Unlock: Speech Bubble Banner</span>
+                    </div>
+                    <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 10px;">Send taunts or inspect sensory numbers live during combat:</p>
+                    <pre style="background: #090a0d; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #38bdf8; margin: 0; overflow-x: auto;"><code>print("En garde, rival!")
+dist = get_enemy_distance()
+print("Distance:", dist)</code></pre>
+                </div>
+
+                <!-- Level 3 -->
+                <div class="lesson-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 13px; font-weight: 700; color: #fbbf24;">🎭 LEVEL 3: Input & Dynamic Tactics</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Unlock: Challenger Mask</span>
+                    </div>
+                    <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 10px;">Ask for tactics interactively during combat:</p>
+                    <pre style="background: #090a0d; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #38bdf8; margin: 0; overflow-x: auto;"><code>stance = input("Choose stance [rush/defend]:")
+if stance == "rush":
+    dash(3)
+else:
+    block()</code></pre>
+                </div>
+
+                <!-- Level 4 -->
+                <div class="lesson-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 13px; font-weight: 700; color: #a855f7;">🟣 LEVEL 4: Conditionals (if / else)</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Unlock: Reactive Shielding</span>
+                    </div>
+                    <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 10px;">React dynamically to opponent distance and attack state:</p>
+                    <pre style="background: #090a0d; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #38bdf8; margin: 0; overflow-x: auto;"><code>if get_enemy_distance() < 90:
+    if is_enemy_attacking():
+        block()
+    else:
+        attack()
+else:
+    dash(2)</code></pre>
+                </div>
+
+                <!-- Level 5 -->
+                <div class="lesson-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 13px; font-weight: 700; color: #ff5c5c;">⚡ LEVEL 5: For Loops & Combos</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Unlock: Triple Strike Trail</span>
+                    </div>
+                    <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 10px;">Queue up relentless attack sequences with loops:</p>
+                    <pre style="background: #090a0d; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #38bdf8; margin: 0; overflow-x: auto;"><code>if get_enemy_distance() < 80:
+    for i in range(3):
+        attack()</code></pre>
+                </div>
+
+                <!-- Level 6 -->
+                <div class="lesson-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 13px; font-weight: 700; color: #f97316;">🗡️ LEVEL 6: Functions (def)</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Unlock: Tactical Formations</span>
+                    </div>
+                    <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 10px;">Package reusable combat algorithms into functions:</p>
+                    <pre style="background: #090a0d; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #38bdf8; margin: 0; overflow-x: auto;"><code>def counter_strike():
+    if is_enemy_attacking():
+        block()
+    else:
+        attack()
+
+counter_strike()</code></pre>
+                </div>
+
+                <!-- Level 7 -->
+                <div class="lesson-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 13px; font-weight: 700; color: #eab308;">👑 LEVEL 7: Object-Oriented Combat (OOP)</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Unlock: Grandmaster Crown</span>
+                    </div>
+                    <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 10px;">Command fighter equipment via object methods and properties:</p>
+                    <pre style="background: #090a0d; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #38bdf8; margin: 0; overflow-x: auto;"><code># Customize equipment via OOP methods in Wardrobe Studio
+fighter.color = "violet"
+sword.change_color("cyan")
+shield.change_color("gold")</code></pre>
+                </div>
+
+            </div>
+            
+            <div style="padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; background: rgba(0,0,0,0.2);">
+                <button type="button" class="button button-primary" onclick="closeHandbook()">Got it, let's fight!</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- ℹ️ ABOUT & FEEDBACK HUB MODAL               -->
+    <!-- ========================================== -->
+    <div id="info_modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99999; backdrop-filter: blur(8px); overflow-y: auto; padding: 20px;" onclick="if(event.target===this) closeInfoModal()">
+        <div style="max-width: 820px; margin: 30px auto; background: #13151b; border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,0.85); overflow: hidden;">
+            <!-- Modal Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);">
+                <div>
+                    <h3 style="margin: 0; font-size: 18px; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                        <span>ℹ️</span> About &amp; Feedback Hub
+                    </h3>
+                    <p style="margin: 2px 0 0; font-size: 12px; color: #94a3b8;">Release Specifications, Security Sandboxing &amp; Developer Channels</p>
+                </div>
+                <button type="button" onclick="closeInfoModal()" style="background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer; padding: 4px 8px;" title="Close">✕</button>
+            </div>
+            
+            <!-- Modal Body (Scrollable) -->
+            <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-height: 72vh; overflow-y: auto;">
+                
+                <!-- Cover Showcase Banner -->
+                <div style="text-align: center;">
+                    <img src="/static/cover.jpg" alt="Stickman Battle Official Showcase" style="width: 100%; height: auto; max-height: 320px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(192, 132, 252, 0.35); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 25px rgba(192, 132, 252, 0.2);">
+                </div>
+
+                <!-- Feedback & Support Spotlight Card -->
+                <div style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(56, 189, 248, 0.08)); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 10px; padding: 20px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        <span style="font-size: 18px;">📬</span>
+                        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: #d8b4fe;">COMMUNITY IDEAS &amp; BUG REPORTS</span>
+                    </div>
+                    <h4 style="margin: 0 0 6px; font-size: 16px; color: #f8fafc;">Got a suggestion, balance tweak, or found a glitch?</h4>
+                    <p style="margin: 0 0 16px; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
+                        Whether you have an idea for a new trigonometric spell, bot combat behavior, or encountered an unexpected bug, we'd love to hear from you directly!
+                    </p>
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 12px 16px;">
+                        <div>
+                            <span style="font-size: 10px; font-weight: 600; color: #94a3b8; display: block; letter-spacing: 0.05em;">DIRECT DEVELOPER EMAIL</span>
+                            <span style="font-family: monospace; font-size: 13.5px; color: #38bdf8; font-weight: 600;">shayaksadhukhan402@gmail.com</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <a href="mailto:shayaksadhukhan402@gmail.com?subject=Stickman%20Battle%20Feedback%20/%20Bug%20Report" class="button button-primary" style="padding: 7px 14px; font-size: 12px; text-decoration: none;">
+                                ✉️ Send Email
+                            </a>
+                            <button id="modal_copy_email_btn" type="button" class="button button-secondary" onclick="copyDeveloperEmailModal()" style="padding: 7px 14px; font-size: 12px;">
+                                📋 Copy Email
+                            </button>
+                            <a href="https://github.com/SHAYAK-ARROW/Stickman-Battle/issues" target="_blank" rel="noopener" class="button button-secondary" style="padding: 7px 14px; font-size: 12px; text-decoration: none;">
+                                🐙 GitHub Issues
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Grid: Release Meta, Sandboxing, Physics -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px;">
+                    <!-- Metadata Card -->
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <span style="font-size: 16px;">⚔️</span>
+                            <h4 style="margin: 0; font-size: 14px; color: #f8fafc;">Release Metadata</h4>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.04); padding-bottom: 4px;">
+                                <span style="color: #94a3b8;">Product</span>
+                                <span style="color: #f1f5f9; font-weight: 500;">Stickman Battle</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.04); padding-bottom: 4px;">
+                                <span style="color: #94a3b8;">Version</span>
+                                <span style="color: #4ade80; font-weight: 600;">v1.0.0 (Release)</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.04); padding-bottom: 4px;">
+                                <span style="color: #94a3b8;">Studio</span>
+                                <span style="color: #f1f5f9; font-weight: 500;">Arrows Development Hub</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.04); padding-bottom: 4px;">
+                                <span style="color: #94a3b8;">Lead Dev</span>
+                                <span style="color: #c084fc; font-weight: 500;">Shayak Sadhukhan</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: #94a3b8;">Engine</span>
+                                <span style="color: #38bdf8; font-weight: 500;">Flask-SocketIO 60 FPS</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security & Sandboxing Card -->
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <span style="font-size: 16px;">🛡️</span>
+                            <h4 style="margin: 0; font-size: 14px; color: #f8fafc;">Security &amp; Sandboxing</h4>
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+                            User Python code executes in an isolated subprocess protected by an Abstract Syntax Tree (AST) validator. System primitives (<code style="background: #090a0d; padding: 2px 4px; border-radius: 4px; color: #f87171;">eval</code>, <code style="background: #090a0d; padding: 2px 4px; border-radius: 4px; color: #f87171;">exec</code>, <code style="background: #090a0d; padding: 2px 4px; border-radius: 4px; color: #f87171;">open</code>) and infinite loops are strictly blocked to ensure 100% fair and safe combat.
+                        </p>
+                    </div>
+
+                    <!-- Trigonometric Physics Card -->
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <span style="font-size: 16px;">📐</span>
+                            <h4 style="margin: 0; font-size: 14px; color: #f8fafc;">Trigonometric Physics</h4>
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+                            Projectile spells compute real-time mathematical wave functions (<code style="background: #090a0d; padding: 2px 4px; border-radius: 4px; color: #38bdf8;">sin</code>, <code style="background: #090a0d; padding: 2px 4px; border-radius: 4px; color: #38bdf8;">cos</code>, <code style="background: #090a0d; padding: 2px 4px; border-radius: 4px; color: #38bdf8;">tan</code>, <code style="background: #090a0d; padding: 2px 4px; border-radius: 4px; color: #38bdf8;">sec</code>, <code style="background: #090a0d; padding: 2px 4px; border-radius: 4px; color: #38bdf8;">csc</code>, <code style="background: #090a0d; padding: 2px 4px; border-radius: 4px; color: #38bdf8;">cot</code>) dynamically mapped to HTML5 Canvas weapon hitboxes at 60 FPS.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- Modal Footer -->
+            <div style="padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; background: rgba(0,0,0,0.2);">
+                <button type="button" class="button button-primary" onclick="closeInfoModal()">Back to Lobby</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openHandbook() {
+            const m = document.getElementById("handbook_modal");
+            if (m) m.style.display = "block";
+        }
+        function closeHandbook() {
+            const m = document.getElementById("handbook_modal");
+            if (m) m.style.display = "none";
+        }
+        function openInfoModal() {
+            const m = document.getElementById("info_modal");
+            if (m) m.style.display = "block";
+        }
+        function closeInfoModal() {
+            const m = document.getElementById("info_modal");
+            if (m) m.style.display = "none";
+        }
+        function copyDeveloperEmailModal() {
+            const email = "shayaksadhukhan402@gmail.com";
+            const btn = document.getElementById("modal_copy_email_btn");
+            const notify = () => {
+                if (btn) {
+                    const orig = btn.innerText;
+                    btn.innerText = "✓ Copied!";
+                    btn.style.borderColor = "#4ade80";
+                    btn.style.color = "#4ade80";
+                    setTimeout(() => {
+                        btn.innerText = orig;
+                        btn.style.borderColor = "";
+                        btn.style.color = "";
+                    }, 2200);
+                }
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(email).then(notify).catch(() => {
+                    const ta = document.createElement("textarea");
+                    ta.value = email;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(ta);
+                    notify();
+                });
+            } else {
+                const ta = document.createElement("textarea");
+                ta.value = email;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand("copy");
+                document.body.removeChild(ta);
+                notify();
+            }
+        }
+        // Escape key closes open modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeHandbook();
+                closeInfoModal();
+            }
+        });
+    </script>
+
 </body>
 </html>

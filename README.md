@@ -1,12 +1,14 @@
 # ⚔️ Stickman Battle
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Play%20Online-6366f1?style=for-the-badge&logo=render&logoColor=white)](https://stickman-battle.onrender.com)
+[![Play on itch.io](https://img.shields.io/badge/itch.io-Play%20Online-fa5c5c?style=for-the-badge&logo=itchdotio&logoColor=white)](https://arrows-dev.itch.io/stickman-battle)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-6366f1?style=for-the-badge&logo=render&logoColor=white)](https://stickman-battle.onrender.com)
 [![Python](https://img.shields.io/badge/Python-3.12-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![WebSocket](https://img.shields.io/badge/Engine-60%20FPS%20Real--Time-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io)
 
 > **A real-time 1v1 multiplayer combat arena where fighters battle by writing and executing Python algorithms directly in their browser.**
 > 
-> 🎮 **Play Live:** [https://stickman-battle.onrender.com](https://stickman-battle.onrender.com)  
+> 🎮 **Play Live on itch.io:** [https://arrows-dev.itch.io/stickman-battle](https://arrows-dev.itch.io/stickman-battle)  
+> 🌐 **Direct Mirror:** [https://stickman-battle.onrender.com](https://stickman-battle.onrender.com)  
 > Made with precision by **Arrows Development Hub**.
 
 > [!NOTE]

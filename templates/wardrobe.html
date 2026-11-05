@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0e0f12">
+    <title>🥋 Python Wardrobe Studio · Combat Customization</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .wardrobe-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 100vh;
+        }
+        .wardrobe-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .wardrobe-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: stretch;
+            flex: 1;
+        }
+        @media (max-width: 900px) {
+            .wardrobe-split {
+                grid-template-columns: 1fr;
+            }
+        }
+        .preview-panel {
+            background: rgba(18, 19, 25, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+        }
+        .canvas-wrapper {
+            position: relative;
+            background: radial-gradient(circle at center, rgba(56, 189, 248, 0.06) 0%, rgba(14, 15, 18, 0.95) 75%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: var(--radius-sm);
+            width: 100%;
+            max-width: 440px;
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        #wardrobe_canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .runes-palette {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .runes-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+        .runes-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .rune-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 12px;
+            color: #f1f0f5;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: var(--mono);
+        }
+        .rune-chip:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .rune-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .syntax-card {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            font-size: 12px;
+            color: #cbd5e1;
+            font-family: var(--mono);
+            line-height: 1.6;
+        }
+        .syntax-card code {
+            color: #38bdf8;
+        }
+        .editor-panel {
+            background: rgba(18, 19, 25, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+        }
+        .editor-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .editor-container {
+            flex: 1;
+            min-height: 280px;
+            background: #090a0d;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-sm);
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+        .line-nums {
+            width: 36px;
+            padding: 12px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            color: #64748b;
+            font-family: var(--mono);
+            font-size: 13px;
+            line-height: 22px;
+            text-align: right;
+            padding-right: 8px;
+            user-select: none;
+        }
+        #wardrobe_editor {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 12px;
+            color: #f1f0f5;
+            font-family: var(--mono);
+            font-size: 13px;
+            line-height: 22px;
+            resize: none;
+            outline: none;
+            tab-size: 4;
+            white-space: pre;
+            overflow-y: auto;
+        }
+        .success-banner {
+            display: none;
+            padding: 10px 14px;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: var(--radius-sm);
+            color: #6ee7b7;
+            font-size: 13px;
+            font-weight: 600;
+            animation: diagSlideIn 0.25s ease;
+        }
+    </style>
+</head>
+<body class="home-page">
+    <div class="wardrobe-container">
+        <header class="wardrobe-header">
+            <a class="brand" href="/" aria-label="Stickman Battle home">
+                <img class="brand-mark" src="/static/favicon.png" alt="Stickman Battle Icon" width="32" height="32">
+                <div class="brand-text-wrap">
+                    <span class="brand-title">Python <span class="brand-light">Wardrobe</span> <span class="version-badge">Level 1</span></span>
+                    <span class="brand-subtitle">Combat Customization Studio</span>
+                </div>
+            </a>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <a href="/" class="button button-secondary" style="padding: 8px 14px; font-size: 13px;">← Return to Lobby</a>
+                <button type="button" class="button button-primary" onclick="applyWardrobeCode()" style="padding: 8px 18px; font-size: 13px;">
+                    <span>⚡ Equip Python Rune</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="wardrobe-split">
+            <!-- Left Panel: Live Stickman Preview & Available Runes -->
+            <section class="preview-panel">
+                <div class="canvas-wrapper">
+                    <canvas id="wardrobe_canvas" width="440" height="320"></canvas>
+                </div>
+
+                <div class="runes-palette">
+                    <span class="runes-title">Available Color Runes (Click to Insert)</span>
+                    <div class="runes-grid">
+                        <button type="button" class="rune-chip" onclick="insertRune('emerald')">
+                            <span class="rune-dot" style="background: #10b981;"></span>
+                            <span>"emerald"</span>
+                        </button>
+                        <button type="button" class="rune-chip" onclick="insertRune('cyan')">
+                            <span class="rune-dot" style="background: #00f0ff;"></span>
+                            <span>"cyan"</span>
+                        </button>
+                        <button type="button" class="rune-chip" onclick="insertRune('crimson')">
+                            <span class="rune-dot" style="background: #ff4757;"></span>
+                            <span>"crimson"</span>
+                        </button>
+                        <button type="button" class="rune-chip" onclick="insertRune('gold')">
+                            <span class="rune-dot" style="background: #fbbf24;"></span>
+                            <span>"gold"</span>
+                        </button>
+                        <button type="button" class="rune-chip" onclick="insertRune('violet')">
+                            <span class="rune-dot" style="background: #a855f7;"></span>
+                            <span>"violet"</span>
+                        </button>
+                        <button type="button" class="rune-chip" onclick="insertRune('obsidian')">
+                            <span class="rune-dot" style="background: #334155;"></span>
+                            <span>"obsidian"</span>
+                        </button>
+                        <button type="button" class="rune-chip" onclick="insertRune('white')">
+                            <span class="rune-dot" style="background: #ffffff;"></span>
+                            <span>"white"</span>
+                        </button>
+                        <button type="button" class="rune-chip" onclick="insertRune('orange')">
+                            <span class="rune-dot" style="background: #ff7a00;"></span>
+                            <span>"orange"</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="syntax-card">
+                    <b>🥋 Python Coding Syntax:</b><br>
+                    <span style="color: #94a3b8;"># Level 1 (Variables):</span><br>
+                    <code>body = "emerald"</code><br>
+                    <code>shield = "gold"</code><br>
+                    <span style="color: #94a3b8;"># Level 7 (OOP Methods):</span><br>
+                    <code>sword.change_color("crimson")</code>
+                </div>
+            </section>
+
+            <!-- Right Panel: Python Code Editor -->
+            <section class="editor-panel">
+                <div class="editor-bar">
+                    <span style="font-size: 13px; font-weight: 700; color: #f1f0f5;">Wardrobe Python Script</span>
+                    <span class="language-pill" style="font-size: 11px; padding: 2px 8px;">Python 3.12</span>
+                </div>
+
+                <div class="editor-container">
+                    <div id="wardrobe_lines" class="line-nums">1<br>2<br>3<br>4<br>5</div>
+                    <textarea id="wardrobe_editor" spellcheck="false" placeholder="# Write variable assignments here..."># 🥋 Stickman Wardrobe: Level 1 Variables
+# Assign colors to customize your combat appearance!
+
+body = "emerald"
+shield = "gold"
+sword.change_color("crimson")</textarea>
+                </div>
+
+                <!-- Code Diagnostics Console (Python IDLE Traceback) -->
+                <div id="editor_diagnostics" class="editor-diagnostics" style="display: none;">
+                    <div class="diag-header">
+                        <span class="diag-icon">⚠️</span>
+                        <span id="diag_title" class="diag-title">Code Diagnostics (IDLE Traceback)</span>
+                        <button type="button" class="diag-close-btn" onclick="dismissDiagnostics()" title="Dismiss">✕</button>
+                    </div>
+                    <div id="diag_message" class="diag-message"></div>
+                </div>
+
+                <!-- Success Banner -->
+                <div id="success_banner" class="success-banner">
+                    ✓ Outfit successfully equipped and stored in your fighter profile!
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: auto;">
+                    <button type="button" class="button button-primary button-large" onclick="applyWardrobeCode()" style="flex: 1;">
+                        <span>⚡ Run Rune &amp; Equip</span>
+                        <span class="btn-arrow" aria-hidden="true">→</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/audio.js"></script>
+    <script>
+        // --- LIVE 60 FPS STICKMAN PREVIEW ENGINE ---
+        const canvas = document.getElementById("wardrobe_canvas");
+        const ctx = canvas.getContext("2d");
+        const editor = document.getElementById("wardrobe_editor");
+        const linesEl = document.getElementById("wardrobe_lines");
+        const diag = document.getElementById("editor_diagnostics");
+        const diagMsg = document.getElementById("diag_message");
+        const successBanner = document.getElementById("success_banner");
+
+        // Current equipped colors (from localStorage or defaults)
+        let activeColors = {
+            body: "#10b981",
+            shield: "#fbbf24",
+            sword: "#ff4757"
+        };
+
+        try {
+            const saved = localStorage.getItem("stickman_custom_colors");
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.body) activeColors.body = parsed.body;
+                if (parsed.shield) activeColors.shield = parsed.shield;
+                if (parsed.sword) activeColors.sword = parsed.sword;
+            }
+        } catch(e) {}
+
+        let animTime = 0;
+        function renderStickman() {
+            animTime += 0.04;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const cx = canvas.width / 2;
+            const cy = 135 + Math.sin(animTime) * 3; // Breathing idle motion
+
+            // Floor guideline
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(40, 275);
+            ctx.lineTo(canvas.width - 40, 275);
+            ctx.stroke();
+
+            // Head (Head with glowing aura)
+            ctx.save();
+            ctx.fillStyle = activeColors.body;
+            ctx.shadowColor = activeColors.body;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Body Spine
+            ctx.save();
+            ctx.strokeStyle = activeColors.body;
+            ctx.lineWidth = 5;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(cx, cy + 22);
+            ctx.lineTo(cx, cy + 85);
+            
+            // Legs
+            ctx.moveTo(cx, cy + 85);
+            ctx.lineTo(cx - 24, cy + 138);
+            ctx.moveTo(cx, cy + 85);
+            ctx.lineTo(cx + 24, cy + 138);
+
+            // Arms: Left arm to shield, right arm to sword
+            const shieldX = cx - 38;
+            const shieldY = cy + 46;
+            const swordX = cx + 38;
+            const swordY = cy + 44;
+
+            ctx.moveTo(cx, cy + 38);
+            ctx.lineTo(shieldX, shieldY);
+            ctx.moveTo(cx, cy + 38);
+            ctx.lineTo(swordX, swordY);
+            ctx.stroke();
+            ctx.restore();
+
+            // Shield (Left hand)
+            ctx.save();
+            ctx.translate(shieldX, shieldY);
+            ctx.beginPath();
+            ctx.moveTo(0, -22);
+            ctx.quadraticCurveTo(-12, 0, 0, 22);
+            ctx.quadraticCurveTo(8, 0, 0, -22);
+            ctx.closePath();
+            ctx.fillStyle = "rgba(18, 19, 25, 0.95)";
+            ctx.fill();
+            ctx.strokeStyle = activeColors.shield;
+            ctx.shadowColor = activeColors.shield;
+            ctx.shadowBlur = 10;
+            ctx.lineWidth = 2.8;
+            ctx.stroke();
+            ctx.restore();
+
+            // Sword (Right hand)
+            ctx.save();
+            ctx.translate(swordX, swordY);
+            ctx.rotate(-0.55 + Math.sin(animTime * 1.5) * 0.05);
+
+            // Crossguard
+            ctx.strokeStyle = "#94a3b8";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-7, 0);
+            ctx.lineTo(7, 0);
+            ctx.stroke();
+
+            // Blade with custom color glow
+            ctx.strokeStyle = activeColors.sword;
+            ctx.fillStyle = activeColors.sword;
+            ctx.shadowColor = activeColors.sword;
+            ctx.shadowBlur = 14;
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -55);
+            ctx.stroke();
+
+            // Tip
+            ctx.beginPath();
+            ctx.arc(0, -55, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            requestAnimationFrame(renderStickman);
+        }
+        requestAnimationFrame(renderStickman);
+
+        // --- EDITOR LINE NUMBERS & HELPERS ---
+        function updateLines() {
+            const lines = editor.value.split("\n").length;
+            let nums = "";
+            for (let i = 1; i <= lines; i++) nums += i + "<br>";
+            linesEl.innerHTML = nums;
+        }
+        editor.addEventListener("input", updateLines);
+        updateLines();
+
+        function insertRune(name) {
+            editor.value += `\nbody = "${name}"`;
+            updateLines();
+            editor.scrollTop = editor.scrollHeight;
+        }
+
+        function dismissDiagnostics() {
+            if (diag) diag.style.display = "none";
+        }
+
+        // --- EVALUATE PYTHON CODE & EQUIP ---
+        async function applyWardrobeCode() {
+            dismissDiagnostics();
+            if (successBanner) successBanner.style.display = "none";
+
+            const code = editor.value;
+            try {
+                const response = await fetch("/api/wardrobe/eval", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code: code })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    if (data.colors) {
+                        if (data.colors.body) activeColors.body = data.colors.body;
+                        if (data.colors.shield) activeColors.shield = data.colors.shield;
+                        if (data.colors.sword) activeColors.sword = data.colors.sword;
+                        localStorage.setItem("stickman_custom_colors", JSON.stringify(activeColors));
+                    }
+                    if (successBanner) {
+                        successBanner.innerText = "✓ Equipped! Outfit saved to your battle profile.";
+                        successBanner.style.display = "block";
+                    }
+                    if (window.AudioEngine && window.AudioEngine.playCountdown) {
+                        window.AudioEngine.playCountdown(true);
+                    }
+                } else {
+                    if (diag && diagMsg) {
+                        diagMsg.innerText = data.error || "Execution error";
+                        diag.style.display = "flex";
+                    }
+                }
+            } catch(e) {
+                if (diag && diagMsg) {
+                    diagMsg.innerText = "Network Error: Could not connect to Python sandbox server.";
+                    diag.style.display = "flex";
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -46,10 +46,69 @@ function start_game() {
     window.location.href = "/player1";
 }
 
+const ARCADE_STAGES = {
+    'rusher': 1,
+    'turtle': 2,
+    'weaver': 3,
+    'duelist': 4,
+    'berserker': 5,
+    'apex': 6
+};
+
+function getUnlockedStage() {
+    try {
+        const val = localStorage.getItem('stickman_arcade_unlocked');
+        return val ? parseInt(val, 10) : 1;
+    } catch(e) {
+        return 1;
+    }
+}
+
 function play_bot(difficulty) {
-    const diff = (difficulty === 'hard') ? 'hard' : 'easy';
+    if (difficulty === 'dummy') {
+        window.location.href = "/bot/dummy";
+        return;
+    }
+    const stage = ARCADE_STAGES[difficulty];
+    if (stage && stage > 1) {
+        const unlocked = getUnlockedStage();
+        if (stage > unlocked) {
+            showToast({
+                title: "Stage Locked! 🔒",
+                message: `Defeat Stage ${stage - 1} to unlock this challenger!`,
+                type: "warning"
+            });
+            return;
+        }
+    }
+    const valid = ['easy', 'hard', 'dummy', 'rusher', 'turtle', 'weaver', 'duelist', 'berserker', 'apex'];
+    const diff = valid.includes(difficulty) ? difficulty : 'easy';
     window.location.href = "/bot/" + diff;
 }
+
+function updateArcadeLadderUI() {
+    const unlocked = getUnlockedStage();
+    const ladderGrid = document.querySelector('.arcade-ladder-grid');
+    if (!ladderGrid) return;
+    const buttons = ladderGrid.querySelectorAll('button');
+    buttons.forEach((btn, idx) => {
+        const stageNum = idx + 1;
+        const arrow = btn.querySelector('.btn-arrow');
+        if (stageNum > unlocked) {
+            btn.style.opacity = '0.50';
+            btn.style.filter = 'grayscale(0.4)';
+            btn.title = `Locked: Defeat Stage ${stageNum - 1} to unlock`;
+            if (arrow) arrow.innerText = '🔒';
+        } else {
+            btn.style.opacity = '1';
+            btn.style.filter = 'none';
+            btn.title = '';
+            if (arrow) arrow.innerText = '→';
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', updateArcadeLadderUI);
 
 function join_custom_room() {
     const input = document.getElementById("room_input");

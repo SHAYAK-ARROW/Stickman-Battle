@@ -50,7 +50,12 @@ class GameEngine:
             is_crouching = (getattr(player, 'crouch_timer', 0) > 0)
             is_casting = (getattr(player, 'cast_timer', 0) > 0)
             
-            is_busy = is_moving or is_airborne or is_attacking or is_blocking or is_crouching or is_casting
+            # Airborne Combat Enabled: aerial attacks, swings, spells, and blocks are allowed mid-air!
+            # Only ground movement (move, run, dash, dodge, crouch, jump) requires solid ground contact.
+            next_action = player.action_queue[0][0] if (hasattr(player, 'action_queue') and player.action_queue) else None
+            is_busy = is_moving or is_attacking or is_blocking or is_crouching or is_casting
+            if next_action in ('move', 'run', 'dash', 'dodge', 'crouch', 'jump', 'long_jump'):
+                is_busy = is_busy or is_airborne
             
             if not is_game_over and not is_busy and hasattr(player, 'action_queue') and player.action_queue:
                 player.execute_next_action()
@@ -75,13 +80,23 @@ class GameEngine:
             # Physics and Gravity
             player.y += player.jump_pixel
                                 
-            # x boundary (hitbox)
-            if player.x < 85:
+            # x boundary (hitbox) with Wall-Pinning Rebound
+            if player.x <= 85:
                 player.x = 85
-                player.target_x = 85
-            elif player.x > 715:
+                if player.target_x < 85:
+                    # Knockback pushed player into left wall: rebound slightly towards arena center to break corner lock
+                    player.target_x = 110
+                    player.speed_x = 3
+                else:
+                    player.target_x = max(85, player.target_x)
+            elif player.x >= 715:
                 player.x = 715
-                player.target_x = 715
+                if player.target_x > 715:
+                    # Knockback pushed player into right wall: rebound slightly towards arena center
+                    player.target_x = 690
+                    player.speed_x = 3
+                else:
+                    player.target_x = min(715, player.target_x)
                 
             # y boundary and Gravity check
             if player.y < 20:          
@@ -290,8 +305,99 @@ class GameEngine:
 
         # --- SPELLS & RANGED PROJECTILES UPDATE & COLLISION ---
         if not is_game_over and len(self.players) >= 2:
+            # 1. Update positions for trajectory waves first to enable mid-air collision checks
+            for s in self.spells:
+                stype = s.get('type')
+                if stype in ('sin_wave', 'cos_wave'):
+                    phase = (2 * math.pi * s['t']) / WAVE_DURATION_FRAMES
+                    s['x'] = s['origin_x'] + (WAVE_SPEED * s['t'] * s['dir'])
+                    amplitude = WAVE_AMPLITUDE * (0.3 + 0.07 * s.get('power', 1))
+                    trig_val = math.sin(phase) if stype == 'sin_wave' else math.cos(phase)
+                    s['y'] = s['origin_y'] - amplitude * trig_val
+
+            # 2. Mid-Air Spell vs Spell Collision (Trig Fusion: Sin + Cos = Tangent Spike + Shockwave!)
+            spells_to_remove = set()
+            fusion_spells_to_add = []
+            active_projectiles = [s for s in self.spells if s.get('type') in ('sin_wave', 'cos_wave', 'throw_sword')]
+            
+            for i in range(len(active_projectiles)):
+                for j in range(i + 1, len(active_projectiles)):
+                    s1 = active_projectiles[i]
+                    s2 = active_projectiles[j]
+                    if id(s1) in spells_to_remove or id(s2) in spells_to_remove:
+                        continue
+                    if s1.get('owner') == s2.get('owner'):
+                        continue  # Friendly spells don't collide
+                    
+                    dx = abs(s1.get('x', 0) - s2.get('x', 0))
+                    dy = abs(s1.get('y', 0) - s2.get('y', 0))
+                    if dx <= 35 and dy <= 55:
+                        t1, t2 = s1.get('type'), s2.get('type')
+                        
+                        # --- FUSION: SIN + COS = TANGENT SPIKE + SHOCKWAVE! ---
+                        if {t1, t2} == {'sin_wave', 'cos_wave'}:
+                            spells_to_remove.add(id(s1))
+                            spells_to_remove.add(id(s2))
+                            clash_x = (s1.get('x', 400) + s2.get('x', 400)) / 2.0
+                            clash_y = (s1.get('y', 470) + s2.get('y', 470)) / 2.0
+                            power = max(s1.get('power', 1), s2.get('power', 1))
+                            
+                            # 1. Tangent Spike erupts vertically from ground
+                            fusion_spells_to_add.append({
+                                'type': 'tan_spike',
+                                'target_x': clash_x,
+                                'x': clash_x,
+                                'y': 560,
+                                'power': power,
+                                'owner': None,
+                                't': 0,
+                                'dir': 1,
+                                'is_fusion': True
+                            })
+                            # 2. Harmonic Energy Shockwave expands radially
+                            fusion_spells_to_add.append({
+                                'type': 'shockwave',
+                                'x': clash_x,
+                                'y': clash_y,
+                                'radius': 12,
+                                'max_radius': 115,
+                                'power': power,
+                                't': 0
+                            })
+                            # Shockwave knocks back nearby fighters
+                            for pl in self.players:
+                                if abs(pl.x - clash_x) <= 90:
+                                    pl.target_x += (30 if pl.x >= clash_x else -30)
+                                    pl.speed_x = 4
+                            logger.info(f"--- ⚡ TRIG FUSION! SIN + COS COLLIDED AT X={int(clash_x)} -> TANGENT SPIKE & SHOCKWAVE ERUPTED! ---")
+                            
+                        # --- MUTUAL CANCELLATION: SAME WAVE VS SAME WAVE ---
+                        elif (t1 == t2) and t1 in ('sin_wave', 'cos_wave'):
+                            spells_to_remove.add(id(s1))
+                            spells_to_remove.add(id(s2))
+                            clash_x = (s1.get('x', 400) + s2.get('x', 400)) / 2.0
+                            clash_y = (s1.get('y', 470) + s2.get('y', 470)) / 2.0
+                            fusion_spells_to_add.append({
+                                'type': 'shockwave',
+                                'x': clash_x,
+                                'y': clash_y,
+                                'radius': 8,
+                                'max_radius': 45,
+                                'power': 1,
+                                't': 0
+                            })
+                            logger.info(f"--- 💥 WAVE CLASH! Two {t1} waves neutralized each other! ---")
+                            
+                        # --- SWORD CUT: THROWN SWORD SLICES WAVE ---
+                        elif 'throw_sword' in (t1, t2) and ('sin_wave' in (t1, t2) or 'cos_wave' in (t1, t2)):
+                            wave_spell = s1 if t1 != 'throw_sword' else s2
+                            spells_to_remove.add(id(wave_spell))
+                            logger.info("--- 🗡️ THROWN SWORD SLICED SPELL IN MID-AIR! ---")
+
             remaining_spells = []
             for s in self.spells:
+                if id(s) in spells_to_remove:
+                    continue
                 s['t'] += 1
                 stype = s['type']
                 owner = s.get('owner')
@@ -389,24 +495,31 @@ class GameEngine:
 
                 elif stype == 'tan_spike':
                     if 'target_x' not in s:
-                        # Aim at the opponent's position when the spell is cast.
-                        # The fixed 100px offset made this attack miss at normal
-                        # starting distances and made it feel non-functional.
                         s['target_x'] = enemy.x
                         s['x'] = s['target_x']
                         s['y'] = 560
                     if 10 <= s['t'] <= 45 and not s.get('has_hit'):
-                        if abs(enemy.x - s['target_x']) <= 45 and enemy.y >= 440:
-                            s['has_hit'] = True
-                            if (getattr(enemy, 'barrier_timer', 0) > 0
-                                    or getattr(enemy, 'dome_timer', 0) > 0
-                                    or (hasattr(enemy, 'shield') and enemy.shield.block_timer > 0)):
-                                logger.info("--- TAN_SPIKE BLOCKED BY DEFENSE! ---")
-                            else:
-                                enemy.heart -= _spell_damage(s.get('power', 1))
-                                enemy.jump_pixel = -12
-                                logger.info(f"--- TAN_SPIKE PIERCED! Hearts: {enemy.heart} ---")
+                        # If fusion hazard, check both players; otherwise target enemy
+                        targets = self.players if s.get('is_fusion') else [enemy]
+                        for tgt in targets:
+                            if abs(tgt.x - s['target_x']) <= 45 and tgt.y >= 440:
+                                s['has_hit'] = True
+                                if (getattr(tgt, 'barrier_timer', 0) > 0
+                                        or getattr(tgt, 'dome_timer', 0) > 0
+                                        or (hasattr(tgt, 'shield') and tgt.shield.block_timer > 0)):
+                                    logger.info("--- TAN_SPIKE BLOCKED BY DEFENSE! ---")
+                                else:
+                                    tgt.heart -= _spell_damage(s.get('power', 1))
+                                    tgt.jump_pixel = -12
+                                    logger.info(f"--- TAN_SPIKE PIERCED! Hearts: {tgt.heart} ---")
                     elif s['t'] > 60:
+                        remove_spell = True
+
+                elif stype == 'shockwave':
+                    s['radius'] = s.get('radius', 12) + 6
+                    s['x'] = s.get('x', 400)
+                    s['y'] = s.get('y', 470)
+                    if s['t'] > 20 or s['radius'] >= s.get('max_radius', 115):
                         remove_spell = True
 
                 elif stype == 'cot_wall':
@@ -431,4 +544,6 @@ class GameEngine:
                 if not remove_spell:
                     remaining_spells.append(s)
 
+            # Append new fusion spells (tangent spike & shockwave)
+            remaining_spells.extend(fusion_spells_to_add)
             self.spells = remaining_spells

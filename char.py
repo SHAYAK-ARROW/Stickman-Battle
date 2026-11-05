@@ -186,7 +186,7 @@ class Body(Character):
         if not self.action_queue:
             return
             
-        action = self.action_queue.pop(0)
+        action = self.action_queue[0]
         action_type = action[0]
         
         # Energy Cost Evaluation
@@ -204,12 +204,15 @@ class Body(Character):
         else:
             cost = 0
 
-        # Stamina / Energy Check: notify player if energy is too low for heavy moves
+        # Stamina / Energy Check: wait for passive recharge instead of dropping action
         current_energy = getattr(self, 'energy', MAX_ENERGY)
         if current_energy < cost:
             self.speech_text = f"Low Energy ({int(current_energy)}/{cost}⚡)"
-            self.speech_timer = 40
+            self.speech_timer = 30
             return
+        
+        # Pop only when sufficient energy is confirmed
+        self.action_queue.pop(0)
         
         if cost > 0:
             self.energy = max(0, current_energy - cost)
@@ -254,18 +257,20 @@ class Body(Character):
             else:
                 self.speed_x = 2
         elif action_type == 'project':
-            angle = _safe_float(action[1], 45.0, -360.0, 360.0)
+            raw_angle = _safe_float(action[1], 45.0, -360.0, 360.0)
+            # Clamp angle to upward arc (10 to 170 degrees) to prevent diving into floor
+            angle = max(10.0, min(170.0, abs(raw_angle) if abs(raw_angle) > 0 else 45.0))
             power = _safe_float(action[2] if len(action) > 2 else 5.0, 5.0, 0.0, 30.0)
             rad = math.radians(angle)
             v = power * 5
-            v_y = v * math.sin(rad)
+            v_y = max(1.0, v * math.sin(rad))
             v_x = v * math.cos(rad)
             self.jump_pixel = -v_y
             air_time = 2 * v_y
             distance = v_x * air_time
             self.target_x += (distance * self.direction)
             if air_time > 0:
-                self.speed_x = abs(distance / air_time)
+                self.speed_x = max(1.0, abs(distance / air_time))
             else:
                 self.speed_x = 2
         elif action_type == 'attack':

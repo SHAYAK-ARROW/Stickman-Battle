@@ -61,6 +61,9 @@
     const SPARKLE_NOTES = [523.25, 659.25, 783.99, 1046.50, 1174.66];
 
     function getAudioContext(forceCreate) {
+        if (document.hidden && !forceCreate) {
+            return null;
+        }
         if (!audioCtx) {
             if (!hasUserInteracted && !forceCreate) {
                 return null;
@@ -82,7 +85,9 @@
             masterSfxGain.connect(audioCtx.destination);
         }
         if (audioCtx.state === 'suspended' && (hasUserInteracted || forceCreate)) {
-            audioCtx.resume().catch(() => {});
+            if (!document.hidden) {
+                audioCtx.resume().catch(() => {});
+            }
         }
         return audioCtx;
     }
@@ -96,7 +101,7 @@
 
     // Parallel "straight line" ambient drone / synth pad (warm root & fifth grounding bed)
     function startDronePad() {
-        if (!bgmEnabled) return;
+        if (!bgmEnabled || document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || droneOsc1) return;
 
@@ -159,7 +164,7 @@
     function playAmbientChord(freqs, duration) {
         if (!duration) duration = 5.5;
         const ctx = getAudioContext(true);
-        if (!ctx || !bgmEnabled) return;
+        if (!ctx || !bgmEnabled || document.hidden) return;
 
         const chordGain = ctx.createGain();
         chordGain.gain.setValueAtTime(0.001, ctx.currentTime);
@@ -198,7 +203,7 @@
 
     function playSparkleBell() {
         const ctx = getAudioContext(true);
-        if (!ctx || !bgmEnabled) return;
+        if (!ctx || !bgmEnabled || document.hidden) return;
         const note = SPARKLE_NOTES[Math.floor(Math.random() * SPARKLE_NOTES.length)];
         const bellGain = ctx.createGain();
         bellGain.gain.setValueAtTime(0.001, ctx.currentTime);
@@ -216,7 +221,7 @@
     }
 
     function bgmLoop() {
-        if (!bgmEnabled) {
+        if (!bgmEnabled || document.hidden) {
             isBgmPlaying = false;
             return;
         }
@@ -628,17 +633,18 @@
 
     // Browser Autoplay Policy: resume AudioContext and start BGM on first user gesture
     function handleFirstUserGesture() {
+        if (document.hidden) return; // Do not unlock or resume on clicks while tab is hidden/closing!
         hasUserInteracted = true;
         const ctx = getAudioContext(true);
         if (ctx) {
             if (ctx.state === 'suspended') {
                 ctx.resume().then(() => {
                     console.log("🔊 AudioContext successfully unlocked!");
-                    if (bgmEnabled && !isBgmPlaying) {
+                    if (bgmEnabled && !isBgmPlaying && !document.hidden) {
                         startBGM();
                     }
                 }).catch(() => {});
-            } else if (bgmEnabled && !isBgmPlaying) {
+            } else if (bgmEnabled && !isBgmPlaying && !document.hidden) {
                 startBGM();
             }
         }
@@ -647,6 +653,63 @@
     ['click', 'pointerdown', 'keydown', 'touchstart'].forEach(evt => {
         window.addEventListener(evt, handleFirstUserGesture, { passive: true });
         document.addEventListener(evt, handleFirstUserGesture, { passive: true });
+    });
+
+    let wasBgmPlayingBeforeHide = false;
+
+    // Complete Audio Mute/Teardown on Tab Switch or Minimize
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            wasBgmPlayingBeforeHide = isBgmPlaying;
+            stopBGM();
+            if (masterBgmGain && audioCtx) {
+                try {
+                    masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                    masterBgmGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                } catch (e) {}
+            }
+            if (masterSfxGain && audioCtx) {
+                try {
+                    masterSfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                    masterSfxGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                } catch (e) {}
+            }
+            if (audioCtx && audioCtx.state === 'running') {
+                audioCtx.suspend().catch(() => {});
+            }
+        } else {
+            if (audioCtx && audioCtx.state === 'suspended' && hasUserInteracted) {
+                audioCtx.resume().then(() => {
+                    if (masterSfxGain) {
+                        masterSfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                        masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0.0001, audioCtx.currentTime);
+                    }
+                    if (masterBgmGain) {
+                        masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                        masterBgmGain.gain.setValueAtTime(bgmEnabled ? 0.35 * bgmVolume : 0.0001, audioCtx.currentTime);
+                    }
+                    if (bgmEnabled && (wasBgmPlayingBeforeHide || !isBgmPlaying)) {
+                        startBGM();
+                    }
+                }).catch(() => {});
+            } else if (bgmEnabled && !isBgmPlaying) {
+                startBGM();
+            }
+        }
+    });
+
+    // Handle tab close or page navigation
+    window.addEventListener('pagehide', () => {
+        stopBGM();
+        if (audioCtx && audioCtx.state === 'running') {
+            audioCtx.suspend().catch(() => {});
+        }
+    });
+    window.addEventListener('beforeunload', () => {
+        stopBGM();
+        if (audioCtx && audioCtx.state === 'running') {
+            audioCtx.suspend().catch(() => {});
+        }
     });
 
     document.addEventListener('DOMContentLoaded', updateUI);
