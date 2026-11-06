@@ -910,6 +910,9 @@ function run() {
         }
         return;
     }
+    if (window.codeMirrorInstance) {
+        window.codeMirrorInstance.save();
+    }
     const code = document.getElementById("ide").value;
     if (!code || !code.trim()) {
         if (typeof showToast === 'function') {

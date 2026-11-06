@@ -5,6 +5,9 @@
 // ==============================================================================
 
 // --- PRIVATE IN-EDITOR DIAGNOSTICS (Opponent never sees this) ---
+var codeMirrorInstance = null;
+var activeErrorLine = null;
+
 function showDiagnostics(msg) {
     const diag = document.getElementById("editor_diagnostics");
     const diagMsg = document.getElementById("diag_message");
@@ -12,18 +15,32 @@ function showDiagnostics(msg) {
     diagMsg.innerText = msg;
     diag.style.display = "flex";
 
-    // Highlight the failing line in the editor line-numbers column (Python IDLE style)
+    // Highlight the failing line in CodeMirror or legacy gutter
     const match = msg.match(/line\s+(\d+)/i);
     if (match) {
         const lineNum = parseInt(match[1], 10);
-        updateLineNumbers(lineNum);
+        if (codeMirrorInstance) {
+            if (activeErrorLine !== null) {
+                codeMirrorInstance.removeLineClass(activeErrorLine, "background", "cm-error-line");
+            }
+            activeErrorLine = lineNum - 1;
+            codeMirrorInstance.addLineClass(activeErrorLine, "background", "cm-error-line");
+            codeMirrorInstance.scrollIntoView({ line: activeErrorLine, ch: 0 }, 50);
+        } else {
+            updateLineNumbers(lineNum);
+        }
     }
 }
 
 function dismissDiagnostics() {
     const diag = document.getElementById("editor_diagnostics");
     if (diag) diag.style.display = "none";
-    updateLineNumbers();
+    if (codeMirrorInstance && activeErrorLine !== null) {
+        codeMirrorInstance.removeLineClass(activeErrorLine, "background", "cm-error-line");
+        activeErrorLine = null;
+    } else {
+        updateLineNumbers();
+    }
 }
 
 
@@ -110,48 +127,83 @@ function updateEditorUI() {
     updateIndentGuides();
 }
 
-if (ide) {
-    ide.addEventListener("input", updateEditorUI);
-    ide.addEventListener("scroll", syncEditorScroll);
+function initCodeMirror() {
+    if (typeof CodeMirror !== "undefined" && ide) {
+        const frame = document.querySelector(".editor-frame");
+        if (frame) frame.classList.add("has-codemirror");
 
-    ide.addEventListener("keydown", function(e) {
-        const start = this.selectionStart;
-        const end = this.selectionEnd;
+        codeMirrorInstance = CodeMirror.fromTextArea(ide, {
+            mode: { name: "python", version: 3, singleLineStringErrors: false },
+            theme: "dracula",
+            lineNumbers: true,
+            indentUnit: 4,
+            tabSize: 4,
+            indentWithTabs: false,
+            lineWrapping: true,
+            autofocus: false,
+            viewportMargin: Infinity
+        });
 
-        if (e.key === "Tab") {
-            e.preventDefault();
-            this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
-            this.selectionStart = this.selectionEnd = start + 4;
-            updateEditorUI();
-        } else if (e.key === "Enter") {
-            e.preventDefault();
-            const textBefore = this.value.substring(0, start);
-            const textAfter = this.value.substring(end);
-            const currentLine = textBefore.split("\n").pop();
-            const match = currentLine.match(/^\s*/);
-            let indent = match ? match[0] : "";
+        window.codeMirrorInstance = codeMirrorInstance;
 
-            if (currentLine.trim().endsWith(":")) {
-                indent += "    ";
-            }
+        codeMirrorInstance.on("change", function() {
+            codeMirrorInstance.save();
+        });
 
-            this.value = textBefore + "\n" + indent + textAfter;
-            this.selectionStart = this.selectionEnd = start + 1 + indent.length;
-            updateEditorUI();
-            this.dispatchEvent(new Event("scroll"));
-        } else if (e.key === "Backspace" && start === end && start >= 4) {
-            const before = this.value.substring(start - 4, start);
-            const currentLineBefore = this.value.substring(0, start).split("\n").pop();
-            if (before === "    " && /^\s+$/.test(currentLineBefore)) {
+        setTimeout(function() {
+            codeMirrorInstance.refresh();
+        }, 120);
+    } else if (ide) {
+        // Fallback for standalone/legacy mode without CodeMirror
+        ide.addEventListener("input", updateEditorUI);
+        ide.addEventListener("scroll", syncEditorScroll);
+
+        ide.addEventListener("keydown", function(e) {
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+
+            if (e.key === "Tab") {
                 e.preventDefault();
-                this.value = this.value.substring(0, start - 4) + this.value.substring(start);
-                this.selectionStart = this.selectionEnd = start - 4;
+                this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4;
                 updateEditorUI();
-            }
-        }
-    });
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                const textBefore = this.value.substring(0, start);
+                const textAfter = this.value.substring(end);
+                const currentLine = textBefore.split("\n").pop();
+                const match = currentLine.match(/^\s*/);
+                let indent = match ? match[0] : "";
 
-    updateEditorUI();
+                if (currentLine.trim().endsWith(":")) {
+                    indent += "    ";
+                }
+
+                this.value = textBefore + "\n" + indent + textAfter;
+                this.selectionStart = this.selectionEnd = start + 1 + indent.length;
+                updateEditorUI();
+                this.dispatchEvent(new Event("scroll"));
+            } else if (e.key === "Backspace" && start === end && start >= 4) {
+                const before = this.value.substring(start - 4, start);
+                const currentLineBefore = this.value.substring(0, start).split("\n").pop();
+                if (before === "    " && /^\s+$/.test(currentLineBefore)) {
+                    e.preventDefault();
+                    this.value = this.value.substring(0, start - 4) + this.value.substring(start);
+                    this.selectionStart = this.selectionEnd = start - 4;
+                    updateEditorUI();
+                }
+            }
+        });
+
+        updateEditorUI();
+    }
+}
+
+// Initialize CodeMirror on page load
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initCodeMirror);
+} else {
+    initCodeMirror();
 }
 
 // --- OPPONENT INPUT MODAL (Model 1 Challenge/Dialogue) ---
@@ -227,6 +279,20 @@ function sendQuickReply(text) {
 
 // --- Quick Code Snippet Insertion (Quick Chips & Commands Manual Insert) ---
 function insertSnippet(snippet) {
+    if (codeMirrorInstance) {
+        const doc = codeMirrorInstance.getDoc();
+        const cursor = doc.getCursor();
+        let toInsert = snippet;
+        const currentLine = doc.getLine(cursor.line) || "";
+        if (currentLine.trim().length > 0) {
+            toInsert = "\n" + toInsert;
+        }
+        doc.replaceRange(toInsert + "\n", cursor);
+        codeMirrorInstance.focus();
+        codeMirrorInstance.save();
+        return;
+    }
+
     const editor = document.getElementById("ide");
     if (!editor) return;
     
