@@ -311,7 +311,9 @@
     <div class="strategy-vault-bar">
         <div class="vault-top-row">
             <div class="vault-slot-group">
-                <span class="vault-label">📁 Strategy:</span>
+                <button type="button" class="vault-deck-btn" onclick="openStrategyVaultDialog()" title="View and manage all 10 saved strategies in full visual card deck">
+                    📁 10 Strategies Deck
+                </button>
                 <select id="strategy_slot_select" class="vault-select" aria-label="Select saved strategy slot" onchange="onStrategySlotChange(this.value)">
                     <option value="1">Slot 1: ⚡ Blitz Rush</option>
                     <option value="2">Slot 2: 🛡️ Shield Breaker</option>
@@ -410,6 +412,20 @@ else:
 </section>
 
 
+
+<!-- 📁 Strategy Vault Visual Deck Dialog (10 Slots View & Live In-Battle Insert) -->
+<dialog id="strategy_vault_dialog" class="strategy-vault-dialog">
+    <div class="dialog-header-row">
+        <div>
+            <h3>📁 Battle Strategy Vault (10 Loadout Slots)</h3>
+            <p class="dialog-subtitle">Browse your 10 saved strategies. Click "⚡ Insert into Battle" to instantly load any tactic live!</p>
+        </div>
+        <button type="button" class="button button-secondary dialog-close" onclick="closeStrategyVaultDialog()">✕ Close</button>
+    </div>
+    <div class="vault-cards-grid" id="vault_cards_grid">
+        <!-- Rendered dynamically by JavaScript -->
+    </div>
+</dialog>
 
 <!-- HTML5 Native Popup Dialog -->
 

@@ -2449,3 +2449,193 @@ li.CodeMirror-hint-active .hint-desc {
     box-shadow: 0 0 12px rgba(189, 147, 249, 0.3);
     transform: translateY(-1px);
 }
+
+.vault-deck-btn {
+    background: rgba(168, 85, 247, 0.2);
+    color: #f8f8f2;
+    border: 1px solid rgba(168, 85, 247, 0.45);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, transform 0.08s, box-shadow 0.15s;
+}
+
+.vault-deck-btn:hover {
+    background: rgba(168, 85, 247, 0.35);
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+    transform: translateY(-1px);
+}
+
+/* 📁 Strategy Vault Dialog Deck Modal */
+#strategy_vault_dialog {
+    width: min(960px, calc(100% - 24px));
+    max-height: 88vh;
+    overflow: hidden;
+    padding: 22px;
+    border: 1px solid rgba(189, 147, 249, 0.4);
+    border-radius: var(--radius, 12px);
+    background: #191a21;
+    color: #f8f8f2;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(168, 85, 247, 0.2);
+}
+
+#strategy_vault_dialog::backdrop {
+    background: rgba(4, 4, 7, .82);
+    backdrop-filter: blur(8px);
+}
+
+.dialog-subtitle {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.vault-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    max-height: calc(88vh - 120px);
+    overflow-y: auto;
+    padding: 6px 4px 16px;
+    margin-top: 14px;
+    box-sizing: border-box;
+}
+
+.vault-card {
+    background: #21222c;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.vault-card:hover {
+    border-color: rgba(189, 147, 249, 0.45);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+.vault-card.active-slot {
+    border-color: #50fa7b;
+    box-shadow: 0 0 14px rgba(80, 250, 123, 0.2);
+}
+
+.vault-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 6px;
+}
+
+.vault-card-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: rgba(168, 85, 247, 0.25);
+    color: #bd93f9;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+.vault-card.active-slot .vault-card-badge {
+    background: rgba(80, 250, 123, 0.2);
+    color: #50fa7b;
+    border-color: rgba(80, 250, 123, 0.4);
+}
+
+.vault-card-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #f8f8f2;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0 6px;
+}
+
+.vault-card-preview {
+    background: #14151c;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: var(--mono, monospace);
+    font-size: 11px;
+    line-height: 1.4;
+    color: #cbd5e1;
+    max-height: 75px;
+    overflow: hidden;
+    white-space: pre;
+    margin-bottom: 12px;
+}
+
+.vault-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vault-card-btn {
+    flex: 1;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    text-align: center;
+    white-space: nowrap;
+    transition: background 0.12s, transform 0.08s;
+}
+
+.vault-card-btn-insert {
+    background: #50fa7b;
+    color: #121319;
+    font-weight: 700;
+}
+
+.vault-card-btn-insert:hover {
+    background: #69ff91;
+    transform: translateY(-1px);
+    box-shadow: 0 0 10px rgba(80, 250, 123, 0.4);
+}
+
+.vault-card-btn-save {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.vault-card-btn-save:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+
+/* Flash animation on editor when code is inserted */
+@keyframes cmInsertPulseAnim {
+    0% {
+        box-shadow: 0 0 0 0 rgba(80, 250, 123, 0.8), 0 0 20px rgba(189, 147, 249, 0.6);
+        border-color: #50fa7b;
+    }
+    50% {
+        box-shadow: 0 0 20px 4px rgba(80, 250, 123, 0.5), 0 0 25px rgba(189, 147, 249, 0.5);
+        border-color: #bd93f9;
+    }
+    100% {
+        box-shadow: none;
+        border-color: transparent;
+    }
+}
+
+.CodeMirror.cm-insert-pulse {
+    animation: cmInsertPulseAnim 1.1s ease-out;
+}

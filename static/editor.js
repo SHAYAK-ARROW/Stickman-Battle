@@ -562,29 +562,128 @@ function saveCurrentStrategy() {
     }
 }
 
-function insertCurrentStrategy() {
-    const activeId = getActiveSlotId();
+function insertCurrentStrategy(explicitSlotId = null) {
+    const select = document.getElementById('strategy_slot_select');
+    let slotId = null;
+
+    if (explicitSlotId !== null && typeof explicitSlotId !== 'undefined' && !isNaN(explicitSlotId)) {
+        slotId = parseInt(explicitSlotId, 10);
+    } else if (select) {
+        slotId = parseInt(select.value, 10);
+    } else {
+        slotId = getActiveSlotId();
+    }
+
+    setActiveSlotId(slotId);
     const slots = getStrategyVault();
-    const slot = slots.find(s => s.id === activeId);
+    const slot = slots.find(s => s.id === slotId);
     if (!slot) return;
+
+    const titleInput = document.getElementById('strategy_title_input');
+    if (titleInput) {
+        titleInput.value = slot.title.replace(/^Slot \d+:\s*/, "");
+    }
+    if (select) {
+        select.value = slotId.toString();
+    }
 
     if (codeMirrorInstance) {
         codeMirrorInstance.setValue(slot.code);
         codeMirrorInstance.save();
         codeMirrorInstance.focus();
+
+        // Trigger visible pulse glow animation on editor
+        const wrapper = codeMirrorInstance.getWrapperElement();
+        if (wrapper) {
+            wrapper.classList.remove("cm-insert-pulse");
+            void wrapper.offsetWidth; // trigger reflow
+            wrapper.classList.add("cm-insert-pulse");
+            setTimeout(() => wrapper.classList.remove("cm-insert-pulse"), 1200);
+        }
     } else if (ide) {
         ide.value = slot.code;
         ide.focus();
     }
 
+    closeStrategyVaultDialog();
+
     if (typeof showToast === 'function') {
         showToast({
-            title: "Strategy Inserted!",
-            message: `Ready in live battle: "${slot.title}"`,
+            title: "Strategy Loaded!",
+            message: `Slot ${slotId}: "${slot.title}" inserted into battle!`,
             type: "success",
-            duration: 2000
+            duration: 2200
         });
     }
+}
+
+function openStrategyVaultDialog() {
+    renderVaultCards();
+    const dialog = document.getElementById('strategy_vault_dialog');
+    if (dialog && typeof dialog.showModal === 'function') {
+        dialog.showModal();
+    }
+}
+
+function closeStrategyVaultDialog() {
+    const dialog = document.getElementById('strategy_vault_dialog');
+    if (dialog && typeof dialog.close === 'function') {
+        dialog.close();
+    }
+}
+
+function renderVaultCards() {
+    const grid = document.getElementById('vault_cards_grid');
+    if (!grid) return;
+
+    const slots = getStrategyVault();
+    const activeId = getActiveSlotId();
+
+    grid.innerHTML = "";
+    slots.forEach(s => {
+        const isActive = s.id === activeId;
+        const card = document.createElement("div");
+        card.className = "vault-card" + (isActive ? " active-slot" : "");
+
+        const previewSnippet = (s.code || "")
+            .split("\n")
+            .filter(line => line.trim().length > 0 && !line.trim().startsWith("#"))
+            .slice(0, 3)
+            .join("\n") || "# Empty Strategy Slot";
+
+        card.innerHTML = `
+            <div class="vault-card-header">
+                <span class="vault-card-badge">Slot ${s.id}</span>
+                <span class="vault-card-title" title="${escapeStrategyHtml(s.title)}">${escapeStrategyHtml(s.title)}</span>
+            </div>
+            <div class="vault-card-preview">${escapeStrategyHtml(previewSnippet)}</div>
+            <div class="vault-card-actions">
+                <button type="button" class="vault-card-btn vault-card-btn-insert" onclick="insertCurrentStrategy(${s.id})">
+                    ⚡ Insert into Battle
+                </button>
+                <button type="button" class="vault-card-btn vault-card-btn-save" onclick="saveToVaultCard(${s.id})" title="Save current editor code to this slot">
+                    💾 Save Here
+                </button>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function saveToVaultCard(slotId) {
+    setActiveSlotId(slotId);
+    saveCurrentStrategy();
+    renderVaultCards();
+}
+
+function escapeStrategyHtml(str) {
+    if (!str) return "";
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 // Global exposure
@@ -592,6 +691,9 @@ window.saveCurrentStrategy = saveCurrentStrategy;
 window.insertCurrentStrategy = insertCurrentStrategy;
 window.onStrategySlotChange = onStrategySlotChange;
 window.initStrategyVault = initStrategyVault;
+window.openStrategyVaultDialog = openStrategyVaultDialog;
+window.closeStrategyVaultDialog = closeStrategyVaultDialog;
+window.saveToVaultCard = saveToVaultCard;
 
 // --- OPPONENT INPUT MODAL (Model 1 Challenge/Dialogue) ---
 socket.on('prompt_opponent_input', function(data) {
