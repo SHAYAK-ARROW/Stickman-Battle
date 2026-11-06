@@ -233,7 +233,28 @@ function initCodeMirror() {
             scoredMatches.sort((a, b) => a.score - b.score);
 
             return {
-                list: scoredMatches.map(m => m.item),
+                list: scoredMatches.map(m => {
+                    const item = Object.assign({}, m.item);
+                    item.render = function(element, self, data) {
+                        const raw = data.displayText || data.text;
+                        const parts = raw.split(" · ");
+                        const left = parts[0] || data.text;
+                        const right = parts[1] || "";
+
+                        const cmdSpan = document.createElement("span");
+                        cmdSpan.className = "hint-cmd";
+                        cmdSpan.textContent = left;
+                        element.appendChild(cmdSpan);
+
+                        if (right) {
+                            const descSpan = document.createElement("span");
+                            descSpan.className = "hint-desc";
+                            descSpan.textContent = " · " + right;
+                            element.appendChild(descSpan);
+                        }
+                    };
+                    return item;
+                }),
                 from: CodeMirror.Pos(line, start),
                 to: CodeMirror.Pos(line, end)
             };
