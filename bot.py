@@ -73,10 +73,10 @@ class BattleBot:
         self.decision_interval = random.uniform(cfg["interval"][0], cfg["interval"][1])
         self.last_banter_time = time.time()
         self.banter_phrases = [
-            "খেলা হবে! ⚡",
-            "কোপ দে মামা! ⚔️",
-            "ধারে কাছে ঘেঁষতে দেব না! 🛡️",
-            "উরাধুরা মার! 🔥",
+            "Game on! ⚡",
+            "Feel the blade! ⚔️",
+            "Can't touch this guard! 🛡️",
+            "Relentless strike! 🔥",
             "Analyzing your code...",
             "Nice algorithm!",
             "Can you break my defense?",
