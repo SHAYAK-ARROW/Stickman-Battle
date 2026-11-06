@@ -28,9 +28,9 @@ function dismissDiagnostics() {
 
 
 // --- VS Code Style Code Editor (Line Numbers, Dynamic Indent Guides & Auto-Indent) ---
-const ide = document.getElementById("ide");
-const lineNumbers = document.getElementById("line_numbers");
-const indentGuides = document.getElementById("indent_guides");
+var ide = document.getElementById("ide");
+var lineNumbers = document.getElementById("line_numbers");
+var indentGuides = document.getElementById("indent_guides");
 
 function updateLineNumbers(highlightLine = null) {
     if (!ide || !lineNumbers) return;
@@ -252,6 +252,8 @@ function insertSnippet(snippet) {
     if (typeof updateLineNumbers === 'function') updateLineNumbers();
     if (typeof updateIndentGuides === 'function') updateIndentGuides();
 }
+
+window.insertSnippet = insertSnippet;
 
 function setupCommandsTableInsertButtons() {
     const table = document.getElementById("commands_table");

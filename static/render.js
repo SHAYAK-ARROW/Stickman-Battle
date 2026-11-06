@@ -4,8 +4,7 @@
 // trig spells, energy shields, health HUDs, damage hit sparks & speech bubbles.
 // ==============================================================================
 
-const canvas = document.getElementById('gui_screen');
-const ctx = canvas ? canvas.getContext('2d') : null;
+// Note: canvas and ctx are already declared in game.js
 
 function drawTrigCurve(context, options) {
     const { centerX, centerY, width, start, end, samples, fn, scale, direction, ySign } = options;
@@ -22,23 +21,7 @@ function drawTrigCurve(context, options) {
     context.stroke();
 }
 
-// --- PROCEDURAL AUDIO SFX STATE TRACKING ---
-let prevP1Heart = null;
-let prevP2Heart = null;
-let prevP1Blocking = false;
-let prevP2Blocking = false;
-let prevP1Crouching = false;
-let prevP2Crouching = false;
-let prevP1Attacking = false;
-let prevP2Attacking = false;
-let activeSpellKeys = new Set();
-let prevGameOver = false;
-
-// --- SWORD TRAIL / MOTION BLUR SYSTEM ---
-const swordTrails = {
-    p1: [],
-    p2: []
-};
+// Note: SFX state tracking and swordTrails are declared in game.js
 
 function draw_sword_trails() {
     ['p1', 'p2'].forEach(key => {
