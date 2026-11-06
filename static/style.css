@@ -2240,6 +2240,28 @@ button { color: inherit; }
     background: rgba(239, 68, 68, 0.25) !important;
 }
 
+/* VS Code style True Indentation Guide Lines (Only on indented blocks) */
+.CodeMirror-line {
+    position: relative;
+}
+.cm-indent-guides-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+    display: flex;
+    height: 100%;
+    z-index: 0;
+}
+.cm-indent-guide-unit {
+    display: inline-block;
+    width: 4ch;
+    height: 100%;
+    box-sizing: border-box;
+    border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+
 /* VS Code Style Autocomplete Popup (IntelliSense Dropdown) */
 .CodeMirror-hints {
     position: absolute;

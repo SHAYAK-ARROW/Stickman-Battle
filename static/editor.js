@@ -234,6 +234,53 @@ function initCodeMirror() {
             codeMirrorInstance.save();
         });
 
+        // Render true VS Code-style vertical indent guides only for indented code blocks
+        codeMirrorInstance.on("renderLine", function(cm, line, elt) {
+            const text = line.text;
+            let spaces = 0;
+            while (spaces < text.length && text.charAt(spaces) === " ") spaces++;
+            let lvl = Math.floor(spaces / 4);
+
+            // If empty line, calculate surrounding indent level
+            if (text.trim().length === 0) {
+                const lineNo = cm.getLineNumber(line);
+                let prevLvl = 0;
+                for (let p = lineNo - 1; p >= 0; p--) {
+                    const pt = cm.getLine(p);
+                    if (pt && pt.trim().length > 0) {
+                        let sp = 0;
+                        while (sp < pt.length && pt.charAt(sp) === " ") sp++;
+                        prevLvl = Math.floor(sp / 4);
+                        break;
+                    }
+                }
+                let nextLvl = 0;
+                const total = cm.lineCount();
+                for (let n = lineNo + 1; n < total; n++) {
+                    const nt = cm.getLine(n);
+                    if (nt && nt.trim().length > 0) {
+                        let sp = 0;
+                        while (sp < nt.length && nt.charAt(sp) === " ") sp++;
+                        nextLvl = Math.floor(sp / 4);
+                        break;
+                    }
+                }
+                lvl = Math.min(prevLvl, nextLvl);
+            }
+
+            if (lvl > 0) {
+                const guides = document.createElement("div");
+                guides.className = "cm-indent-guides-bar";
+                guides.setAttribute("aria-hidden", "true");
+                for (let j = 0; j < lvl; j++) {
+                    const span = document.createElement("span");
+                    span.className = "cm-indent-guide-unit";
+                    guides.appendChild(span);
+                }
+                elt.insertBefore(guides, elt.firstChild);
+            }
+        });
+
         setTimeout(function() {
             codeMirrorInstance.refresh();
         }, 120);
