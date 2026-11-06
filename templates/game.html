@@ -1238,7 +1238,7 @@ function enterBattleGate(e) {
 
     if (window.AudioEngine) {
 
-        window.AudioEngine.handleFirstUserGesture();
+        if (window.AudioEngine.handleFirstUserGesture) window.AudioEngine.handleFirstUserGesture();
 
         if (window.AudioEngine.playMatchStart) window.AudioEngine.playMatchStart();
 

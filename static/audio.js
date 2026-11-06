@@ -718,6 +718,9 @@
 
     // Global Audio Engine API
     window.AudioEngine = {
+        handleFirstUserGesture: handleFirstUserGesture,
+        startBGM: startBGM,
+        stopBGM: stopBGM,
         toggleBGM: toggleBGM,
         setBGMVolume: setBGMVolume,
         toggleSFX: toggleSFX,
