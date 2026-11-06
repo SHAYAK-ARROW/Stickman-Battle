@@ -163,37 +163,28 @@
         <!-- ⚔️ ARCADE READY TO DUEL / BATTLE START GATE -->
 
     <div id="battle_start_gate" class="battle-start-gate" onclick="enterBattleGate(event)" style="display: none;">
-
         <div class="gate-card" onclick="event.stopPropagation()">
-
             <div class="gate-badge">
-
                 <span class="gate-pulse-dot"></span>
-
                 <span id="gate_stage_label">COMBAT ARENA READY</span>
-
             </div>
-
             <h2 id="gate_title" class="gate-title">STICKMAN DUEL</h2>
-
-            <p id="gate_desc" class="gate-desc">Prepare your Python battle algorithm. Duel begins the moment you step in.</p>
-
-            <button id="gate_enter_btn" type="button" class="gate-enter-btn" onclick="enterBattleGate(event)">
-
-                <span class="gate-btn-icon">⚔️</span>
-
-                <span id="gate_btn_text">ENTER BATTLE</span>
-
-            </button>
-
-            <div class="gate-hint">
-
-                <span>💡 Tip: Click anywhere or press any key to enter</span>
-
+            <div id="gate_intel_box" class="gate-intel-box" style="display: none;">
+                <div class="gate-intel-header">
+                    <span class="gate-intel-icon">🎯</span>
+                    <span class="gate-intel-label">Boss Intel</span>
+                </div>
+                <div id="gate_intel_text" class="gate-intel-text"></div>
             </div>
-
+            <p id="gate_desc" class="gate-desc">Prepare your Python battle algorithm. Duel begins the moment you step in.</p>
+            <button id="gate_enter_btn" type="button" class="gate-enter-btn" onclick="enterBattleGate(event)">
+                <span class="gate-btn-icon">⚔️</span>
+                <span id="gate_btn_text">ENTER BATTLE</span>
+            </button>
+            <div class="gate-hint">
+                <span>💡 Tip: Click anywhere or press any key to enter</span>
+            </div>
         </div>
-
     </div>
 
 
@@ -1146,91 +1137,71 @@ function close_commands_dialog() {
 
 
 const STAGE_TITLES = {
-
-    'dummy': '🥋 Practice Dojo (Dummy)',
-
-    'rusher': '🌱 Stage 1: Byte Rusher',
-
+    'dummy': '🥋 Practice Dojo',
+    'rusher': '⚡ Stage 1: Byte Rusher',
     'turtle': '🛡️ Stage 2: Iron Turtle',
-
-    'weaver': '📐 Stage 3: Wave Weaver',
-
+    'weaver': '🌊 Stage 3: Wave Weaver',
     'duelist': '🗡️ Stage 4: Shadow Duelist',
-
     'berserker': '🔥 Stage 5: Berserker Ronin',
-
     'apex': '👑 Stage 6: Apex Sovereign',
-
     'easy': '🌱 Solo vs Bot (Easy)',
-
     'hard': '🔥 Solo vs Bot (Hard)'
-
 };
 
-
+const STAGE_INTEL = {
+    'turtle': 'Heavy shield · Break with heavy_attack()',
+    'rusher': 'Direct charges · ~45% error rate · Punish whiffed dashes with sword_slash()',
+    'weaver': 'Trig spells (sin/cos) · Crouch or jump to evade, or clash with throw_sword()',
+    'duelist': 'Agile dashes · Flips behind player · Turn around quickly or back-dodge',
+    'berserker': 'Combos & rapid counters · High aggression · Block early and strike on cooldown',
+    'apex': 'Grandmaster Boss · Sub-second reflex · Master all sensors and spell fusion',
+    'dummy': 'Infinite Health · Zero Pressure · Peaceful Combat Sandbox for test loops',
+    'easy': 'Standard sparring bot · Great for testing basic movement and attacks',
+    'hard': 'Tactical counter bot · Fast reactions and dynamic distance tracking'
+};
 
 let gateDismissed = false;
 
-
-
-function showBattleGate(customTitle, customLabel, customDesc) {
-
+function showBattleGate(customTitle, customLabel, customDesc, customIntel) {
     if (gateDismissed) return;
-
     const gate = document.getElementById('battle_start_gate');
-
     const titleEl = document.getElementById('gate_title');
-
     const labelEl = document.getElementById('gate_stage_label');
-
     const descEl = document.getElementById('gate_desc');
-
+    const intelBox = document.getElementById('gate_intel_box');
+    const intelText = document.getElementById('gate_intel_text');
     if (!gate) return;
 
-
-
     if (customTitle && titleEl) titleEl.innerText = customTitle;
-
     if (customLabel && labelEl) labelEl.innerText = customLabel;
-
     if (customDesc && descEl) descEl.innerText = customDesc;
 
-    gate.style.display = 'flex';
+    if (customIntel && intelBox && intelText) {
+        intelText.innerText = customIntel;
+        intelBox.style.display = 'flex';
+    } else if (intelBox) {
+        intelBox.style.display = 'none';
+    }
 
+    gate.style.display = 'flex';
 }
 
-
-
 function showBattleGateOnMatchStart() {
-
     if (gateDismissed) {
-
         if (window.AudioEngine && window.AudioEngine.playMatchStart) {
-
             window.AudioEngine.playMatchStart();
-
         }
-
         return;
-
     }
-
     const isBot = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM);
-
     if (isBot) {
-
         const title = STAGE_TITLES[BOT_DIFFICULTY] || '⚔️ Solo Bot Duel';
-
         const label = BOT_DIFFICULTY === 'dummy' ? 'PEACEFUL DOJO' : 'ARCADE CHALLENGE';
-
-        showBattleGate(title, label, 'Prepare your Python battle code. Click to enter the arena and battle!');
-
+        const intel = STAGE_INTEL[BOT_DIFFICULTY] || 'Prepare your Python battle algorithm and enter the arena!';
+        showBattleGate(title, label, 'Duel begins the moment you step into the arena.', intel);
     } else {
-
-        showBattleGate('⚔️ 1v1 Online PvP Duel', 'RIVAL READY', 'A challenger entered the arena! Click below or press any key to fight.');
-
+        showBattleGate('⚔️ 1v1 Online PvP Duel', 'RIVAL READY', 'A challenger entered the arena! Click below or press any key to fight.', 'Live Human PvP · Script defensive counters and outplay opponent in real-time.');
     }
-
 }
 
 
