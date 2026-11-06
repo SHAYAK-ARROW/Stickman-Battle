@@ -2239,3 +2239,46 @@ button { color: inherit; }
 .cm-error-line {
     background: rgba(239, 68, 68, 0.25) !important;
 }
+
+/* VS Code style Vertical Indentation Guide Lines */
+.CodeMirror-lines {
+    background-image: repeating-linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0.08) 0px,
+        rgba(255, 255, 255, 0.08) 1px,
+        transparent 1px,
+        transparent 31.3px
+    );
+    background-position: 4px 0;
+}
+
+/* VS Code Style Autocomplete Popup (IntelliSense Dropdown) */
+.CodeMirror-hints {
+    position: absolute;
+    z-index: 100;
+    overflow: hidden;
+    overflow-y: auto;
+    max-height: 220px;
+    margin: 0;
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    background: #121319;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), 0 0 15px rgba(168, 85, 247, 0.15);
+    font-family: var(--mono);
+    font-size: 12px;
+}
+.CodeMirror-hint {
+    margin: 2px 0;
+    padding: 5px 10px;
+    border-radius: 5px;
+    white-space: pre;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+li.CodeMirror-hint-active {
+    background: rgba(168, 85, 247, 0.25) !important;
+    color: #f8fafc !important;
+    border-left: 2px solid #a855f7;
+}

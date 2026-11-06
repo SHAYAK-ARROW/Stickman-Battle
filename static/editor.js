@@ -127,10 +127,80 @@ function updateEditorUI() {
     updateIndentGuides();
 }
 
+// --- Stickman Battle Game Autocomplete Dictionary (VS Code Style Hints) ---
+const BATTLE_HINTS = [
+    // Core combat commands
+    { text: "attack()", displayText: "🗡️ attack() · Fast sword strike" },
+    { text: "heavy_attack()", displayText: "💥 heavy_attack() · Break shields (slow)" },
+    { text: "swing()", displayText: "⚔️ swing() · Swift horizontal slash" },
+    { text: "block()", displayText: "🛡️ block() · Raise shield defense" },
+    { text: "dodge()", displayText: "💨 dodge() · Quick backward retreat" },
+    { text: "dash(3)", displayText: "⚡ dash(step) · Fast forward charge" },
+    { text: "jump(15)", displayText: "🦘 jump(power) · Leap into air" },
+    { text: "flip()", displayText: "🔄 flip() · Face opposite direction" },
+    { text: "crouch(30)", displayText: "🦆 crouch(duration) · Duck under high strikes" },
+    { text: "move(2)", displayText: "🏃 move(step) · Walk forward" },
+    { text: "throw_sword()", displayText: "🗡️ throw_sword() · Ranged sword projectile" },
+
+    // Trigonometric spells
+    { text: "math.sin(45)", displayText: "🌊 math.sin(power) · Sine wave projectile" },
+    { text: "math.cos(45)", displayText: "🌀 math.cos(power) · Cosine wave pulse" },
+    { text: "math.tan(45)", displayText: "⚡ math.tan(power) · Ground spike eruption" },
+    { text: "math.sec(45)", displayText: "🛡️ math.sec(power) · Kinetic barrier aura" },
+    { text: "math.cosec(45)", displayText: "🔮 math.cosec(power) · Defensive dome" },
+    { text: "math.cot(45)", displayText: "🧱 math.cot(power) · Shockwave wall" },
+
+    // Tactical sensory telemetry
+    { text: "get_enemy_distance()", displayText: "📏 get_enemy_distance() · Distance to opponent" },
+    { text: "is_enemy_attacking()", displayText: "⚠️ is_enemy_attacking() · Opponent swinging?" },
+    { text: "is_enemy_blocking()", displayText: "🛡️ is_enemy_blocking() · Opponent shielded?" },
+    { text: "is_enemy_crouching()", displayText: "🦆 is_enemy_crouching() · Opponent ducking?" },
+    { text: "is_enemy_airborne()", displayText: "🦘 is_enemy_airborne() · Opponent in air?" },
+    { text: "get_enemy_direction()", displayText: "🧭 get_enemy_direction() · Opponent facing direction" },
+    { text: "get_my_health()", displayText: "❤️ get_my_health() · Your remaining hearts" },
+    { text: "get_enemy_health()", displayText: "💔 get_enemy_health() · Opponent remaining hearts" },
+    { text: "get_my_energy()", displayText: "⚡ get_my_energy() · Your current stamina" },
+    { text: "get_enemy_energy()", displayText: "🔋 get_enemy_energy() · Opponent stamina" },
+    { text: "print()", displayText: "💬 print(msg) · Display speech bubble" },
+
+    // Python basic syntax
+    { text: "if ", displayText: "🔀 if condition:" },
+    { text: "elif ", displayText: "🔀 elif condition:" },
+    { text: "else:\n    ", displayText: "🔀 else:" },
+    { text: "for i in range(5):\n    ", displayText: "🔁 for loop" },
+    { text: "while ", displayText: "🔁 while loop (bounded)" },
+    { text: "import math\n", displayText: "📐 import math" }
+];
+
 function initCodeMirror() {
     if (typeof CodeMirror !== "undefined" && ide) {
         const frame = document.querySelector(".editor-frame");
         if (frame) frame.classList.add("has-codemirror");
+
+        // Register custom Python + Game Battle autocomplete provider
+        CodeMirror.registerHelper("hint", "python", function(cm) {
+            const cur = cm.getCursor();
+            const token = cm.getTokenAt(cur);
+            const start = token.start;
+            const end = cur.ch;
+            const line = cur.line;
+            const word = token.string.toLowerCase().replace(/^[^\w\.]+/, "");
+
+            if (!word) return null;
+
+            const matches = BATTLE_HINTS.filter(h => {
+                const clean = h.text.toLowerCase();
+                return clean.startsWith(word) || clean.includes(word);
+            });
+
+            if (matches.length === 0) return null;
+
+            return {
+                list: matches,
+                from: CodeMirror.Pos(line, start),
+                to: CodeMirror.Pos(line, end)
+            };
+        });
 
         codeMirrorInstance = CodeMirror.fromTextArea(ide, {
             mode: { name: "python", version: 3, singleLineStringErrors: false },
@@ -141,10 +211,24 @@ function initCodeMirror() {
             indentWithTabs: false,
             lineWrapping: true,
             autofocus: false,
-            viewportMargin: Infinity
+            viewportMargin: Infinity,
+            extraKeys: {
+                "Ctrl-Space": function(cm) {
+                    cm.showHint({ hint: CodeMirror.hint.python, completeSingle: false });
+                }
+            }
         });
 
         window.codeMirrorInstance = codeMirrorInstance;
+
+        // Auto-show suggestions on typing letters or dot
+        codeMirrorInstance.on("inputRead", function(cm, change) {
+            if (change.origin !== "+input") return;
+            const ch = change.text[0];
+            if (/[a-zA-Z_\.]/.test(ch)) {
+                cm.showHint({ hint: CodeMirror.hint.python, completeSingle: false });
+            }
+        });
 
         codeMirrorInstance.on("change", function() {
             codeMirrorInstance.save();
