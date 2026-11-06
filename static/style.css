@@ -2328,3 +2328,124 @@ li.CodeMirror-hint-active .hint-desc {
     color: #f1fa8c !important;
     opacity: 1;
 }
+
+/* 📁 Strategy Vault (10 Saved Slots & Live Quick-Insert) */
+.strategy-vault-bar {
+    background: #14151c;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 12px;
+    box-sizing: border-box;
+}
+
+.vault-top-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.vault-slot-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 200px;
+    min-width: 180px;
+}
+
+.vault-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #a855f7;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.vault-select {
+    background: #1e1f29;
+    color: #f8f8f2;
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-family: var(--mono, monospace);
+    outline: none;
+    cursor: pointer;
+    flex: 1;
+    min-width: 140px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.vault-select:focus {
+    border-color: #bd93f9;
+    box-shadow: 0 0 8px rgba(189, 147, 249, 0.3);
+}
+
+.vault-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+}
+
+.vault-title-input {
+    background: #1e1f29;
+    color: #f8f8f2;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    width: 160px;
+    transition: border-color 0.15s;
+}
+
+.vault-title-input:focus {
+    border-color: #a855f7;
+}
+
+.vault-title-input::placeholder {
+    color: #6272a4;
+}
+
+.vault-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.08s, background 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
+}
+
+.vault-save-btn {
+    background: rgba(80, 250, 123, 0.15);
+    color: #50fa7b;
+    border: 1px solid rgba(80, 250, 123, 0.4);
+}
+
+.vault-save-btn:hover {
+    background: rgba(80, 250, 123, 0.28);
+    box-shadow: 0 0 10px rgba(80, 250, 123, 0.25);
+    transform: translateY(-1px);
+}
+
+.vault-insert-btn {
+    background: rgba(189, 147, 249, 0.2);
+    color: #f8f8f2;
+    border: 1px solid rgba(189, 147, 249, 0.45);
+}
+
+.vault-insert-btn:hover {
+    background: rgba(189, 147, 249, 0.35);
+    box-shadow: 0 0 12px rgba(189, 147, 249, 0.3);
+    transform: translateY(-1px);
+}

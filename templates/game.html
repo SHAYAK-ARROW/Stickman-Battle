@@ -307,6 +307,32 @@
 
     </div>
 
+    <!-- 📁 STRATEGY VAULT: 10 Custom Strategy Slots (Save & Live Quick-Insert) -->
+    <div class="strategy-vault-bar">
+        <div class="vault-top-row">
+            <div class="vault-slot-group">
+                <span class="vault-label">📁 Strategy:</span>
+                <select id="strategy_slot_select" class="vault-select" aria-label="Select saved strategy slot" onchange="onStrategySlotChange(this.value)">
+                    <option value="1">Slot 1: ⚡ Blitz Rush</option>
+                    <option value="2">Slot 2: 🛡️ Shield Breaker</option>
+                    <option value="3">Slot 3: 🌊 Wave Weaver</option>
+                    <option value="4">Slot 4: [Empty Slot]</option>
+                    <option value="5">Slot 5: [Empty Slot]</option>
+                    <option value="6">Slot 6: [Empty Slot]</option>
+                    <option value="7">Slot 7: [Empty Slot]</option>
+                    <option value="8">Slot 8: [Empty Slot]</option>
+                    <option value="9">Slot 9: [Empty Slot]</option>
+                    <option value="10">Slot 10: [Empty Slot]</option>
+                </select>
+            </div>
+            <div class="vault-actions-group">
+                <input type="text" id="strategy_title_input" class="vault-title-input" placeholder="Strategy Title (e.g. Blitz Rush)" maxlength="28" aria-label="Strategy Title">
+                <button type="button" class="vault-btn vault-save-btn" onclick="saveCurrentStrategy()" title="Save current editor code to this slot">💾 Save</button>
+                <button type="button" class="vault-btn vault-insert-btn" onclick="insertCurrentStrategy()" title="Insert this strategy into editor live during match">⚡ Insert</button>
+            </div>
+        </div>
+    </div>
+
     <div class="editor-frame">
 
         <!-- Line Numbers Column -->
