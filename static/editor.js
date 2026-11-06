@@ -181,22 +181,59 @@ function initCodeMirror() {
         CodeMirror.registerHelper("hint", "python", function(cm) {
             const cur = cm.getCursor();
             const token = cm.getTokenAt(cur);
+            const line = cur.line;
+            const lineText = cm.getLine(line);
+
+            // Don't show combat command hints inside comments, strings, or when defining a function name (def ...)
+            if (token.type === "comment" || token.type === "string" || token.type === "def") {
+                return null;
+            }
+
+            // Also suppress suggestions if the user is typing a function name after 'def '
+            const textBeforeCursor = lineText.slice(0, cur.ch);
+            if (/^\s*def\s+\w*$/.test(textBeforeCursor)) {
+                return null;
+            }
+
             const start = token.start;
             const end = cur.ch;
-            const line = cur.line;
             const word = token.string.toLowerCase().replace(/^[^\w\.]+/, "");
 
             if (!word) return null;
 
-            const matches = BATTLE_HINTS.filter(h => {
-                const clean = h.text.toLowerCase();
-                return clean.startsWith(word) || clean.includes(word);
-            });
+            // Smart scoring & prefix filtering:
+            // 1. Direct prefix (e.g. 'g' -> 'get_enemy_distance()') -> score 1
+            // 2. Word boundary prefix after '_' or '.' (e.g. 'dist' -> 'get_enemy_distance()', 'cos' -> 'math.cos()') -> score 2
+            // 3. For multi-letter words (>= 3 chars), allow clean token substring match (score 3)
+            // Never match single letters loosely inside unrelated words (e.g. 'g' inside 'swing' or 'range')!
+            const scoredMatches = [];
 
-            if (matches.length === 0) return null;
+            for (const h of BATTLE_HINTS) {
+                const clean = h.text.toLowerCase().replace(/\(.*$/, "").trim();
+                const parts = clean.split(/[_\.]/);
+
+                let score = -1;
+
+                if (clean.startsWith(word)) {
+                    score = 1;
+                } else if (parts.some(p => p.startsWith(word))) {
+                    score = 2;
+                } else if (word.length >= 3 && clean.includes(word)) {
+                    score = 3;
+                }
+
+                if (score !== -1) {
+                    scoredMatches.push({ item: h, score: score });
+                }
+            }
+
+            if (scoredMatches.length === 0) return null;
+
+            // Direct prefix matches come first, followed by subword matches
+            scoredMatches.sort((a, b) => a.score - b.score);
 
             return {
-                list: matches,
+                list: scoredMatches.map(m => m.item),
                 from: CodeMirror.Pos(line, start),
                 to: CodeMirror.Pos(line, end)
             };
