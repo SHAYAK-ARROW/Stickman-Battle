@@ -4,7 +4,9 @@
   "manager": "Shayak Sadhukhan",
   "manager_email": "shayaksadhukhan402@gmail.com",
   "status": "Production Release",
-  "version": "1.0.0",
-  "release_type": "v1.0 Combat & Arena Release",
+  "version": "1.2.0",
+  "itch_slug": "arrows-dev/stickman-battle",
+  "itch_url": "https://arrows-dev.itch.io/stickman-battle",
+  "release_type": "v1.2 Strategy Vault & Dracula Editor Release",
   "description": "A real-time 1v1 multiplayer combat arena where players battle by writing Python code."
 }
