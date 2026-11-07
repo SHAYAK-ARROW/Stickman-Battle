@@ -583,8 +583,8 @@ button { color: inherit; }
 }
 
 /* ── Responsive ────────────────────────────────────────────── */
-@media (max-width: 980px) {
-    .home-shell, .game-shell { width: min(100% - 32px, 720px); }
+@media (max-width: 1080px) {
+    .home-shell, .game-shell { width: min(100% - 32px, 860px); }
     #battle_layout { grid-template-columns: 1fr; }
     .editor-frame { height: 420px; }
 }
