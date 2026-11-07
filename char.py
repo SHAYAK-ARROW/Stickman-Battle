@@ -100,6 +100,9 @@ class Body(Character):
     def duck(self):
         self.crouch()
 
+    def bend(self, angle=0):
+        self.crouch()
+
     def dash(self, step=3):
         if len(self.action_queue) < 100:
             self.action_queue.append(('dash', _safe_float(step, 3.0, -20.0, 20.0)))

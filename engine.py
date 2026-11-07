@@ -532,10 +532,12 @@ class GameEngine:
                         remove_spell = True
 
                 elif stype == 'cot_wall':
-                    if 'x' not in s:
-                        s['x'] = owner.x + (70 * s['dir'])
+                    if s.get('t', 0) == 1:
+                        # Position wall 70px forward in front of caster on spawn
+                        s['x'] = s.get('origin_x', owner.x) + (70 * s.get('dir', 1))
                         s['y'] = 530
-                    if abs(enemy.x - s['x']) <= 30 and not s.get('has_hit'):
+                    enemy_grounded = (enemy.y >= 430)
+                    if abs(enemy.x - s['x']) <= 35 and enemy_grounded and not s.get('has_hit'):
                         s['has_hit'] = True
                         if (getattr(enemy, 'barrier_timer', 0) > 0
                                 or getattr(enemy, 'dome_timer', 0) > 0

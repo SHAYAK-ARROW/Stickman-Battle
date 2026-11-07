@@ -2,6 +2,7 @@ import ast
 import logging
 import math
 import multiprocessing
+import random as py_random
 import re
 import threading
 import traceback
@@ -171,23 +172,75 @@ def _sandbox_execute(code, sensors):
         "cosec_value": staticmethod(lambda value: 1 / math.sin(value)),
     })()
 
+    def _safe_randint(a, b):
+        if isinstance(a, bool) or isinstance(b, bool) or not isinstance(a, int) or not isinstance(b, int):
+            raise TypeError("random.randint(a, b) expects integer arguments")
+        if abs(a) > 1000 or abs(b) > 1000:
+            raise ValueError("random.randint() bounds must be within [-1000, 1000]")
+        return py_random.randint(min(a, b), max(a, b))
+
+    def _safe_choice(seq):
+        if not isinstance(seq, (list, tuple)):
+            raise TypeError("random.choice() expects a list or tuple")
+        if len(seq) == 0:
+            raise IndexError("Cannot choose from an empty sequence")
+        if len(seq) > 100:
+            raise ValueError("Sequence length exceeds limit (max 100)")
+        return py_random.choice(seq)
+
+    def _safe_uniform(a, b):
+        if isinstance(a, bool) or isinstance(b, bool) or not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
+            raise TypeError("random.uniform(a, b) expects numeric arguments")
+        if abs(a) > 1000 or abs(b) > 1000:
+            raise ValueError("random.uniform() bounds must be within [-1000, 1000]")
+        return py_random.uniform(a, b)
+
+    random_api = type("SafeRandom", (), {
+        "randint": staticmethod(_safe_randint),
+        "choice": staticmethod(_safe_choice),
+        "random": staticmethod(py_random.random),
+        "uniform": staticmethod(_safe_uniform),
+    })()
+
     def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if name == "math" and level == 0 and not fromlist:
+        if level != 0:
+            raise ImportError("Relative imports are not allowed")
+        if name == "math":
+            if fromlist:
+                for item in fromlist:
+                    if not hasattr(math_api, item):
+                        raise ImportError(f"Cannot import '{item}' from math. Note: This is Stickman Battle's battle math module (sin, cos, tan, cot, sec, cosec, pi, e).")
             return math_api
-        raise ImportError("Only 'import math' is allowed")
+        elif name == "random":
+            if fromlist:
+                for item in fromlist:
+                    if not hasattr(random_api, item):
+                        raise ImportError(f"Cannot import '{item}' from random. Available methods: randint, choice, random, uniform")
+            return random_api
+        raise ImportError(f"Importing '{name}' is restricted for battle security! Only 'math' and 'random' are allowed.")
 
     safe_builtins["__import__"] = restricted_import
 
     safe_env.update({
+        "enemy_distance": sensors["enemy_distance"],
         "get_enemy_distance": lambda: sensors["enemy_distance"],
+        "enemy_attacking": sensors["enemy_attacking"],
         "is_enemy_attacking": lambda: sensors["enemy_attacking"],
+        "enemy_blocking": sensors.get("enemy_blocking", False),
         "is_enemy_blocking": lambda: sensors.get("enemy_blocking", False),
+        "enemy_crouching": sensors.get("enemy_crouching", False),
         "is_enemy_crouching": lambda: sensors.get("enemy_crouching", False),
+        "enemy_airborne": sensors.get("enemy_airborne", False),
         "is_enemy_airborne": lambda: sensors.get("enemy_airborne", False),
+        "enemy_direction": sensors.get("enemy_direction", -1),
         "get_enemy_direction": lambda: sensors.get("enemy_direction", -1),
+        "my_health": sensors["my_health"],
         "get_my_health": lambda: sensors["my_health"],
+        "enemy_health": sensors["enemy_health"],
         "get_enemy_health": lambda: sensors["enemy_health"],
+        "my_energy": sensors.get("my_energy", 100),
         "get_my_energy": lambda: sensors.get("my_energy", 100),
+        "enemy_energy": sensors.get("enemy_energy", 100),
         "get_enemy_energy": lambda: sensors.get("enemy_energy", 100),
         "print": game_print,
         "input": game_input,
@@ -330,16 +383,20 @@ class SecurityValidator(ast.NodeVisitor):
         '__import__', 'open', 'exit', 'quit', 'help'
     }
 
+    ALLOWED_MODULES = {'math', 'random'}
+
     def __init__(self):
         self.loop_depth = 0
         self.current_function = None
 
     def visit_Import(self, node):
-        if len(node.names) != 1 or node.names[0].name != 'math':
-            raise ValueError("Only 'import math' is allowed!")
+        for alias in node.names:
+            if alias.name not in self.ALLOWED_MODULES:
+                raise ValueError(f"Importing '{alias.name}' is restricted for battle security! Only 'math' and 'random' are allowed.")
 
     def visit_ImportFrom(self, node):
-        raise ValueError("Importing modules ('from ... import') is forbidden!")
+        if node.module not in self.ALLOWED_MODULES:
+            raise ValueError(f"Importing from '{node.module}' is restricted for battle security! Only 'math' and 'random' are allowed.")
 
     def visit_Attribute(self, node):
         if node.attr.startswith('_'):
