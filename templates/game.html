@@ -14,6 +14,12 @@
 
     <link rel="icon" type="image/png" href="/static/favicon.png">
 
+    <link rel="stylesheet" href="/static/lib/codemirror/codemirror.min.css">
+
+    <link rel="stylesheet" href="/static/lib/codemirror/show-hint.min.css">
+
+    <link rel="stylesheet" href="/static/lib/codemirror/dracula.min.css">
+
     <link rel="stylesheet" href="/static/style.css">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
@@ -34,7 +40,7 @@
 
         <div class="brand-text-wrap">
 
-            <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v1.1</span></span>
+            <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v1.2</span></span>
 
             <span class="brand-subtitle">Made by Arrows Development Hub</span>
 
@@ -163,37 +169,28 @@
         <!-- ⚔️ ARCADE READY TO DUEL / BATTLE START GATE -->
 
     <div id="battle_start_gate" class="battle-start-gate" onclick="enterBattleGate(event)" style="display: none;">
-
         <div class="gate-card" onclick="event.stopPropagation()">
-
             <div class="gate-badge">
-
                 <span class="gate-pulse-dot"></span>
-
                 <span id="gate_stage_label">COMBAT ARENA READY</span>
-
             </div>
-
             <h2 id="gate_title" class="gate-title">STICKMAN DUEL</h2>
-
-            <p id="gate_desc" class="gate-desc">Prepare your Python battle algorithm. Duel begins the moment you step in.</p>
-
-            <button id="gate_enter_btn" type="button" class="gate-enter-btn" onclick="enterBattleGate(event)">
-
-                <span class="gate-btn-icon">⚔️</span>
-
-                <span id="gate_btn_text">ENTER BATTLE</span>
-
-            </button>
-
-            <div class="gate-hint">
-
-                <span>💡 Tip: Click anywhere or press any key to enter</span>
-
+            <div id="gate_intel_box" class="gate-intel-box" style="display: none;">
+                <div class="gate-intel-header">
+                    <span class="gate-intel-icon">🎯</span>
+                    <span class="gate-intel-label">Boss Intel</span>
+                </div>
+                <div id="gate_intel_text" class="gate-intel-text"></div>
             </div>
-
+            <p id="gate_desc" class="gate-desc">Prepare your Python battle algorithm. Duel begins the moment you step in.</p>
+            <button id="gate_enter_btn" type="button" class="gate-enter-btn" onclick="enterBattleGate(event)">
+                <span class="gate-btn-icon">⚔️</span>
+                <span id="gate_btn_text">ENTER BATTLE</span>
+            </button>
+            <div class="gate-hint">
+                <span>💡 Tip: Click anywhere or press any key to enter</span>
+            </div>
         </div>
-
     </div>
 
 
@@ -310,6 +307,34 @@
 
     </div>
 
+    <!-- 📁 STRATEGY VAULT: 10 Custom Strategy Slots (Save & Live Quick-Insert) -->
+    <div class="strategy-vault-bar">
+        <div class="vault-top-row">
+            <div class="vault-slot-group">
+                <button type="button" class="vault-deck-btn" onclick="openStrategyVaultDialog()" title="View and manage all 10 saved strategies in full visual card deck">
+                    📁 10 Strategies Deck
+                </button>
+                <select id="strategy_slot_select" class="vault-select" aria-label="Select saved strategy slot" onchange="onStrategySlotChange(this.value)">
+                    <option value="1">Slot 1: ⚡ Blitz Rush</option>
+                    <option value="2">Slot 2: 🛡️ Shield Breaker</option>
+                    <option value="3">Slot 3: 🌊 Wave Weaver</option>
+                    <option value="4">Slot 4: [Empty Slot]</option>
+                    <option value="5">Slot 5: [Empty Slot]</option>
+                    <option value="6">Slot 6: [Empty Slot]</option>
+                    <option value="7">Slot 7: [Empty Slot]</option>
+                    <option value="8">Slot 8: [Empty Slot]</option>
+                    <option value="9">Slot 9: [Empty Slot]</option>
+                    <option value="10">Slot 10: [Empty Slot]</option>
+                </select>
+            </div>
+            <div class="vault-actions-group">
+                <input type="text" id="strategy_title_input" class="vault-title-input" placeholder="Strategy Title (e.g. Blitz Rush)" maxlength="28" aria-label="Strategy Title">
+                <button type="button" class="vault-btn vault-save-btn" onclick="saveCurrentStrategy()" title="Save current editor code to this slot">💾 Save</button>
+                <button type="button" class="vault-btn vault-insert-btn" onclick="insertCurrentStrategy()" title="Insert this strategy into editor live during match">⚡ Insert</button>
+            </div>
+        </div>
+    </div>
+
     <div class="editor-frame">
 
         <!-- Line Numbers Column -->
@@ -387,6 +412,20 @@ else:
 </section>
 
 
+
+<!-- 📁 Strategy Vault Visual Deck Dialog (10 Slots View & Live In-Battle Insert) -->
+<dialog id="strategy_vault_dialog" class="strategy-vault-dialog">
+    <div class="dialog-header-row">
+        <div>
+            <h3>📁 Battle Strategy Vault (10 Loadout Slots)</h3>
+            <p class="dialog-subtitle">Browse your 10 saved strategies. Click "⚡ Insert into Battle" to instantly load any tactic live!</p>
+        </div>
+        <button type="button" class="button button-secondary dialog-close" onclick="closeStrategyVaultDialog()">✕ Close</button>
+    </div>
+    <div class="vault-cards-grid" id="vault_cards_grid">
+        <!-- Rendered dynamically by JavaScript -->
+    </div>
+</dialog>
 
 <!-- HTML5 Native Popup Dialog -->
 
@@ -1146,91 +1185,71 @@ function close_commands_dialog() {
 
 
 const STAGE_TITLES = {
-
-    'dummy': '🥋 Practice Dojo (Dummy)',
-
-    'rusher': '🌱 Stage 1: Byte Rusher',
-
+    'dummy': '🥋 Practice Dojo',
+    'rusher': '⚡ Stage 1: Byte Rusher',
     'turtle': '🛡️ Stage 2: Iron Turtle',
-
-    'weaver': '📐 Stage 3: Wave Weaver',
-
+    'weaver': '🌊 Stage 3: Wave Weaver',
     'duelist': '🗡️ Stage 4: Shadow Duelist',
-
     'berserker': '🔥 Stage 5: Berserker Ronin',
-
     'apex': '👑 Stage 6: Apex Sovereign',
-
     'easy': '🌱 Solo vs Bot (Easy)',
-
     'hard': '🔥 Solo vs Bot (Hard)'
-
 };
 
-
+const STAGE_INTEL = {
+    'turtle': 'Heavy shield · Break with heavy_attack()',
+    'rusher': 'Direct charges · ~45% error rate · Punish whiffed dashes with sword_slash()',
+    'weaver': 'Trig spells (sin/cos) · Crouch or jump to evade, or clash with throw_sword()',
+    'duelist': 'Agile dashes · Flips behind player · Turn around quickly or back-dodge',
+    'berserker': 'Combos & rapid counters · High aggression · Block early and strike on cooldown',
+    'apex': 'Grandmaster Boss · Sub-second reflex · Master all sensors and spell fusion',
+    'dummy': 'Infinite Health · Zero Pressure · Peaceful Combat Sandbox for test loops',
+    'easy': 'Standard sparring bot · Great for testing basic movement and attacks',
+    'hard': 'Tactical counter bot · Fast reactions and dynamic distance tracking'
+};
 
 let gateDismissed = false;
 
-
-
-function showBattleGate(customTitle, customLabel, customDesc) {
-
+function showBattleGate(customTitle, customLabel, customDesc, customIntel) {
     if (gateDismissed) return;
-
     const gate = document.getElementById('battle_start_gate');
-
     const titleEl = document.getElementById('gate_title');
-
     const labelEl = document.getElementById('gate_stage_label');
-
     const descEl = document.getElementById('gate_desc');
-
+    const intelBox = document.getElementById('gate_intel_box');
+    const intelText = document.getElementById('gate_intel_text');
     if (!gate) return;
 
-
-
     if (customTitle && titleEl) titleEl.innerText = customTitle;
-
     if (customLabel && labelEl) labelEl.innerText = customLabel;
-
     if (customDesc && descEl) descEl.innerText = customDesc;
 
-    gate.style.display = 'flex';
+    if (customIntel && intelBox && intelText) {
+        intelText.innerText = customIntel;
+        intelBox.style.display = 'flex';
+    } else if (intelBox) {
+        intelBox.style.display = 'none';
+    }
 
+    gate.style.display = 'flex';
 }
 
-
-
 function showBattleGateOnMatchStart() {
-
     if (gateDismissed) {
-
         if (window.AudioEngine && window.AudioEngine.playMatchStart) {
-
             window.AudioEngine.playMatchStart();
-
         }
-
         return;
-
     }
-
     const isBot = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM);
-
     if (isBot) {
-
         const title = STAGE_TITLES[BOT_DIFFICULTY] || '⚔️ Solo Bot Duel';
-
         const label = BOT_DIFFICULTY === 'dummy' ? 'PEACEFUL DOJO' : 'ARCADE CHALLENGE';
-
-        showBattleGate(title, label, 'Prepare your Python battle code. Click to enter the arena and battle!');
-
+        const intel = STAGE_INTEL[BOT_DIFFICULTY] || 'Prepare your Python battle algorithm and enter the arena!';
+        showBattleGate(title, label, 'Duel begins the moment you step into the arena.', intel);
     } else {
-
-        showBattleGate('⚔️ 1v1 Online PvP Duel', 'RIVAL READY', 'A challenger entered the arena! Click below or press any key to fight.');
-
+        showBattleGate('⚔️ 1v1 Online PvP Duel', 'RIVAL READY', 'A challenger entered the arena! Click below or press any key to fight.', 'Live Human PvP · Script defensive counters and outplay opponent in real-time.');
     }
-
 }
 
 
@@ -1261,7 +1280,7 @@ function enterBattleGate(e) {
 
     if (window.AudioEngine) {
 
-        window.AudioEngine.handleFirstUserGesture();
+        if (window.AudioEngine.handleFirstUserGesture) window.AudioEngine.handleFirstUserGesture();
 
         if (window.AudioEngine.playMatchStart) window.AudioEngine.playMatchStart();
 
@@ -1322,6 +1341,12 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 <script src="/static/game.js"></script>
 
 <script src="/static/render.js"></script>
+
+<script src="/static/lib/codemirror/codemirror.min.js"></script>
+
+<script src="/static/lib/codemirror/show-hint.min.js"></script>
+
+<script src="/static/lib/codemirror/python.min.js"></script>
 
 <script src="/static/editor.js"></script>
 

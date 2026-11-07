@@ -194,8 +194,20 @@ def _sandbox_execute(code, sensors):
         "Input": game_input,
     })
 
+    total_loop_steps = 0
+    def _check_loop(loop_id):
+        nonlocal total_loop_steps
+        total_loop_steps += 1
+        return total_loop_steps <= 100
+
+    safe_env["_check_loop"] = _check_loop
+
     try:
-        compiled = compile(code, "<strategy.py>", "exec")
+        parsed_tree = ast.parse(code, filename="<strategy.py>")
+        guard = WhileLoopGuard()
+        transformed_tree = guard.visit(parsed_tree)
+        ast.fix_missing_locations(transformed_tree)
+        compiled = compile(transformed_tree, "<strategy.py>", "exec")
         exec(compiled, safe_env)
     except Exception as exc:
         tb = traceback.extract_tb(exc.__traceback__)
@@ -291,6 +303,26 @@ def _apply_commands(commands, current_player):
             raise ValueError(f"Unsupported command: {method_name}")
         method(*args)
 
+class WhileLoopGuard(ast.NodeTransformer):
+    """Safely bounds all 'while' loops so they cannot exceed 100 total iterations."""
+    def __init__(self):
+        super().__init__()
+        self.loop_id = 0
+
+    def visit_While(self, node):
+        self.generic_visit(node)
+        self.loop_id += 1
+        check_call = ast.Call(
+            func=ast.Name(id='_check_loop', ctx=ast.Load()),
+            args=[ast.Constant(value=self.loop_id)],
+            keywords=[]
+        )
+        node.test = ast.BoolOp(
+            op=ast.And(),
+            values=[node.test, check_call]
+        )
+        return node
+
 class SecurityValidator(ast.NodeVisitor):
     FORBIDDEN_NAMES = {
         'eval', 'exec', 'compile', 'getattr', 'setattr', 'delattr',
@@ -322,7 +354,11 @@ class SecurityValidator(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_While(self, node):
-        raise ValueError("'while' loops are disabled! Use 'for i in range(...)'.")
+        self.loop_depth += 1
+        if self.loop_depth > 2:
+            raise ValueError("Max 2 nested loops allowed to prevent CPU exhaustion!")
+        self.generic_visit(node)
+        self.loop_depth -= 1
 
     def visit_Try(self, node):
         raise ValueError("'try/except' blocks are forbidden!")
