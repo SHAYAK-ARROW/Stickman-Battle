@@ -19,6 +19,8 @@ class GameEngine:
         self.weapons = []
         self.shields = []
         self.spells = []
+        self.clash_event = False
+        self.last_hit_player = None
 
     def add_player(self, *player_list):
         for player in player_list:
@@ -201,24 +203,27 @@ class GameEngine:
                 player.pending_spells.clear()
         
         # --- MELEE SWORD COLLISION & DAMAGE (DYNAMIC SWORD & SHIELD LENGTH) ---
+        self.clash_event = False
         if not is_game_over and len(self.players) >= 2:
             p1 = self.players[0]
             p2 = self.players[1]
             dx = abs(p1.x - p2.x)
             dy = abs(p1.y - p2.y)
             
-            # Dynamic sword clash range based on actual weapon lengths
+            # Dynamic sword clash range based on actual weapon lengths (dy <= 110 accommodates jumping clashes)
             p1_slen = getattr(p1.sword, 'sword_length', 50)
             p2_slen = getattr(p2.sword, 'sword_length', 50)
-            sword_range = (dx <= (p1_slen + p2_slen + 55) and dy <= 60)
+            sword_range = (dx <= (p1_slen + p2_slen + 65) and dy <= 110)
             
             # Dynamic reach against opponent's body based on attacker's sword length
-            p1_body_range = (dx <= (p1_slen + 55) and dy <= 60)
-            p2_body_range = (dx <= (p2_slen + 55) and dy <= 60)
+            # Stickman height spans 150px (y-20 to y+130), dy <= 110 ensures clean hits against airborne or crouching foes
+            p1_body_range = (dx <= (p1_slen + 60) and dy <= 110)
+            p2_body_range = (dx <= (p2_slen + 60) and dy <= 110)
 
-            # Facing checks
-            p1_facing_p2 = (p1.direction == 1 and p2.x > p1.x) or (p1.direction == -1 and p2.x < p1.x)
-            p2_facing_p1 = (p2.direction == 1 and p1.x > p2.x) or (p2.direction == -1 and p1.x < p2.x)
+            # Close-quarters & point-blank facing check:
+            # Allows hits if enemy steps inside the blade reach or slightly overlaps attacker (up to 25px behind)
+            p1_facing_p2 = (p1.direction == 1 and p2.x >= (p1.x - 25)) or (p1.direction == -1 and p2.x <= (p1.x + 25))
+            p2_facing_p1 = (p2.direction == 1 and p1.x >= (p2.x - 25)) or (p2.direction == -1 and p1.x <= (p2.x + 25))
             
             # Attacking only if fighter actually has sword in hand!
             p1_slashing = (hasattr(p1, 'sword') and getattr(p1, 'has_sword', True) and p1.sword.attack_state == 2 and not getattr(p1.sword, 'has_hit', False))
@@ -228,6 +233,7 @@ class GameEngine:
             if sword_range and p1_slashing and p2_slashing and p1_facing_p2 and p2_facing_p1:
                 p1.sword.has_hit = True
                 p2.sword.has_hit = True
+                self.clash_event = True
                 p1.target_x -= 20 * p1.direction
                 p2.target_x -= 20 * p2.direction
                 p1.speed_x = 4
@@ -410,8 +416,9 @@ class GameEngine:
                         s['x'] += 14 * s['dir']
                         s['distance_traveled'] = s.get('distance_traveled', 0) + 14
                         
-                        # Check collision with enemy
-                        if abs(s['x'] - enemy.x) <= 35 and abs(s['y'] - enemy.y) <= 65:
+                        # Check collision with enemy: spans head (enemy.y - 30) to feet (enemy.y + 135)
+                        enemy_hitbox_y = (enemy.y - 30 <= s['y'] <= enemy.y + 135)
+                        if abs(s['x'] - enemy.x) <= 45 and enemy_hitbox_y:
                             if (getattr(enemy, 'barrier_timer', 0) > 0
                                     or getattr(enemy, 'dome_timer', 0) > 0):
                                 logger.info("--- THROWN SWORD ABSORBED BY TRIG DEFENSE! ---")
@@ -449,8 +456,9 @@ class GameEngine:
                     s['x'] = s['origin_x'] + (WAVE_SPEED * s['t'] * s['dir'])
                     amplitude = WAVE_AMPLITUDE * (0.3 + 0.07 * s.get('power', 1))
                     s['y'] = s['origin_y'] - amplitude * math.sin(phase)
-                    if (not s.get('has_hit') and abs(s['x'] - enemy.x) <= 35
-                            and abs(s['y'] - enemy.y) <= 65):
+                    enemy_hitbox_y = (enemy.y - 30 <= s['y'] <= enemy.y + 135)
+                    if (not s.get('has_hit') and abs(s['x'] - enemy.x) <= 45
+                            and enemy_hitbox_y):
                         s['has_hit'] = True
                         if (getattr(enemy, 'barrier_timer', 0) > 0
                                 or getattr(enemy, 'dome_timer', 0) > 0):
@@ -476,8 +484,9 @@ class GameEngine:
                     s['x'] = s['origin_x'] + (WAVE_SPEED * s['t'] * s['dir'])
                     amplitude = WAVE_AMPLITUDE * (0.3 + 0.07 * s.get('power', 1))
                     s['y'] = s['origin_y'] - amplitude * math.cos(phase)
-                    if (not s.get('has_hit') and abs(s['x'] - enemy.x) <= 40
-                            and abs(s['y'] - enemy.y) <= 75):
+                    enemy_hitbox_y = (enemy.y - 30 <= s['y'] <= enemy.y + 135)
+                    if (not s.get('has_hit') and abs(s['x'] - enemy.x) <= 45
+                            and enemy_hitbox_y):
                         s['has_hit'] = True
                         if (getattr(enemy, 'dome_timer', 0) > 0
                                 or getattr(enemy, 'barrier_timer', 0) > 0):

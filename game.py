@@ -776,7 +776,8 @@ def game_loop():
                                     'origin_y': round(s.get('origin_y', s.get('y', 470)), 1)
                                 }
                                 for s in getattr(room.engine, 'spells', [])
-                            ]
+                            ],
+                            'clash': getattr(room.engine, 'clash_event', False)
                         }
                         socketio.emit('update_game_gui', data_to_send, to=room.room_id)
                 except Exception as re:

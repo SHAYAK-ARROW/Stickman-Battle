@@ -267,9 +267,8 @@ function draw_on_camvas(data) {
         // 2. Sword Swing & Dynamic Clash
         const p1Slashing = data.player1.has_sword && data.player1.attack_state === 2;
         const p2Slashing = data.player2.has_sword && data.player2.attack_state === 2;
-        const fightersClose = Math.abs(data.player1.x - data.player2.x) <= 140;
 
-        if (p1Slashing && p2Slashing && fightersClose && (!prevP1Attacking || !prevP2Attacking)) {
+        if (data.clash) {
             window.AudioEngine.playSwordClash();
         } else {
             if (p1Slashing && !prevP1Attacking) window.AudioEngine.playSwordSwing();
