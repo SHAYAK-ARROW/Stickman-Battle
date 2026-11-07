@@ -27,6 +27,153 @@ function updateConnectionStatus(status) {
     }
 }
 
+// --- Reusable Modern Toast Notification (Fallback & Global) ---
+if (typeof window.showToast !== 'function') {
+    window.showToast = function showToast({ title, message, type = 'info', duration = 3500 }) {
+        let container = document.getElementById('toast_container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast_container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        const iconSymbols = { success: '✓', warning: '⚡', info: 'ℹ', danger: '✕' };
+        const iconChar = iconSymbols[type] || 'ℹ';
+
+        toast.innerHTML = `
+            <div class="toast-icon ${type}">${iconChar}</div>
+            <div class="toast-content">
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" title="Close">&times;</button>
+        `;
+
+        const closeToast = () => {
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 250);
+        };
+
+        toast.querySelector('.toast-close').addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeToast();
+        });
+        toast.addEventListener('click', closeToast);
+
+        container.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('show'));
+
+        if (duration > 0) {
+            setTimeout(closeToast, duration);
+        }
+    };
+}
+const showToast = window.showToast;
+
+// --- ⚡ 30-Second Quick Start Guide Banner Handlers ---
+function dismissQuickGuide() {
+    const banner = document.getElementById('quick_start_guide_banner');
+    if (banner) {
+        banner.style.display = 'none';
+        try {
+            localStorage.setItem('stickman_quick_guide_dismissed', '1');
+        } catch(e) {}
+    }
+}
+window.dismissQuickGuide = dismissQuickGuide;
+
+function toggleQuickGuide() {
+    const banner = document.getElementById('quick_start_guide_banner');
+    if (!banner) return;
+    const isHidden = (banner.style.display === 'none' || getComputedStyle(banner).display === 'none');
+    if (isHidden) {
+        banner.style.display = 'block';
+        try {
+            localStorage.removeItem('stickman_quick_guide_dismissed');
+        } catch(e) {}
+    } else {
+        banner.style.display = 'none';
+        try {
+            localStorage.setItem('stickman_quick_guide_dismissed', '1');
+        } catch(e) {}
+    }
+}
+window.toggleQuickGuide = toggleQuickGuide;
+
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        if (localStorage.getItem('stickman_quick_guide_dismissed') === '1') {
+            const banner = document.getElementById('quick_start_guide_banner');
+            if (banner) banner.style.display = 'none';
+        }
+    } catch(e) {}
+});
+
+// --- 📡 Combat Telemetry Logging Engine ---
+const telemetryStartTime = Date.now();
+const MAX_TELEMETRY_LOGS = 12;
+
+function logCombatTelemetry(category, tag, message) {
+    const feed = document.getElementById('telemetry_log_feed');
+    if (!feed) return;
+
+    const elapsed = Math.floor((Date.now() - telemetryStartTime) / 1000);
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    const timeStr = `${m}:${s}`;
+
+    const entry = document.createElement('div');
+    entry.className = `telemetry-entry ${category}`;
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'telemetry-time';
+    timeSpan.textContent = timeStr;
+
+    const tagSpan = document.createElement('span');
+    tagSpan.className = `telemetry-tag ${category}`;
+    tagSpan.textContent = tag;
+
+    const msgSpan = document.createElement('span');
+    msgSpan.className = 'telemetry-msg';
+    msgSpan.textContent = message;
+
+    entry.appendChild(timeSpan);
+    entry.appendChild(tagSpan);
+    entry.appendChild(msgSpan);
+
+    feed.appendChild(entry);
+
+    while (feed.children.length > MAX_TELEMETRY_LOGS) {
+        feed.removeChild(feed.firstChild);
+    }
+    feed.scrollTop = feed.scrollHeight;
+
+    const counter = document.getElementById('telemetry_counter');
+    if (counter) {
+        counter.textContent = `${feed.children.length} Events`;
+    }
+}
+window.logCombatTelemetry = logCombatTelemetry;
+
+function clearCombatTelemetry() {
+    const feed = document.getElementById('telemetry_log_feed');
+    if (feed) {
+        feed.innerHTML = `
+            <div class="telemetry-entry sys">
+                <span class="telemetry-time">00:00</span>
+                <span class="telemetry-tag sys">[RESET]</span>
+                <span class="telemetry-msg">Telemetry feed cleared. Listening for combat events...</span>
+            </div>
+        `;
+    }
+    const counter = document.getElementById('telemetry_counter');
+    if (counter) counter.textContent = 'Cleared';
+}
+window.clearCombatTelemetry = clearCombatTelemetry;
+
 // --- TAB VISIBILITY & MATCH PAUSE SYNCHRONIZATION ---
 let isMatchPaused = false;
 let pauseSecondsLeft = 60;
@@ -169,6 +316,7 @@ let prevP1Attacking = false;
 let prevP2Attacking = false;
 let activeSpellKeys = new Set();
 let prevGameOver = false;
+let prevClash = false;
 
 // --- SWORD TRAIL / MOTION BLUR SYSTEM ---
 const swordTrails = {
@@ -252,14 +400,19 @@ function draw_on_camvas(data) {
         pausePlayerId = data.paused_by;
     }
 
-    // --- PROCEDURAL AUDIO SFX EVENT TRIGGERS (Suppressed when paused or tab hidden!) ---
-    if (!isPaused && !document.hidden && window.AudioEngine) {
+    // --- PROCEDURAL AUDIO SFX & COMBAT TELEMETRY EVENT TRIGGERS ---
+    if (!isPaused) {
         // 1. Damage Hit
         if (prevP1Heart !== null && data.player1.heart < prevP1Heart) {
-            window.AudioEngine.playDamageHit();
+            if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit();
+            const dmg = prevP1Heart - data.player1.heart;
+            logCombatTelemetry('hit', '[DAMAGE HIT]', `💥 P1 took ${dmg} DMG! (Hearts: ${data.player1.heart}/10)`);
         }
         if (prevP2Heart !== null && data.player2.heart < prevP2Heart) {
-            window.AudioEngine.playDamageHit();
+            if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit();
+            const dmg = prevP2Heart - data.player2.heart;
+            const target = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'Bot' : 'P2';
+            logCombatTelemetry('hit', '[DAMAGE HIT]', `💥 ${target} took ${dmg} DMG! (Hearts: ${data.player2.heart}/10)`);
         }
         prevP1Heart = data.player1.heart;
         prevP2Heart = data.player2.heart;
@@ -269,24 +422,40 @@ function draw_on_camvas(data) {
         const p2Slashing = data.player2.has_sword && data.player2.attack_state === 2;
 
         if (data.clash) {
-            window.AudioEngine.playSwordClash();
+            if (!document.hidden && window.AudioEngine) window.AudioEngine.playSwordClash();
+            if (!prevClash) {
+                logCombatTelemetry('clash', '[SWORD CLASH]', '⚔️ Mid-air Sword Clash! Kinetic sparks erupted!');
+            }
         } else {
-            if (p1Slashing && !prevP1Attacking) window.AudioEngine.playSwordSwing();
-            if (p2Slashing && !prevP2Attacking) window.AudioEngine.playSwordSwing();
+            if (p1Slashing && !prevP1Attacking && !document.hidden && window.AudioEngine) window.AudioEngine.playSwordSwing();
+            if (p2Slashing && !prevP2Attacking && !document.hidden && window.AudioEngine) window.AudioEngine.playSwordSwing();
         }
+        prevClash = !!data.clash;
         prevP1Attacking = p1Slashing;
         prevP2Attacking = p2Slashing;
 
         // 3. Shield Block
-        if ((data.player1.is_blocking && !prevP1Blocking) || (data.player2.is_blocking && !prevP2Blocking)) {
-            window.AudioEngine.playShieldBlock();
+        if (data.player1.is_blocking && !prevP1Blocking) {
+            if (!document.hidden && window.AudioEngine) window.AudioEngine.playShieldBlock();
+            logCombatTelemetry('shield', '[DEFENSE]', '🛡️ P1 raised shield barrier');
+        }
+        if (data.player2.is_blocking && !prevP2Blocking) {
+            if (!document.hidden && window.AudioEngine) window.AudioEngine.playShieldBlock();
+            const target = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'Bot' : 'P2';
+            logCombatTelemetry('shield', '[DEFENSE]', `🛡️ ${target} raised shield barrier`);
         }
         prevP1Blocking = !!data.player1.is_blocking;
         prevP2Blocking = !!data.player2.is_blocking;
 
         // 4. Dodge / Crouch
-        if ((data.player1.is_crouching && !prevP1Crouching) || (data.player2.is_crouching && !prevP2Crouching)) {
-            window.AudioEngine.playDodge();
+        if (data.player1.is_crouching && !prevP1Crouching) {
+            if (!document.hidden && window.AudioEngine) window.AudioEngine.playDodge();
+            logCombatTelemetry('dodge', '[EVASION]', '💨 P1 crouched / evaded');
+        }
+        if (data.player2.is_crouching && !prevP2Crouching) {
+            if (!document.hidden && window.AudioEngine) window.AudioEngine.playDodge();
+            const target = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'Bot' : 'P2';
+            logCombatTelemetry('dodge', '[EVASION]', `💨 ${target} crouched / evaded`);
         }
         prevP1Crouching = !!data.player1.is_crouching;
         prevP2Crouching = !!data.player2.is_crouching;
@@ -297,7 +466,9 @@ function draw_on_camvas(data) {
                 const sKey = `${s.type}_${s.owner || 0}_${s.origin_x || s.x || 0}`;
                 if (!activeSpellKeys.has(sKey) && (s.t === undefined || s.t <= 2)) {
                     activeSpellKeys.add(sKey);
-                    window.AudioEngine.playSpell(s.type);
+                    if (!document.hidden && window.AudioEngine) window.AudioEngine.playSpell(s.type);
+                    const ownerLabel = s.owner === 1 ? 'P1' : ((typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'Bot' : 'P2');
+                    logCombatTelemetry('spell', '[TRIG SPELL]', `✨ ${ownerLabel} cast ${s.type} (Power: ${s.power || 1})`);
                 }
             });
             if (activeSpellKeys.size > 150) activeSpellKeys.clear();
@@ -307,6 +478,7 @@ function draw_on_camvas(data) {
         prevP2Heart = data.player2.heart;
         prevP1Attacking = false;
         prevP2Attacking = false;
+        prevClash = false;
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -957,6 +1129,7 @@ function draw_on_camvas(data) {
         if (window.AudioEngine) {
             window.AudioEngine.playGameOver(iWon);
         }
+        logCombatTelemetry('gameover', '[VICTORY]', `🏆 ${winnerText}`);
 
         // 🏆 Progressive Arcade Unlock Record on Victory
         if (iWon && typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM && typeof BOT_DIFFICULTY !== 'undefined') {
@@ -1086,6 +1259,11 @@ function run() {
     };
     socket.emit("run_code", payload);
 
+    const activeLines = code.trim().split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
+    const firstCmd = activeLines[0] || code.trim().split('\n')[0] || "custom algorithm";
+    const shortCmd = firstCmd.length > 30 ? firstCmd.slice(0, 27) + '...' : firstCmd;
+    logCombatTelemetry('code', `[P${MY_PLAYER_ID} CODE]`, `Sent: ${shortCmd}`);
+
     // Safety timeout: Auto-recover from "Running..." if network hangs
     clearTimeout(window._runCodeSafetyTimeout);
     window._runCodeSafetyTimeout = setTimeout(() => {
@@ -1147,12 +1325,15 @@ socket.on('code_error', (data) => {
     }
     if (data && data.error) {
         showDiagnostics(data.error);
+        const firstErr = (data.error.split('\n')[0] || data.error);
+        logCombatTelemetry('error', '[COMPILE ERR]', firstErr.slice(0, 42));
     }
 });
 
 socket.on('code_success', () => {
     dismissDiagnostics();
     clearTimeout(window._runCodeSafetyTimeout);
+    logCombatTelemetry('success', '[ACCEPTED]', 'Combat instructions verified & running');
     const runBtn = document.getElementById("run_btn");
     if (runBtn) {
         runBtn.disabled = false;
@@ -1234,6 +1415,7 @@ socket.on('emergency_used', (data) => {
     startEmergencyCooldownUI(action, cd);
     const label = action === 'shield' ? '🛡️ Quick Shield' : '💨 Quick Dodge';
     showEmergencyFeedback(`${label} activated!`, 'success');
+    logCombatTelemetry('emergency', '[PANIC REFLEX]', `🚨 ${label} activated! (-15⚡)`);
 });
 
 socket.on('emergency_cooldown', (data) => {
@@ -1244,13 +1426,65 @@ socket.on('emergency_rejected', (data) => {
     showEmergencyFeedback(data.reason || 'Action rejected', 'danger');
 });
 
-// Tactical Keyboard Hotkeys (Alt+S for Shield, Alt+D for Dodge)
+// Tactical Keyboard Hotkeys (Alt+S for Shield, Alt+D for Dodge) & WASD Guidance
+let lastWASDToastTime = 0;
+
 window.addEventListener('keydown', (e) => {
+    // 1. Tactical Keyboard Hotkeys
     if (e.altKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
         triggerEmergency('shield');
+        return;
     } else if (e.altKey && (e.key === 'd' || e.key === 'D')) {
         e.preventDefault();
         triggerEmergency('dodge');
+        return;
+    }
+
+    // Don't intercept if modifier keys like Ctrl, Cmd, or Alt are pressed
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+    // Check if player is focused in an active input, textarea, or CodeMirror editor
+    const activeEl = document.activeElement;
+    const isTyping = activeEl && (
+        activeEl.tagName === 'INPUT' ||
+        activeEl.tagName === 'TEXTAREA' ||
+        activeEl.isContentEditable ||
+        activeEl.closest('.CodeMirror') ||
+        activeEl.closest('#opponent_input_modal') ||
+        activeEl.closest('#strategy_vault_dialog') ||
+        activeEl.closest('#commands_dialog')
+    );
+    if (isTyping) return;
+
+    // Also don't intercept if battle start gate is visible (any key enters the gate)
+    const gate = document.getElementById('battle_start_gate');
+    if (gate && gate.style.display !== 'none' && gate.offsetParent !== null) {
+        return;
+    }
+
+    // WASD & Arrow Keys Intervention for casual arcade gamers
+    const wasdKeys = ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '];
+    if (wasdKeys.includes(e.key) || ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        const now = Date.now();
+        if (now - lastWASDToastTime > 3000) {
+            lastWASDToastTime = now;
+            if (typeof showToast === 'function') {
+                showToast({
+                    title: "Keyboard Controls Disabled ⚡",
+                    message: "Standard keyboard controls disabled! Click Quick Snippets or write Python code to duel!",
+                    type: "warning",
+                    duration: 3800
+                });
+            }
+            // Highlight the 1-Click Snippets row with a pulsing neon ring
+            const chipsRow = document.getElementById('quick_code_chips_row') || document.querySelector('.quick-code-chips-row');
+            if (chipsRow) {
+                chipsRow.classList.remove('chips-attention-pulse');
+                void chipsRow.offsetWidth; // trigger reflow
+                chipsRow.classList.add('chips-attention-pulse');
+                setTimeout(() => chipsRow.classList.remove('chips-attention-pulse'), 1600);
+            }
+        }
     }
 });

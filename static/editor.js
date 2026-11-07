@@ -810,6 +810,47 @@ function insertSnippet(snippet) {
 
 window.insertSnippet = insertSnippet;
 
+// --- ⚡ 1-Click Action Snippet Runner (Zero-Friction Duel) ---
+function runSnippet(snippet) {
+    if (window.AudioEngine) window.AudioEngine.playClick();
+
+    if (codeMirrorInstance) {
+        codeMirrorInstance.setValue(snippet);
+        codeMirrorInstance.save();
+        const wrapper = codeMirrorInstance.getWrapperElement();
+        if (wrapper) {
+            wrapper.classList.remove("cm-insert-pulse");
+            void wrapper.offsetWidth;
+            wrapper.classList.add("cm-insert-pulse");
+            setTimeout(() => wrapper.classList.remove("cm-insert-pulse"), 800);
+        }
+    } else {
+        const editor = document.getElementById("ide");
+        if (editor) {
+            editor.value = snippet;
+            editor.focus();
+        }
+    }
+
+    if (typeof updateLineNumbers === 'function') updateLineNumbers();
+    if (typeof updateIndentGuides === 'function') updateIndentGuides();
+
+    if (typeof showToast === 'function') {
+        showToast({
+            title: "⚡ 1-Click Action",
+            message: `Executing: ${snippet}`,
+            type: "success",
+            duration: 1500
+        });
+    }
+
+    if (typeof run === 'function') {
+        run();
+    }
+}
+
+window.runSnippet = runSnippet;
+
 function setupCommandsTableInsertButtons() {
     const table = document.getElementById("commands_table");
     if (!table) return;

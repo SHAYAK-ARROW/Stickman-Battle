@@ -20,7 +20,7 @@
 
     <link rel="stylesheet" href="/static/lib/codemirror/dracula.min.css">
 
-    <link rel="stylesheet" href="/static/style.css?v=1.2.1">
+    <link rel="stylesheet" href="/static/style.css?v=1.2.3">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 
@@ -144,6 +144,12 @@
 
             </button>
 
+            <button id="guide_toggle_btn" type="button" class="action-chip-btn guide-toggle-btn" onclick="toggleQuickGuide()" title="Toggle 30-Second Quick Start Guide">
+
+                <span>💡 30s Guide</span>
+
+            </button>
+
             <div id="connection_status" class="connection-status" role="status" aria-live="polite">
 
                 <span id="status_dot" class="status-dot"></span>
@@ -154,6 +160,43 @@
 
         </div>
 
+    </div>
+
+    <!-- ⚡ 30-Second Quick Start Guide Banner (Zero-Friction Duel) -->
+    <div id="quick_start_guide_banner" class="quick-start-guide-banner">
+        <div class="guide-banner-header">
+            <div class="guide-banner-title">
+                <span class="guide-bolt-icon">⚡</span>
+                <span class="guide-headline">30-Second Quick Start Guide</span>
+                <span class="guide-badge">No Coding Required to Play</span>
+            </div>
+            <button type="button" class="guide-close-btn" onclick="dismissQuickGuide()" title="Dismiss Quick Guide">✕</button>
+        </div>
+        <div class="guide-steps-grid">
+            <div class="guide-step-card">
+                <span class="step-num">1</span>
+                <div class="step-content">
+                    <span class="step-title">Choose Action</span>
+                    <span class="step-desc">Click <b>⚡ 1-Click Duel</b> chips below or type Python commands.</span>
+                </div>
+            </div>
+            <div class="guide-step-arrow">➔</div>
+            <div class="guide-step-card">
+                <span class="step-num">2</span>
+                <div class="step-content">
+                    <span class="step-title">Execute Code</span>
+                    <span class="step-desc">Chips run instantly! Or click <b>Run</b> for custom algorithms.</span>
+                </div>
+            </div>
+            <div class="guide-step-arrow">➔</div>
+            <div class="guide-step-card highlight">
+                <span class="step-num">3</span>
+                <div class="step-content">
+                    <span class="step-title">Watch Fight</span>
+                    <span class="step-desc">Watch real-time sword clashes, dodges, and physics collisions!</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="arena-wrap">
@@ -293,6 +336,28 @@
 
 </div>
 
+    <!-- 📡 Live Combat Telemetry Terminal (Real-time Action & Energy Log) -->
+    <div id="combat_telemetry_terminal" class="combat-telemetry-panel">
+        <div class="telemetry-header">
+            <div class="telemetry-title-group">
+                <span class="telemetry-dot"></span>
+                <span class="telemetry-label">COMBAT TELEMETRY</span>
+                <span class="telemetry-sublabel">LIVE BATTLE FEED</span>
+            </div>
+            <div class="telemetry-meta">
+                <span id="telemetry_counter" class="telemetry-badge">Ready</span>
+                <button type="button" class="telemetry-clear-btn" onclick="window.clearCombatTelemetry && window.clearCombatTelemetry()" title="Clear telemetry log">Clear</button>
+            </div>
+        </div>
+        <div id="telemetry_log_feed" class="telemetry-feed" role="log" aria-live="polite">
+            <div class="telemetry-entry sys">
+                <span class="telemetry-time">00:00</span>
+                <span class="telemetry-tag sys">[SYSTEM]</span>
+                <span class="telemetry-msg">Combat telemetry online. Arena physics & sensors active.</span>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 
@@ -385,15 +450,15 @@ else:
 
     </div>
 
-        <!-- ⚡ Quick Action Chips (Rapid 1-tap coding for mobile and desktop) -->
-    <div class="quick-code-chips-row">
-        <span class="chips-label">Quick Snippets:</span>
-        <button type="button" class="code-chip-btn" onclick="insertSnippet('dash(3)')" title="Insert dash(3)">⚡ Dash</button>
-        <button type="button" class="code-chip-btn" onclick="insertSnippet('attack()')" title="Insert attack()">🗡️ Attack</button>
-        <button type="button" class="code-chip-btn" onclick="insertSnippet('heavy_attack()')" title="Insert heavy_attack()">💥 Heavy</button>
-        <button type="button" class="code-chip-btn" onclick="insertSnippet('block()')" title="Insert block()">🛡️ Block</button>
-        <button type="button" class="code-chip-btn" onclick="insertSnippet('sin_wave()')" title="Insert sin_wave()">📐 Sin Wave</button>
-        <button type="button" class="code-chip-btn" onclick="insertSnippet('run(3)')" title="Insert run(3)">🏃 Run</button>
+        <!-- ⚡ Quick Action Chips (1-Click Zero-Friction Duel) -->
+    <div id="quick_code_chips_row" class="quick-code-chips-row">
+        <span class="chips-label">⚡ 1-Click Duel:</span>
+        <button type="button" class="code-chip-btn" onclick="runSnippet('dash(3)')" title="1-Click: Dash forward and attack!">⚡ Dash</button>
+        <button type="button" class="code-chip-btn" onclick="runSnippet('attack()')" title="1-Click: Swift sword strike!">🗡️ Attack</button>
+        <button type="button" class="code-chip-btn" onclick="runSnippet('heavy_attack()')" title="1-Click: Heavy attack (breaks shields)!">💥 Heavy</button>
+        <button type="button" class="code-chip-btn" onclick="runSnippet('block()')" title="1-Click: Raise shield barrier!">🛡️ Block</button>
+        <button type="button" class="code-chip-btn" onclick="runSnippet('sin_wave()')" title="1-Click: Cast sine wave energy pulse!">📐 Sin Wave</button>
+        <button type="button" class="code-chip-btn" onclick="runSnippet('run(3)')" title="1-Click: Run forward!">🏃 Run</button>
     </div>
     <div class="editor-toolbar">
 
@@ -1364,7 +1429,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/audio.js?v=1.2.1"></script>
 
-<script src="/static/game.js?v=1.2.2"></script>
+<script src="/static/game.js?v=1.2.3"></script>
 
 <script src="/static/lib/codemirror/codemirror.min.js"></script>
 
@@ -1372,7 +1437,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/lib/codemirror/python.min.js"></script>
 
-<script src="/static/editor.js"></script>
+<script src="/static/editor.js?v=1.2.3"></script>
 
 
 
