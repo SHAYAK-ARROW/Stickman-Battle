@@ -696,21 +696,24 @@ window.closeStrategyVaultDialog = closeStrategyVaultDialog;
 window.saveToVaultCard = saveToVaultCard;
 
 // --- OPPONENT INPUT MODAL (Model 1 Challenge/Dialogue) ---
-socket.on('prompt_opponent_input', function(data) {
-    if (data.from_player !== MY_PLAYER_ID) {
-        let modal = document.getElementById('opponent_input_modal');
-        let title = document.getElementById('input_modal_title');
-        let prompt = document.getElementById('input_modal_prompt');
-        let field = document.getElementById('input_modal_field');
-        if (modal && prompt && field) {
-            title.innerText = `💬 Player ${data.from_player} asks:`;
-            prompt.innerText = data.prompt || "Say something:";
-            field.value = "";
-            modal.style.display = "block";
-            setTimeout(() => field.focus(), 50);
+const appSocket = (typeof socket !== 'undefined' ? socket : (typeof window !== 'undefined' ? window.socket : null));
+if (appSocket) {
+    appSocket.on('prompt_opponent_input', function(data) {
+        if (data.from_player !== MY_PLAYER_ID) {
+            let modal = document.getElementById('opponent_input_modal');
+            let title = document.getElementById('input_modal_title');
+            let prompt = document.getElementById('input_modal_prompt');
+            let field = document.getElementById('input_modal_field');
+            if (modal && prompt && field) {
+                title.innerText = `💬 Player ${data.from_player} asks:`;
+                prompt.innerText = data.prompt || "Say something:";
+                field.value = "";
+                modal.style.display = "block";
+                setTimeout(() => field.focus(), 50);
+            }
         }
-    }
-});
+    });
+}
 
 function sendInputReply() {
     let modal = document.getElementById('opponent_input_modal');
@@ -718,11 +721,14 @@ function sendInputReply() {
     if (!field || !modal) return;
     let reply = field.value.trim();
     if (reply) {
-        socket.emit('reply_input', {
-            room_id: typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default',
-            from_player: MY_PLAYER_ID,
-            reply: reply
-        });
+        const curSocket = (typeof socket !== 'undefined' ? socket : (typeof window !== 'undefined' ? window.socket : null));
+        if (curSocket) {
+            curSocket.emit('reply_input', {
+                room_id: typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default',
+                from_player: MY_PLAYER_ID,
+                reply: reply
+            });
+        }
     }
     modal.style.display = "none";
     field.value = "";

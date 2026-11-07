@@ -5,6 +5,7 @@ const socket = io({
     reconnectionAttempts: 30,
     reconnectionDelay: 1000
 }); // Connect to the server using Socket.IO (prioritize WebSocket for low latency)
+window.socket = socket;
 
 // Connection Status Helpers
 const statusDot = document.getElementById('status_dot');
@@ -27,51 +28,49 @@ function updateConnectionStatus(status) {
     }
 }
 
-// --- Reusable Modern Toast Notification (Fallback & Global) ---
-if (typeof window.showToast !== 'function') {
-    window.showToast = function showToast({ title, message, type = 'info', duration = 3500 }) {
-        let container = document.getElementById('toast_container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast_container';
-            document.body.appendChild(container);
-        }
+// --- Reusable Modern Toast Notification ---
+function showToast({ title, message, type = 'info', duration = 3500 }) {
+    let container = document.getElementById('toast_container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast_container';
+        document.body.appendChild(container);
+    }
 
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        const iconSymbols = { success: '✓', warning: '⚡', info: 'ℹ', danger: '✕' };
-        const iconChar = iconSymbols[type] || 'ℹ';
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    const iconSymbols = { success: '✓', warning: '⚡', info: 'ℹ', danger: '✕' };
+    const iconChar = iconSymbols[type] || 'ℹ';
 
-        toast.innerHTML = `
-            <div class="toast-icon ${type}">${iconChar}</div>
-            <div class="toast-content">
-                <div class="toast-title">${title}</div>
-                <div class="toast-message">${message}</div>
-            </div>
-            <button class="toast-close" title="Close">&times;</button>
-        `;
+    toast.innerHTML = `
+        <div class="toast-icon ${type}">${iconChar}</div>
+        <div class="toast-content">
+            <div class="toast-title">${title}</div>
+            <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" title="Close">&times;</button>
+    `;
 
-        const closeToast = () => {
-            toast.classList.remove('show');
-            toast.classList.add('hide');
-            setTimeout(() => toast.remove(), 250);
-        };
-
-        toast.querySelector('.toast-close').addEventListener('click', (e) => {
-            e.stopPropagation();
-            closeToast();
-        });
-        toast.addEventListener('click', closeToast);
-
-        container.appendChild(toast);
-        requestAnimationFrame(() => toast.classList.add('show'));
-
-        if (duration > 0) {
-            setTimeout(closeToast, duration);
-        }
+    const closeToast = () => {
+        toast.classList.remove('show');
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 250);
     };
+
+    toast.querySelector('.toast-close').addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeToast();
+    });
+    toast.addEventListener('click', closeToast);
+
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    if (duration > 0) {
+        setTimeout(closeToast, duration);
+    }
 }
-const showToast = window.showToast;
+window.showToast = showToast;
 
 // --- ⚡ 30-Second Quick Start Guide Banner Handlers ---
 function dismissQuickGuide() {
