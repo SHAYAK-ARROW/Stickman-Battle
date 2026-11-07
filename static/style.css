@@ -1383,6 +1383,24 @@ button { color: inherit; }
     background: rgba(184, 160, 224, 0.22);
     color: #fff;
 }
+.next-stage-btn {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #34d399 !important;
+    font-weight: 700;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.next-stage-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    box-shadow: 0 0 24px rgba(16, 185, 129, 0.65);
+    transform: translateY(-1px);
+    color: #ffffff !important;
+}
 .audio-toggle-btn {
     user-select: none;
     -webkit-user-select: none;

@@ -950,9 +950,37 @@ function draw_on_camvas(data) {
     }
 
     if (is_game_over && !prevGameOver) {
+        const p1Dead = (data.player1 && data.player1.heart <= 0);
+        const p2Dead = (data.player2 && data.player2.heart <= 0);
+        const isDraw = p1Dead && p2Dead;
+        const iWon = !isDraw && ((MY_PLAYER_ID === 1 && p2Dead) || (MY_PLAYER_ID === 2 && p1Dead));
+
         if (window.AudioEngine) {
-            const iWon = (MY_PLAYER_ID === 1 && data.player2.heart <= 0) || (MY_PLAYER_ID === 2 && data.player1.heart <= 0);
             window.AudioEngine.playGameOver(iWon);
+        }
+
+        // 🏆 Progressive Arcade Unlock Record on Victory
+        if (iWon && typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM && typeof BOT_DIFFICULTY !== 'undefined') {
+            const stageMap = { 'rusher': 1, 'easy': 1, 'turtle': 2, 'weaver': 3, 'duelist': 4, 'hard': 5, 'berserker': 5, 'apex': 6 };
+            const currentStage = stageMap[BOT_DIFFICULTY] || 1;
+            if (currentStage < 6) {
+                try {
+                    const prevUnlocked = parseInt(localStorage.getItem('stickman_arcade_unlocked') || '1', 10);
+                    const nextStage = Math.max(prevUnlocked, currentStage + 1);
+                    localStorage.setItem('stickman_arcade_unlocked', nextStage.toString());
+                    console.log(`🏆 Arcade milestone unlocked: Stage ${nextStage}!`);
+                    if (typeof showToast === 'function') {
+                        showToast({
+                            title: "Stage Unlocked! 🏆",
+                            message: `Congratulations! Stage ${nextStage} has been unlocked in the Arcade Ladder!`,
+                            type: "success",
+                            duration: 5000
+                        });
+                    }
+                } catch(e) {
+                    console.error("Failed to save arcade milestone to localStorage", e);
+                }
+            }
         }
     }
     prevGameOver = is_game_over;
@@ -964,6 +992,28 @@ function draw_on_camvas(data) {
     const exitMatchBtn = document.getElementById('exit_match_btn');
     if (exitMatchBtn) {
         exitMatchBtn.style.display = is_game_over ? 'inline-flex' : 'none';
+    }
+    const nextStageBtn = document.getElementById('next_stage_btn');
+    if (nextStageBtn) {
+        const p1Dead = (data.player1 && data.player1.heart <= 0);
+        const p2Dead = (data.player2 && data.player2.heart <= 0);
+        const wonMatch = (MY_PLAYER_ID === 1 && p2Dead) || (MY_PLAYER_ID === 2 && p1Dead);
+        const nextBotMap = {
+            'rusher': { key: 'turtle', label: 'Stage 2: Iron Turtle' },
+            'turtle': { key: 'weaver', label: 'Stage 3: Wave Weaver' },
+            'weaver': { key: 'duelist', label: 'Stage 4: Shadow Duelist' },
+            'duelist': { key: 'berserker', label: 'Stage 5: Berserker Ronin' },
+            'berserker': { key: 'apex', label: 'Stage 6: Apex Sovereign' }
+        };
+        const nextBot = (typeof BOT_DIFFICULTY !== 'undefined') ? nextBotMap[BOT_DIFFICULTY] : null;
+
+        if (is_game_over && wonMatch && typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM && nextBot) {
+            nextStageBtn.style.display = 'inline-flex';
+            nextStageBtn.href = '/bot/' + nextBot.key;
+            nextStageBtn.innerText = `⚔️ Next: ${nextBot.label} ➔`;
+        } else {
+            nextStageBtn.style.display = 'none';
+        }
     }
 
     const runBtn = document.getElementById('run_btn');

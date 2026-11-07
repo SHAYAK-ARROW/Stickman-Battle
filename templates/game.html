@@ -403,6 +403,8 @@ else:
 
         <button id="restart_btn" class="button button-secondary" onclick="request_restart()" style="display: none;">Play again</button>
 
+        <a id="next_stage_btn" href="#" class="button button-primary next-stage-btn" style="display: none;" title="Advance to the next Arcade Stage">⚔️ Next Stage ➔</a>
+
         <a id="exit_match_btn" href="/" class="button button-secondary leave-lobby-btn" style="display: none;" title="Exit match and return to Lobby">🏠 Exit to Lobby</a>
 
     </div>
@@ -1338,9 +1340,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/audio.js?v=1.2.1"></script>
 
-<script src="/static/game.js?v=1.2.1"></script>
-
-<script src="/static/render.js"></script>
+<script src="/static/game.js?v=1.2.2"></script>
 
 <script src="/static/lib/codemirror/codemirror.min.js"></script>
 
