@@ -27,6 +27,50 @@ function updateConnectionStatus(status) {
     }
 }
 
+// --- TAB VISIBILITY & MATCH PAUSE SYNCHRONIZATION ---
+let isMatchPaused = false;
+let pauseSecondsLeft = 60;
+let pausePlayerId = null;
+
+function sendPlayerTabState() {
+    const isHidden = !!document.hidden;
+    console.log("🎮 Tab visibility changed. Hidden:", isHidden);
+    if (typeof socket !== 'undefined' && socket && socket.connected) {
+        socket.emit('player_tab_state', { hidden: isHidden });
+    }
+}
+
+document.addEventListener('visibilitychange', sendPlayerTabState);
+window.addEventListener('pagehide', () => sendPlayerTabState());
+window.addEventListener('pageshow', () => sendPlayerTabState());
+
+socket.on('game_paused', (data) => {
+    isMatchPaused = true;
+    pausePlayerId = data.paused_by;
+    pauseSecondsLeft = data.timeout || 60;
+    console.log("⏸️ Match paused by Player", data.paused_by);
+});
+
+socket.on('game_resumed', (data) => {
+    isMatchPaused = false;
+    pausePlayerId = null;
+    console.log("▶️ Match resumed by Player", data.resumed_by);
+});
+
+socket.on('player_afk_timeout', (data) => {
+    isMatchPaused = false;
+    pausePlayerId = null;
+    console.warn("⚠️ Match ended due to AFK timeout:", data.message);
+    if (typeof showToast === 'function') {
+        showToast({
+            title: "Match Ended",
+            message: data.message || "Player was away for more than 1 minute.",
+            type: "warning",
+            duration: 6000
+        });
+    }
+});
+
 socket.on('connect', () => {
     console.log("Connected to server! Room:", typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default');
     updateConnectionStatus('connected');
@@ -199,8 +243,17 @@ function draw_sword_trails() {
 function draw_on_camvas(data) {
     if (!data || !data.player1 || !data.player2) return;
 
-    // --- PROCEDURAL AUDIO SFX EVENT TRIGGERS ---
-    if (window.AudioEngine) {
+    const isPaused = !!data.is_paused;
+    isMatchPaused = isPaused;
+    if (data.pause_seconds_left !== undefined) {
+        pauseSecondsLeft = data.pause_seconds_left;
+    }
+    if (data.paused_by !== undefined) {
+        pausePlayerId = data.paused_by;
+    }
+
+    // --- PROCEDURAL AUDIO SFX EVENT TRIGGERS (Suppressed when paused or tab hidden!) ---
+    if (!isPaused && !document.hidden && window.AudioEngine) {
         // 1. Damage Hit
         if (prevP1Heart !== null && data.player1.heart < prevP1Heart) {
             window.AudioEngine.playDamageHit();
@@ -250,6 +303,11 @@ function draw_on_camvas(data) {
             });
             if (activeSpellKeys.size > 150) activeSpellKeys.clear();
         }
+    } else {
+        prevP1Heart = data.player1.heart;
+        prevP2Heart = data.player2.heart;
+        prevP1Attacking = false;
+        prevP2Attacking = false;
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -851,6 +909,46 @@ function draw_on_camvas(data) {
         ctx.restore();
     }
 
+    // Pause Overlay Banner
+    if (isPaused && !is_game_over) {
+        ctx.save();
+        ctx.fillStyle = "rgba(10, 11, 16, 0.72)";
+        ctx.fillRect(0, 0, canvas.width, 600);
+
+        const bannerW = 440;
+        const bannerH = 76;
+        const bannerX = (canvas.width - bannerW) / 2;
+        const bannerY = 220;
+
+        ctx.fillStyle = "rgba(22, 23, 29, 0.95)";
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 2;
+        if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(bannerX, bannerY, bannerW, bannerH, 12);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+            ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
+        }
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        ctx.font = "700 22px 'Space Grotesk', 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#fbbf24";
+        ctx.fillText("⏸️ MATCH PAUSED", canvas.width / 2, bannerY + 34);
+
+        ctx.font = "500 14px 'Space Grotesk', 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#94a3b8";
+        const isMyPause = (pausePlayerId !== null && typeof MY_PLAYER_ID !== 'undefined') ? (pausePlayerId === MY_PLAYER_ID) : true;
+        const pauseMsg = isMyPause ?
+            `You switched tab · Auto-forfeit in ${pauseSecondsLeft}s` :
+            `Opponent switched tab · Waiting (Auto-win in ${pauseSecondsLeft}s)`;
+        ctx.fillText(pauseMsg, canvas.width / 2, bannerY + 58);
+        ctx.restore();
+    }
+
     if (is_game_over && !prevGameOver) {
         if (window.AudioEngine) {
             const iWon = (MY_PLAYER_ID === 1 && data.player2.heart <= 0) || (MY_PLAYER_ID === 2 && data.player1.heart <= 0);
@@ -873,8 +971,11 @@ function draw_on_camvas(data) {
         if (is_game_over) {
             runBtn.disabled = true;
             runBtn.innerText = "Match Over (Play Again to Rematch)";
-        } else if (data.is_match_active && runBtn.disabled) {
-            // Self-healing: if server reports active match, ensure button is ready
+        } else if (isPaused) {
+            runBtn.disabled = true;
+            runBtn.innerText = "⏸️ Match Paused";
+        } else if (data.is_match_active && runBtn.disabled && (runBtn.innerText.includes("Paused") || runBtn.innerText.includes("Waiting"))) {
+            // Self-healing: if server reports active match and unpaused, ensure button is ready
             runBtn.disabled = false;
             runBtn.innerText = "Run";
             const waitScreen = document.getElementById('wait_screen');

@@ -74,13 +74,13 @@
 
             // Master BGM Gain (volume controlled)
             masterBgmGain = audioCtx.createGain();
-            const initBgmGain = bgmEnabled ? 0.35 * bgmVolume : 0.0001;
+            const initBgmGain = bgmEnabled ? 0.35 * bgmVolume : 0;
             masterBgmGain.gain.setValueAtTime(initBgmGain, audioCtx.currentTime);
             masterBgmGain.connect(audioCtx.destination);
 
             // Master SFX Gain (volume controlled)
             masterSfxGain = audioCtx.createGain();
-            const initSfxGain = sfxEnabled ? 0.60 * sfxVolume : 0.0001;
+            const initSfxGain = sfxEnabled ? 0.60 * sfxVolume : 0;
             masterSfxGain.gain.setValueAtTime(initSfxGain, audioCtx.currentTime);
             masterSfxGain.connect(audioCtx.destination);
         }
@@ -98,6 +98,9 @@
     let droneOsc2 = null;
     let droneFilter = null;
     let droneGain = null;
+    let activeChordOscs = [];
+    let activeChordGain = null;
+    let sparkleTimer = null;
 
     // Parallel "straight line" ambient drone / synth pad (warm root & fifth grounding bed)
     function startDronePad() {
@@ -137,7 +140,7 @@
         }
     }
 
-    function stopDronePad() {
+    function stopDronePad(immediate) {
         if (droneGain && audioCtx) {
             const oldOsc1 = droneOsc1;
             const oldOsc2 = droneOsc2;
@@ -148,16 +151,27 @@
             droneGain = null;
             droneFilter = null;
 
-            try {
-                oldGain.gain.cancelScheduledValues(audioCtx.currentTime);
-                oldGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
-                setTimeout(() => {
-                    try { oldOsc1 && oldOsc1.stop(); oldOsc1 && oldOsc1.disconnect(); } catch (e) {}
-                    try { oldOsc2 && oldOsc2.stop(); oldOsc2 && oldOsc2.disconnect(); } catch (e) {}
-                    try { oldFilter && oldFilter.disconnect(); } catch (e) {}
-                    try { oldGain && oldGain.disconnect(); } catch (e) {}
-                }, 650);
-            } catch (e) {}
+            if (immediate) {
+                try {
+                    oldGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                    oldGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                } catch (e) {}
+                try { oldOsc1 && oldOsc1.stop(); oldOsc1 && oldOsc1.disconnect(); } catch (e) {}
+                try { oldOsc2 && oldOsc2.stop(); oldOsc2 && oldOsc2.disconnect(); } catch (e) {}
+                try { oldFilter && oldFilter.disconnect(); } catch (e) {}
+                try { oldGain && oldGain.disconnect(); } catch (e) {}
+            } else {
+                try {
+                    oldGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                    oldGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
+                    setTimeout(() => {
+                        try { oldOsc1 && oldOsc1.stop(); oldOsc1 && oldOsc1.disconnect(); } catch (e) {}
+                        try { oldOsc2 && oldOsc2.stop(); oldOsc2 && oldOsc2.disconnect(); } catch (e) {}
+                        try { oldFilter && oldFilter.disconnect(); } catch (e) {}
+                        try { oldGain && oldGain.disconnect(); } catch (e) {}
+                    }, 350);
+                } catch (e) {}
+            }
         }
     }
 
@@ -166,7 +180,18 @@
         const ctx = getAudioContext(true);
         if (!ctx || !bgmEnabled || document.hidden) return;
 
+        // Clean up any lingering chord oscillators before starting next step
+        activeChordOscs.forEach(o => {
+            try { o.stop(); o.disconnect(); } catch (e) {}
+        });
+        activeChordOscs = [];
+        if (activeChordGain) {
+            try { activeChordGain.disconnect(); } catch (e) {}
+            activeChordGain = null;
+        }
+
         const chordGain = ctx.createGain();
+        activeChordGain = chordGain;
         chordGain.gain.setValueAtTime(0.001, ctx.currentTime);
         chordGain.gain.exponentialRampToValueAtTime(0.30, ctx.currentTime + 1.0); // Gentle 1s swell
         chordGain.gain.setValueAtTime(0.30, ctx.currentTime + 2.8); // Steady sustain
@@ -190,12 +215,18 @@
             osc.connect(chordGain);
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + duration);
+            activeChordOscs.push(osc);
+            osc.onended = () => {
+                const i = activeChordOscs.indexOf(osc);
+                if (i !== -1) activeChordOscs.splice(i, 1);
+            };
         });
 
         // Gentle sparkle bell
         if (Math.random() > 0.3) {
-            setTimeout(() => {
-                if (!bgmEnabled || !audioCtx) return;
+            if (sparkleTimer) clearTimeout(sparkleTimer);
+            sparkleTimer = setTimeout(() => {
+                if (!bgmEnabled || !audioCtx || document.hidden) return;
                 playSparkleBell();
             }, 1000 + Math.random() * 1200);
         }
@@ -234,7 +265,7 @@
     }
 
     function startBGM() {
-        if (!bgmEnabled) return;
+        if (!bgmEnabled || document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx) return;
         if (masterBgmGain) {
@@ -247,16 +278,30 @@
         }
     }
 
-    function stopBGM() {
+    function stopBGM(immediate) {
         isBgmPlaying = false;
         if (bgmTimer) {
             clearTimeout(bgmTimer);
             bgmTimer = null;
         }
-        stopDronePad();
+        if (sparkleTimer) {
+            clearTimeout(sparkleTimer);
+            sparkleTimer = null;
+        }
+        activeChordOscs.forEach(o => {
+            try { o.stop(); o.disconnect(); } catch (e) {}
+        });
+        activeChordOscs = [];
+        if (activeChordGain) {
+            try { activeChordGain.disconnect(); } catch (e) {}
+            activeChordGain = null;
+        }
+        stopDronePad(immediate !== false);
         if (audioCtx && masterBgmGain) {
-            masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
-            masterBgmGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+            try {
+                masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                masterBgmGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            } catch (e) {}
         }
     }
 
@@ -264,6 +309,7 @@
 
     // 1. Sword Swing (Crisp Swoosh)
     function playSwordSwing() {
+        if (document.hidden) return;
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
         const duration = 0.15;
@@ -298,6 +344,7 @@
 
     // 2. Sword Clash (Loud Ringing Metallic Clang)
     function playSwordClash() {
+        if (document.hidden) return;
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
         [1760, 2400, 3200].forEach((freq, idx) => {
@@ -320,6 +367,7 @@
 
     // 3. Shield Block (Solid Punchy Thud)
     function playShieldBlock() {
+        if (document.hidden) return;
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
         const osc = ctx.createOscillator();
@@ -339,6 +387,7 @@
 
     // 4. Damage Hit (Crisp Punch Impact)
     function playDamageHit() {
+        if (document.hidden) return;
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
         const osc = ctx.createOscillator();
@@ -363,6 +412,7 @@
 
     // 5. Trig Spells (Sci-Fi Laser / Wave)
     function playSpell(type) {
+        if (document.hidden) return;
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
 
@@ -428,6 +478,7 @@
 
     // 6. Dodge / Quick Dash
     function playDodge() {
+        if (document.hidden) return;
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
         const osc = ctx.createOscillator();
@@ -447,6 +498,7 @@
 
     // 7. Tactical Click (Distinct High-Pitch Double Chime)
     function playClick() {
+        if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
         [880, 1320].forEach((freq, idx) => {
@@ -467,10 +519,12 @@
 
     // 8. Match Start Chime (523Hz -> 783Hz Ready Bell)
     function playMatchStart() {
+        if (document.hidden) return;
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
         [523.25, 783.99].forEach((freq, i) => {
             setTimeout(() => {
+                if (document.hidden || !sfxEnabled) return;
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = 'sine';
@@ -489,11 +543,13 @@
 
     // 9. Game Over (Victory / Defeat)
     function playGameOver(isWinner) {
+        if (document.hidden) return;
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
         const notes = isWinner ? [523.25, 659.25, 783.99, 1046.50] : [440.00, 392.00, 349.23, 261.63];
         notes.forEach((freq, idx) => {
             setTimeout(() => {
+                if (document.hidden || !sfxEnabled) return;
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = isWinner ? 'triangle' : 'sine';
@@ -554,11 +610,11 @@
         if (bgmEnabled) {
             if (bgmVolume === 0) bgmVolume = 0.70;
             startBGM();
+            playClick();
         } else {
-            stopBGM();
+            stopBGM(true);
         }
         updateUI();
-        playClick();
         console.log("🎵 BGM toggled:", bgmEnabled ? "ON" : "OFF");
     }
 
@@ -579,11 +635,14 @@
         } else if (bgmVolume === 0 && bgmEnabled) {
             bgmEnabled = false;
             safeSet('sb_bgm_enabled', '0');
-            stopBGM();
+            stopBGM(true);
         } else if (bgmEnabled && masterBgmGain && audioCtx) {
             masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
             masterBgmGain.gain.setValueAtTime(0.35 * bgmVolume, audioCtx.currentTime);
             if (!isBgmPlaying) startBGM();
+        } else if (!bgmEnabled && masterBgmGain && audioCtx) {
+            masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+            masterBgmGain.gain.setValueAtTime(0, audioCtx.currentTime);
         }
         updateUI();
     }
@@ -597,7 +656,8 @@
         sfxEnabled = !sfxEnabled;
         safeSet('sb_sfx_enabled', sfxEnabled ? '1' : '0');
         if (masterSfxGain && audioCtx) {
-            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0.0001, audioCtx.currentTime);
+            masterSfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
+            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0, audioCtx.currentTime);
         }
         updateUI();
         if (sfxEnabled) {
@@ -625,7 +685,7 @@
         }
         if (masterSfxGain && audioCtx) {
             masterSfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
-            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0.0001, audioCtx.currentTime);
+            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0, audioCtx.currentTime);
         }
         updateUI();
         if (sfxEnabled) playClick();
@@ -658,20 +718,20 @@
     let wasBgmPlayingBeforeHide = false;
 
     // Complete Audio Mute/Teardown on Tab Switch or Minimize
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
+    function handleAudioVisibility(isHidden) {
+        if (isHidden) {
             wasBgmPlayingBeforeHide = isBgmPlaying;
-            stopBGM();
+            stopBGM(true);
             if (masterBgmGain && audioCtx) {
                 try {
                     masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
-                    masterBgmGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                    masterBgmGain.gain.setValueAtTime(0, audioCtx.currentTime);
                 } catch (e) {}
             }
             if (masterSfxGain && audioCtx) {
                 try {
                     masterSfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
-                    masterSfxGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                    masterSfxGain.gain.setValueAtTime(0, audioCtx.currentTime);
                 } catch (e) {}
             }
             if (audioCtx && audioCtx.state === 'running') {
@@ -682,34 +742,39 @@
                 audioCtx.resume().then(() => {
                     if (masterSfxGain) {
                         masterSfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
-                        masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0.0001, audioCtx.currentTime);
+                        masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0, audioCtx.currentTime);
                     }
                     if (masterBgmGain) {
                         masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
-                        masterBgmGain.gain.setValueAtTime(bgmEnabled ? 0.35 * bgmVolume : 0.0001, audioCtx.currentTime);
+                        masterBgmGain.gain.setValueAtTime(bgmEnabled ? 0.35 * bgmVolume : 0, audioCtx.currentTime);
                     }
                     if (bgmEnabled && (wasBgmPlayingBeforeHide || !isBgmPlaying)) {
                         startBGM();
                     }
                 }).catch(() => {});
             } else if (bgmEnabled && !isBgmPlaying) {
+                if (masterBgmGain && audioCtx) {
+                    masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                    masterBgmGain.gain.setValueAtTime(0.35 * bgmVolume, audioCtx.currentTime);
+                }
                 startBGM();
             }
         }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        handleAudioVisibility(!!document.hidden);
     });
 
     // Handle tab close or page navigation
     window.addEventListener('pagehide', () => {
-        stopBGM();
-        if (audioCtx && audioCtx.state === 'running') {
-            audioCtx.suspend().catch(() => {});
-        }
+        handleAudioVisibility(true);
+    });
+    window.addEventListener('pageshow', () => {
+        handleAudioVisibility(!!document.hidden);
     });
     window.addEventListener('beforeunload', () => {
-        stopBGM();
-        if (audioCtx && audioCtx.state === 'running') {
-            audioCtx.suspend().catch(() => {});
-        }
+        handleAudioVisibility(true);
     });
 
     document.addEventListener('DOMContentLoaded', updateUI);
