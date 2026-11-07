@@ -20,7 +20,7 @@
 
     <link rel="stylesheet" href="/static/lib/codemirror/dracula.min.css">
 
-    <link rel="stylesheet" href="/static/style.css?v=1.2.4">
+    <link rel="stylesheet" href="/static/style.css?v=1.2.7">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 
@@ -40,7 +40,7 @@
 
         <div class="brand-text-wrap">
 
-            <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v1.2</span></span>
+            <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v1.3</span></span>
 
             <span class="brand-subtitle">Made by Arrows Development Hub</span>
 
@@ -100,6 +100,37 @@
 
 <section id="battle_layout" aria-label="Battle arena and code editor">
 
+<!-- 📡 COLUMN 1 (20%): LIVE COMBAT TELEMETRY & TACTICAL INTEL -->
+<div id="combat_telemetry_terminal" class="panel telemetry-sidebar-panel">
+    <div class="panel-heading telemetry-sidebar-heading">
+        <div>
+            <p class="eyebrow">LIVE TELEMETRY</p>
+            <h2>Combat feed</h2>
+        </div>
+        <div class="telemetry-meta">
+            <span id="telemetry_counter" class="telemetry-badge">Ready</span>
+            <button type="button" class="telemetry-clear-btn" onclick="window.clearCombatTelemetry && window.clearCombatTelemetry()" title="Clear telemetry log">Clear</button>
+        </div>
+    </div>
+    
+    <div id="telemetry_log_feed" class="telemetry-feed" role="log" aria-live="polite">
+        <div class="telemetry-entry sys">
+            <span class="telemetry-time">00:00</span>
+            <span class="telemetry-tag sys">[SYSTEM]</span>
+            <span class="telemetry-msg">Combat telemetry online. Arena physics & sensors active.</span>
+        </div>
+    </div>
+
+    <!-- Quick Tactical Legend -->
+    <div class="telemetry-legend">
+        <div class="legend-item"><span class="legend-tag hit">[HIT]</span> Damage</div>
+        <div class="legend-item"><span class="legend-tag clash">[CLASH]</span> Parry</div>
+        <div class="legend-item"><span class="legend-tag shield">[SHIELD]</span> Block</div>
+        <div class="legend-item"><span class="legend-tag spell">[SPELL]</span> Spell</div>
+    </div>
+</div>
+
+<!-- ⚔️ COLUMN 2 (50%): HERO BATTLE ARENA STAGE -->
 <div id="battle_stage" class="panel arena-panel">
 
     <div class="panel-heading">
@@ -336,31 +367,12 @@
 
 </div>
 
-    <!-- 📡 Live Combat Telemetry Terminal (Real-time Action & Energy Log) -->
-    <div id="combat_telemetry_terminal" class="combat-telemetry-panel">
-        <div class="telemetry-header">
-            <div class="telemetry-title-group">
-                <span class="telemetry-dot"></span>
-                <span class="telemetry-label">COMBAT TELEMETRY</span>
-                <span class="telemetry-sublabel">LIVE BATTLE FEED</span>
-            </div>
-            <div class="telemetry-meta">
-                <span id="telemetry_counter" class="telemetry-badge">Ready</span>
-                <button type="button" class="telemetry-clear-btn" onclick="window.clearCombatTelemetry && window.clearCombatTelemetry()" title="Clear telemetry log">Clear</button>
-            </div>
-        </div>
-        <div id="telemetry_log_feed" class="telemetry-feed" role="log" aria-live="polite">
-            <div class="telemetry-entry sys">
-                <span class="telemetry-time">00:00</span>
-                <span class="telemetry-tag sys">[SYSTEM]</span>
-                <span class="telemetry-msg">Combat telemetry online. Arena physics & sensors active.</span>
-            </div>
-        </div>
-    </div>
-
 </div>
 
-
+<!-- ↔️ INTERACTIVE SPLITTER: DRAG TO RESIZE ARENA & EDITOR (এদিক-ওদিক টানুন) · DOUBLE-CLICK TO RESET -->
+<div id="layout_splitter" class="layout-splitter" role="separator" aria-orientation="vertical" tabindex="0" title="Drag to resize Arena & Editor (এদিক-ওদিক টেনে সাইজ পরিবর্তন করুন) · Double-click to reset">
+    <div class="splitter-handle"></div>
+</div>
 
 <div id="code_eddior" class="panel editor-panel">
 
@@ -368,7 +380,12 @@
 
         <div><p class="eyebrow">YOUR STRATEGY</p><h2>Code editor</h2></div>
 
-        <span class="language-pill">Python</span>
+        <div class="editor-header-actions">
+            <button id="editor_layout_toggle_btn" type="button" class="layout-mode-btn" onclick="toggleEditorLayoutPreset()" title="Toggle layout preset: 30% ⇄ 42% ⇄ 22%">
+                <span id="layout_preset_icon">↔️</span> <span id="layout_preset_label">Width: 30%</span>
+            </button>
+            <span class="language-pill">Python</span>
+        </div>
 
     </div>
 
@@ -1429,7 +1446,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/audio.js?v=1.2.1"></script>
 
-<script src="/static/game.js?v=1.2.4"></script>
+<script src="/static/game.js?v=1.2.7"></script>
 
 <script src="/static/lib/codemirror/codemirror.min.js"></script>
 
@@ -1437,7 +1454,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/lib/codemirror/python.min.js"></script>
 
-<script src="/static/editor.js?v=1.2.4"></script>
+<script src="/static/editor.js?v=1.2.7"></script>
 
 
 

@@ -73,9 +73,8 @@ button { color: inherit; }
 }
 
 /* ── Layout Shells ─────────────────────────────────────────── */
-.home-shell, .game-shell { width: min(1380px, calc(100% - 56px)); margin: 0 auto; }
-.home-shell { min-height: 100vh; display: flex; flex-direction: column; }
-.game-shell { padding-bottom: 36px; }
+.home-shell { width: min(1380px, calc(100% - 56px)); margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+.game-shell { width: min(1820px, 98vw); margin: 0 auto; padding-bottom: 16px; zoom: 0.84; }
 
 /* ── Header ────────────────────────────────────────────────── */
 .site-header {
@@ -311,11 +310,11 @@ button { color: inherit; }
     animation: pulse-dot 1.8s ease-in-out infinite;
 }
 
-/* ── Game: Battle Layout ───────────────────────────────────── */
+/* ── Game: Battle Layout (PC 3-Column Cockpit with Draggable Splitter) ── */
 #battle_layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(340px, .8fr);
-    gap: 16px;
+    grid-template-columns: var(--col-term, 20fr) var(--col-arena, 50fr) 8px var(--col-editor, 30fr);
+    gap: 12px;
     align-items: stretch;
 }
 
@@ -325,9 +324,64 @@ button { color: inherit; }
     border-radius: var(--radius);
     background: var(--surface);
 }
-.arena-panel, .editor-panel { padding: 16px; }
+.arena-panel, .editor-panel, .telemetry-sidebar-panel { padding: 16px; }
 .arena-panel { overflow: visible; }
-.editor-panel { overflow: hidden; }
+.editor-panel { overflow: hidden; display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.telemetry-sidebar-panel { overflow: hidden; display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+/* ── Interactive Layout Splitter (Drag to Resize Arena & Editor) ── */
+.layout-splitter {
+    width: 8px;
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+.layout-splitter:hover, .layout-splitter.is-dragging {
+    background: rgba(56, 189, 248, 0.15);
+}
+.splitter-handle {
+    width: 4px;
+    height: 48px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.15s ease;
+}
+.layout-splitter:hover .splitter-handle, .layout-splitter.is-dragging .splitter-handle {
+    background: #38bdf8;
+    box-shadow: 0 0 10px #38bdf8;
+    height: 72px;
+}
+
+.editor-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.layout-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.layout-mode-btn:hover {
+    border-color: #38bdf8;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.1);
+}
 
 .panel-heading {
     display: flex;
@@ -337,8 +391,23 @@ button { color: inherit; }
     margin-bottom: 12px;
     padding-top: 2px;
 }
-.panel-heading .eyebrow { margin: 0 0 3px; color: var(--muted); }
-.panel-heading h2 { margin: 0; font: 600 16px/1.2 var(--heading); }
+.panel-heading > div:first-child {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.panel-heading .eyebrow {
+    margin: 0 0 3px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+}
+.panel-heading h2 {
+    margin: 0;
+    font: 700 18.5px/1.2 var(--heading);
+    letter-spacing: -0.3px;
+    color: #f1f5f9;
+}
 
 /* ── Connection Status ─────────────────────────────────────── */
 .connection-status {
@@ -445,7 +514,9 @@ button { color: inherit; }
 
 .editor-frame {
     display: flex;
-    height: clamp(380px, 46vw, 560px);
+    flex: 1 1 auto;
+    min-height: 420px;
+    height: 100%;
     overflow: hidden;
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -582,10 +653,15 @@ button { color: inherit; }
     letter-spacing: .3px;
 }
 
-/* ── Responsive ────────────────────────────────────────────── */
-@media (max-width: 1080px) {
-    .home-shell, .game-shell { width: min(100% - 32px, 860px); }
-    #battle_layout { grid-template-columns: 1fr; }
+/* ── Responsive Mobile & Tablet Stack ──────────────────────── */
+@media (max-width: 960px) {
+    .home-shell, .game-shell { width: min(100% - 24px, 860px); zoom: 1; }
+    #battle_layout { grid-template-columns: 1fr; gap: 14px; }
+    .layout-splitter { display: none !important; }
+    #battle_stage { order: 1; }
+    #code_eddior { order: 2; }
+    #combat_telemetry_terminal { order: 3; margin-top: 10px; }
+    #combat_telemetry_terminal .telemetry-feed { max-height: 110px; }
     .editor-frame { height: 420px; }
 }
 
@@ -756,11 +832,11 @@ button { color: inherit; }
     gap: 2px;
 }
 .brand-title {
-    font: 700 18px/1.1 var(--heading);
-    letter-spacing: -.4px;
+    font: 700 21px/1.1 var(--heading);
+    letter-spacing: -.5px;
 }
 .brand-subtitle {
-    font: 500 10.5px/1 'DM Sans', sans-serif;
+    font: 500 11.5px/1 'DM Sans', sans-serif;
     color: var(--accent);
     letter-spacing: .2px;
 }
@@ -2840,6 +2916,56 @@ li.CodeMirror-hint-active .hint-desc {
 /* ==============================================================================
    📡 COMBAT TELEMETRY & LIVE ACTION LOG PANEL
    ============================================================================== */
+/* ── Telemetry Sidebar Specifics (Cockpit Column 1: 20%) ── */
+.telemetry-sidebar-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+}
+
+.telemetry-sidebar-panel .telemetry-feed {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none !important;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 4px;
+}
+
+.telemetry-legend {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 8px;
+    font-size: 10.5px;
+    color: #94a3b8;
+    font-family: var(--mono, monospace);
+    flex-shrink: 0;
+}
+    font-family: var(--mono, monospace);
+    flex-shrink: 0;
+}
+
+.telemetry-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.telemetry-legend .legend-tag {
+    font-size: 9.5px;
+    font-weight: 700;
+}
+
 .combat-telemetry-panel {
     background: rgba(13, 15, 22, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.08);

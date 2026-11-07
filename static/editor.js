@@ -904,3 +904,137 @@ function setupCommandsTableInsertButtons() {
         tr.appendChild(td);
     });
 }
+
+// ==============================================================================
+// ↔️ COCKPIT LAYOUT SPLITTER & EDITOR WIDTH CONTROLLER ("এদিক-ওদিক" RESIZER)
+// ==============================================================================
+const COCKPIT_LAYOUT_PRESETS = [
+    { name: '30%', term: '20fr', arena: '50fr', editor: '30fr' },
+    { name: '42%', term: '18fr', arena: '40fr', editor: '42fr' },
+    { name: '22%', term: '18fr', arena: '60fr', editor: '22fr' }
+];
+let currentCockpitPresetIdx = 0;
+
+function applyCockpitLayout(term, arena, editor, label) {
+    const layout = document.getElementById('battle_layout');
+    const presetBtn = document.getElementById('layout_preset_label');
+    if (!layout) return;
+    layout.style.setProperty('--col-term', term);
+    layout.style.setProperty('--col-arena', arena);
+    layout.style.setProperty('--col-editor', editor);
+    if (presetBtn && label) presetBtn.textContent = `Width: ${label}`;
+    try {
+        localStorage.setItem('sb_layout_ratio', JSON.stringify({ term, arena, editor, label }));
+    } catch(e) {}
+    if (window.editor && typeof window.editor.refresh === 'function') {
+        setTimeout(() => window.editor.refresh(), 40);
+    }
+}
+
+window.toggleEditorLayoutPreset = function() {
+    currentCockpitPresetIdx = (currentCockpitPresetIdx + 1) % COCKPIT_LAYOUT_PRESETS.length;
+    const p = COCKPIT_LAYOUT_PRESETS[currentCockpitPresetIdx];
+    applyCockpitLayout(p.term, p.arena, p.editor, p.name);
+    if (typeof showToast === 'function') {
+        showToast({
+            title: "Layout Adjusted",
+            message: `Editor width set to ${p.name}.`,
+            type: "info",
+            duration: 1500
+        });
+    }
+};
+
+(function initCockpitLayoutSplitter() {
+    function setupSplitter() {
+        const layout = document.getElementById('battle_layout');
+        const splitter = document.getElementById('layout_splitter');
+        if (!layout || !splitter) return;
+
+        // Load saved layout preference
+        try {
+            const saved = JSON.parse(localStorage.getItem('sb_layout_ratio'));
+            if (saved && saved.term && saved.arena && saved.editor) {
+                applyCockpitLayout(saved.term, saved.arena, saved.editor, saved.label || '30%');
+                const matchedIdx = COCKPIT_LAYOUT_PRESETS.findIndex(p => p.editor === saved.editor);
+                if (matchedIdx !== -1) currentCockpitPresetIdx = matchedIdx;
+            }
+        } catch(e) {}
+
+        // Drag to resize between Arena and Editor
+        let isDragging = false;
+        let startX = 0;
+        let startArenaW = 0;
+        let startEditorW = 0;
+        let availableW = 0;
+
+        splitter.addEventListener('mousedown', (e) => {
+            if (window.innerWidth <= 960) return;
+            isDragging = true;
+            splitter.classList.add('is-dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            startX = e.clientX;
+
+            const arena = document.getElementById('battle_stage');
+            const editorEl = document.getElementById('code_eddior');
+            startArenaW = arena ? arena.getBoundingClientRect().width : 0;
+            startEditorW = editorEl ? editorEl.getBoundingClientRect().width : 0;
+            availableW = startArenaW + startEditorW;
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - startX;
+            let newArenaW = startArenaW + deltaX;
+            let newEditorW = startEditorW - deltaX;
+
+            // Bounds: Arena min 440px, Editor min 320px
+            if (newArenaW < 440) {
+                newArenaW = 440;
+                newEditorW = availableW - 440;
+            } else if (newEditorW < 320) {
+                newEditorW = 320;
+                newArenaW = availableW - 320;
+            }
+
+            const arenaFr = (newArenaW / availableW * 80).toFixed(1) + 'fr';
+            const editorFr = (newEditorW / availableW * 80).toFixed(1) + 'fr';
+            const approxPct = Math.round(newEditorW / (availableW + 300) * 100);
+            applyCockpitLayout('20fr', arenaFr, editorFr, `${approxPct}%`);
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            splitter.classList.remove('is-dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            if (window.editor && typeof window.editor.refresh === 'function') {
+                window.editor.refresh();
+            }
+        });
+
+        // Double click resets to standard 30%
+        splitter.addEventListener('dblclick', () => {
+            currentCockpitPresetIdx = 0;
+            const p = COCKPIT_LAYOUT_PRESETS[0];
+            applyCockpitLayout(p.term, p.arena, p.editor, p.name);
+            if (typeof showToast === 'function') {
+                showToast({
+                    title: "Layout Reset",
+                    message: "Reset to default 20% : 50% : 30% layout.",
+                    type: "info",
+                    duration: 1500
+                });
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupSplitter);
+    } else {
+        setupSplitter();
+    }
+})();
