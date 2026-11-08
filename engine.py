@@ -20,6 +20,7 @@ class GameEngine:
         self.shields = []
         self.spells = []
         self.clash_event = False
+        self.combat_events = []
         self.last_hit_player = None
 
     def add_player(self, *player_list):
@@ -27,6 +28,8 @@ class GameEngine:
             self.players.append(player)
 
     def update(self):
+        self.combat_events = []
+        self.clash_event = False
         # Match game over check
         is_game_over = any(player.heart <= 0 for player in self.players)
     
@@ -203,7 +206,6 @@ class GameEngine:
                 player.pending_spells.clear()
         
         # --- MELEE SWORD COLLISION & DAMAGE (DYNAMIC SWORD & SHIELD LENGTH) ---
-        self.clash_event = False
         if not is_game_over and len(self.players) >= 2:
             p1 = self.players[0]
             p2 = self.players[1]
@@ -238,6 +240,9 @@ class GameEngine:
                 p2.target_x -= 20 * p2.direction
                 p1.speed_x = 4
                 p2.speed_x = 4
+                clash_x = (p1.x + p2.x) / 2.0
+                clash_y = (p1.y + p2.y) / 2.0 + 40
+                self.combat_events.append({'type': 'sword_clash', 'x': round(clash_x, 1), 'y': round(clash_y, 1)})
                 logger.info("--- SWORD CLASH! ---")
                 
             # Case 2: Player 1 attacks Player 2
@@ -249,6 +254,7 @@ class GameEngine:
                 p2_shield_len = getattr(p2.shield, 'shield_length', 40)
                 
                 if p2_crouching:
+                    self.combat_events.append({'type': 'evasion', 'defender': 2, 'attacker': 1, 'weapon': 'sword'})
                     logger.info("--- PLAYER 2 CROUCHED/DUCKED! Attack missed! ---")
                 elif p2_blocking:
                     if is_heavy:
@@ -256,20 +262,24 @@ class GameEngine:
                         p2.heart -= 1
                         p2.target_x += 45 * p1.direction
                         p2.speed_x = 5
+                        self.combat_events.append({'type': 'shield_break', 'defender': 2, 'attacker': 1, 'damage': 1})
                         logger.info("--- HEAVY ATTACK BROKE SHIELD! 1 DAMAGE! ---")
                     elif p2_shield_len < 25:
                         # Shield is too small (<25px) to block strike
                         p2.heart -= 1
                         p2.target_x += 30 * p1.direction
                         p2.speed_x = 4
+                        self.combat_events.append({'type': 'damage_hit', 'target': 2, 'attacker': 1, 'damage': 1, 'is_heavy': False, 'reason': 'shield_too_small'})
                         logger.info("--- SHIELD TOO SMALL TO BLOCK! 1 DAMAGE! ---")
                     else:
+                        self.combat_events.append({'type': 'shield_block', 'defender': 2, 'attacker': 1, 'weapon': 'sword'})
                         logger.info("--- PLAYER 2 BLOCKED WITH SHIELD! ---")
                 else:
                     dmg = 2 if is_heavy else 1
                     p2.heart -= dmg
                     p2.target_x += (50 if is_heavy else 30) * p1.direction
                     p2.speed_x = (5 if is_heavy else 4)
+                    self.combat_events.append({'type': 'damage_hit', 'target': 2, 'attacker': 1, 'damage': dmg, 'is_heavy': is_heavy, 'weapon': 'sword'})
                     logger.info(f"--- PLAYER 2 HIT! Damage: {dmg}, Hearts left: {p2.heart} ---")
                     
             # Case 3: Player 2 attacks Player 1
@@ -281,6 +291,7 @@ class GameEngine:
                 p1_shield_len = getattr(p1.shield, 'shield_length', 40)
                 
                 if p1_crouching:
+                    self.combat_events.append({'type': 'evasion', 'defender': 1, 'attacker': 2, 'weapon': 'sword'})
                     logger.info("--- PLAYER 1 CROUCHED/DUCKED! Attack missed! ---")
                 elif p1_blocking:
                     if is_heavy:
@@ -288,19 +299,23 @@ class GameEngine:
                         p1.heart -= 1
                         p1.target_x += 45 * p2.direction
                         p1.speed_x = 5
+                        self.combat_events.append({'type': 'shield_break', 'defender': 1, 'attacker': 2, 'damage': 1})
                         logger.info("--- HEAVY ATTACK BROKE SHIELD! 1 DAMAGE! ---")
                     elif p1_shield_len < 25:
                         p1.heart -= 1
                         p1.target_x += 30 * p2.direction
                         p1.speed_x = 4
+                        self.combat_events.append({'type': 'damage_hit', 'target': 1, 'attacker': 2, 'damage': 1, 'is_heavy': False, 'reason': 'shield_too_small'})
                         logger.info("--- SHIELD TOO SMALL TO BLOCK! 1 DAMAGE! ---")
                     else:
+                        self.combat_events.append({'type': 'shield_block', 'defender': 1, 'attacker': 2, 'weapon': 'sword'})
                         logger.info("--- PLAYER 1 BLOCKED WITH SHIELD! ---")
                 else:
                     dmg = 2 if is_heavy else 1
                     p1.heart -= dmg
                     p1.target_x += (50 if is_heavy else 30) * p2.direction
                     p1.speed_x = (5 if is_heavy else 4)
+                    self.combat_events.append({'type': 'damage_hit', 'target': 1, 'attacker': 2, 'damage': dmg, 'is_heavy': is_heavy, 'weapon': 'sword'})
                     logger.info(f"--- PLAYER 1 HIT! Damage: {dmg}, Hearts left: {p1.heart} ---")
                     
             # Cooldown reset
@@ -375,6 +390,7 @@ class GameEngine:
                                 if abs(pl.x - clash_x) <= 90:
                                     pl.target_x += (30 if pl.x >= clash_x else -30)
                                     pl.speed_x = 4
+                            self.combat_events.append({'type': 'trig_fusion', 'x': round(clash_x, 1), 'y': round(clash_y, 1), 'power': power})
                             logger.info(f"--- ⚡ TRIG FUSION! SIN + COS COLLIDED AT X={int(clash_x)} -> TANGENT SPIKE & SHOCKWAVE ERUPTED! ---")
                             
                         # --- MUTUAL CANCELLATION: SAME WAVE VS SAME WAVE ---
@@ -392,12 +408,14 @@ class GameEngine:
                                 'power': 1,
                                 't': 0
                             })
+                            self.combat_events.append({'type': 'wave_clash', 'x': round(clash_x, 1), 'y': round(clash_y, 1)})
                             logger.info(f"--- 💥 WAVE CLASH! Two {t1} waves neutralized each other! ---")
                             
                         # --- SWORD CUT: THROWN SWORD SLICES WAVE ---
                         elif 'throw_sword' in (t1, t2) and ('sin_wave' in (t1, t2) or 'cos_wave' in (t1, t2)):
                             wave_spell = s1 if t1 != 'throw_sword' else s2
                             spells_to_remove.add(id(wave_spell))
+                            self.combat_events.append({'type': 'spell_slice', 'spell': wave_spell.get('type')})
                             logger.info("--- 🗡️ THROWN SWORD SLICED SPELL IN MID-AIR! ---")
 
             remaining_spells = []
@@ -408,6 +426,7 @@ class GameEngine:
                 stype = s['type']
                 owner = s.get('owner')
                 enemy = self.players[1] if owner == self.players[0] else self.players[0]
+                enemy_idx = 2 if enemy == self.players[1] else 1
                 remove_spell = False
                 
                 if stype == 'throw_sword':
@@ -421,15 +440,19 @@ class GameEngine:
                         if abs(s['x'] - enemy.x) <= 45 and enemy_hitbox_y:
                             if (getattr(enemy, 'barrier_timer', 0) > 0
                                     or getattr(enemy, 'dome_timer', 0) > 0):
+                                self.combat_events.append({'type': 'barrier_absorb', 'defender': enemy_idx, 'projectile': 'throw_sword'})
                                 logger.info("--- THROWN SWORD ABSORBED BY TRIG DEFENSE! ---")
                             elif getattr(enemy, 'crouch_timer', 0) > 0:
+                                self.combat_events.append({'type': 'evasion', 'defender': enemy_idx, 'projectile': 'throw_sword'})
                                 logger.info("--- THROWN SWORD FLEW OVER DUCKED OPPONENT! ---")
                             elif hasattr(enemy, 'shield') and enemy.shield.block_timer > 0:
+                                self.combat_events.append({'type': 'shield_block', 'defender': enemy_idx, 'projectile': 'throw_sword'})
                                 logger.info("--- THROWN SWORD DEFLECTED BY SHIELD! ---")
                             else:
                                 enemy.heart -= 1
                                 enemy.target_x += 30 * s['dir']
                                 enemy.speed_x = 4
+                                self.combat_events.append({'type': 'damage_hit', 'target': enemy_idx, 'damage': 1, 'is_heavy': False, 'projectile': 'throw_sword'})
                                 logger.info(f"--- THROWN SWORD HIT! Enemy hearts: {enemy.heart} ---")
                             s['returning'] = True
                         elif s['distance_traveled'] >= 280 or s['x'] < 20 or s['x'] > 780:
@@ -443,6 +466,8 @@ class GameEngine:
                             s['x'] = return_x
                             owner.has_sword = True
                             remove_spell = True
+                            owner_idx = 1 if owner == self.players[0] else 2
+                            self.combat_events.append({'type': 'sword_catch', 'player': owner_idx})
                             logger.info("--- THROWN SWORD RETURNED TO OWNER'S HAND! ---")
                         else:
                             s['x'] += ret_speed * (1 if dx > 0 else -1)
@@ -462,18 +487,23 @@ class GameEngine:
                         s['has_hit'] = True
                         if (getattr(enemy, 'barrier_timer', 0) > 0
                                 or getattr(enemy, 'dome_timer', 0) > 0):
+                            self.combat_events.append({'type': 'barrier_absorb', 'defender': enemy_idx, 'projectile': 'sin_wave'})
                             logger.info("--- SIN_WAVE ABSORBED BY TRIG DEFENSE! ---")
                             remove_spell = True
                         elif getattr(enemy, 'crouch_timer', 0) > 0 and s['y'] < enemy.y + 35:
+                            self.combat_events.append({'type': 'evasion', 'defender': enemy_idx, 'projectile': 'sin_wave'})
                             logger.info("--- SIN_WAVE PASSED OVER CROUCHING OPPONENT! ---")
                         elif hasattr(enemy, 'shield') and enemy.shield.block_timer > 0:
+                            self.combat_events.append({'type': 'shield_block', 'defender': enemy_idx, 'projectile': 'sin_wave'})
                             logger.info("--- SIN_WAVE BLOCKED BY SHIELD! ---")
                             remove_spell = True
                         else:
                             power = s.get('power', 1)
-                            enemy.heart -= _spell_damage(power)
+                            dmg = _spell_damage(power)
+                            enemy.heart -= dmg
                             enemy.target_x += (30 + 10 * (power - 1)) * s['dir']
                             enemy.speed_x = 4
+                            self.combat_events.append({'type': 'damage_hit', 'target': enemy_idx, 'damage': dmg, 'is_heavy': power >= 5, 'projectile': 'sin_wave'})
                             logger.info(f"--- SIN_WAVE POWER {power} HIT! Enemy hearts: {enemy.heart} ---")
                             remove_spell = True
                     if s['t'] >= WAVE_DURATION_FRAMES:
@@ -490,13 +520,20 @@ class GameEngine:
                         s['has_hit'] = True
                         if (getattr(enemy, 'dome_timer', 0) > 0
                                 or getattr(enemy, 'barrier_timer', 0) > 0):
+                            self.combat_events.append({'type': 'barrier_absorb', 'defender': enemy_idx, 'projectile': 'cos_wave'})
                             logger.info("--- COS_WAVE ABSORBED BY TRIG DEFENSE! ---")
+                            remove_spell = True
+                        elif hasattr(enemy, 'shield') and enemy.shield.block_timer > 0:
+                            self.combat_events.append({'type': 'shield_block', 'defender': enemy_idx, 'projectile': 'cos_wave'})
+                            logger.info("--- COS_WAVE BLOCKED BY SHIELD! ---")
                             remove_spell = True
                         else:
                             power = s.get('power', 1)
-                            enemy.heart -= _spell_damage(power)
+                            dmg = _spell_damage(power)
+                            enemy.heart -= dmg
                             enemy.target_x += (35 + 10 * (power - 1)) * s['dir']
                             enemy.speed_x = 4
+                            self.combat_events.append({'type': 'damage_hit', 'target': enemy_idx, 'damage': dmg, 'is_heavy': power >= 5, 'projectile': 'cos_wave'})
                             logger.info(f"--- COS_WAVE POWER {power} HIT! Enemy hearts: {enemy.heart} ---")
                             remove_spell = True
                     if s['t'] >= WAVE_DURATION_FRAMES:
@@ -513,13 +550,18 @@ class GameEngine:
                         for tgt in targets:
                             if abs(tgt.x - s['target_x']) <= 45 and tgt.y >= 440:
                                 s['has_hit'] = True
-                                if (getattr(tgt, 'barrier_timer', 0) > 0
-                                        or getattr(tgt, 'dome_timer', 0) > 0
-                                        or (hasattr(tgt, 'shield') and tgt.shield.block_timer > 0)):
-                                    logger.info("--- TAN_SPIKE BLOCKED BY DEFENSE! ---")
+                                tgt_idx = 1 if tgt == self.players[0] else 2
+                                if (hasattr(tgt, 'shield') and tgt.shield.block_timer > 0):
+                                    self.combat_events.append({'type': 'shield_block', 'defender': tgt_idx, 'projectile': 'tan_spike'})
+                                    logger.info("--- TAN_SPIKE BLOCKED BY SHIELD! ---")
+                                elif (getattr(tgt, 'barrier_timer', 0) > 0 or getattr(tgt, 'dome_timer', 0) > 0):
+                                    self.combat_events.append({'type': 'barrier_absorb', 'defender': tgt_idx, 'projectile': 'tan_spike'})
+                                    logger.info("--- TAN_SPIKE BLOCKED BY BARRIER! ---")
                                 else:
-                                    tgt.heart -= _spell_damage(s.get('power', 1))
+                                    dmg = _spell_damage(s.get('power', 1))
+                                    tgt.heart -= dmg
                                     tgt.jump_pixel = -12
+                                    self.combat_events.append({'type': 'damage_hit', 'target': tgt_idx, 'damage': dmg, 'is_heavy': True, 'projectile': 'tan_spike'})
                                     logger.info(f"--- TAN_SPIKE PIERCED! Hearts: {tgt.heart} ---")
                     elif s['t'] > 60:
                         remove_spell = True
@@ -539,15 +581,19 @@ class GameEngine:
                     enemy_grounded = (enemy.y >= 430)
                     if abs(enemy.x - s['x']) <= 35 and enemy_grounded and not s.get('has_hit'):
                         s['has_hit'] = True
-                        if (getattr(enemy, 'barrier_timer', 0) > 0
-                                or getattr(enemy, 'dome_timer', 0) > 0
-                                or (hasattr(enemy, 'shield') and enemy.shield.block_timer > 0)):
-                            logger.info("--- COT_WALL BLOCKED BY DEFENSE! ---")
+                        if (hasattr(enemy, 'shield') and enemy.shield.block_timer > 0):
+                            self.combat_events.append({'type': 'shield_block', 'defender': enemy_idx, 'projectile': 'cot_wall'})
+                            logger.info("--- COT_WALL BLOCKED BY SHIELD! ---")
+                        elif (getattr(enemy, 'barrier_timer', 0) > 0 or getattr(enemy, 'dome_timer', 0) > 0):
+                            self.combat_events.append({'type': 'barrier_absorb', 'defender': enemy_idx, 'projectile': 'cot_wall'})
+                            logger.info("--- COT_WALL BLOCKED BY BARRIER! ---")
                         else:
                             power = s.get('power', 1)
-                            enemy.heart -= _spell_damage(power)
+                            dmg = _spell_damage(power)
+                            enemy.heart -= dmg
                             enemy.target_x += (45 + 10 * (power - 1)) * s['dir']
                             enemy.speed_x = 5
+                            self.combat_events.append({'type': 'damage_hit', 'target': enemy_idx, 'damage': dmg, 'is_heavy': power >= 5, 'projectile': 'cot_wall'})
                             logger.info(f"--- COT_WALL POWER {power} HIT! Hearts: {enemy.heart} ---")
                     if s['t'] > 60:
                         remove_spell = True

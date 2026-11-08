@@ -92,12 +92,60 @@ function draw_on_camvas(data) {
 
     // --- PROCEDURAL AUDIO SFX EVENT TRIGGERS ---
     if (window.AudioEngine) {
-        // 1. Damage Hit
-        if (prevP1Heart !== null && data.player1.heart < prevP1Heart) {
-            window.AudioEngine.playDamageHit();
+        const eventsHandled = new Set();
+        if (data.combat_events && Array.isArray(data.combat_events)) {
+            data.combat_events.forEach(evt => {
+                switch (evt.type) {
+                    case 'sword_clash':
+                        window.AudioEngine.playSwordClash();
+                        eventsHandled.add('clash');
+                        break;
+                    case 'shield_block':
+                        window.AudioEngine.playShieldBlock();
+                        eventsHandled.add('shield_block');
+                        break;
+                    case 'shield_break':
+                        if (window.AudioEngine.playShieldBreak) window.AudioEngine.playShieldBreak();
+                        else window.AudioEngine.playShieldBlock();
+                        eventsHandled.add('shield_break');
+                        eventsHandled.add('hit');
+                        break;
+                    case 'damage_hit':
+                        window.AudioEngine.playDamageHit(!!evt.is_heavy);
+                        eventsHandled.add('hit');
+                        break;
+                    case 'barrier_absorb':
+                        if (window.AudioEngine.playBarrierDeflect) window.AudioEngine.playBarrierDeflect();
+                        else window.AudioEngine.playShieldBlock();
+                        break;
+                    case 'evasion':
+                        window.AudioEngine.playDodge();
+                        eventsHandled.add('evasion');
+                        break;
+                    case 'trig_fusion':
+                        if (window.AudioEngine.playTrigFusion) window.AudioEngine.playTrigFusion();
+                        break;
+                    case 'wave_clash':
+                        if (window.AudioEngine.playWaveClash) window.AudioEngine.playWaveClash();
+                        break;
+                    case 'spell_slice':
+                        if (window.AudioEngine.playSpellSlice) window.AudioEngine.playSpellSlice();
+                        break;
+                    case 'sword_catch':
+                        if (window.AudioEngine.playSwordCatch) window.AudioEngine.playSwordCatch();
+                        break;
+                }
+            });
         }
-        if (prevP2Heart !== null && data.player2.heart < prevP2Heart) {
-            window.AudioEngine.playDamageHit();
+
+        // 1. Damage Hit Fallback
+        if (!eventsHandled.has('hit')) {
+            if (prevP1Heart !== null && data.player1.heart < prevP1Heart) {
+                window.AudioEngine.playDamageHit(false);
+            }
+            if (prevP2Heart !== null && data.player2.heart < prevP2Heart) {
+                window.AudioEngine.playDamageHit(false);
+            }
         }
         prevP1Heart = data.player1.heart;
         prevP2Heart = data.player2.heart;
@@ -107,25 +155,24 @@ function draw_on_camvas(data) {
         const p2Slashing = data.player2.has_sword && data.player2.attack_state === 2;
         const fightersClose = Math.abs(data.player1.x - data.player2.x) <= 140;
 
-        if (p1Slashing && p2Slashing && fightersClose && (!prevP1Attacking || !prevP2Attacking)) {
-            window.AudioEngine.playSwordClash();
+        if (data.clash || (p1Slashing && p2Slashing && fightersClose && (!prevP1Attacking || !prevP2Attacking))) {
+            if (!eventsHandled.has('clash')) window.AudioEngine.playSwordClash();
         } else {
-            if (p1Slashing && !prevP1Attacking) window.AudioEngine.playSwordSwing();
-            if (p2Slashing && !prevP2Attacking) window.AudioEngine.playSwordSwing();
+            if (p1Slashing && !prevP1Attacking && !eventsHandled.has('clash')) window.AudioEngine.playSwordSwing();
+            if (p2Slashing && !prevP2Attacking && !eventsHandled.has('clash')) window.AudioEngine.playSwordSwing();
         }
         prevP1Attacking = p1Slashing;
         prevP2Attacking = p2Slashing;
 
         // 3. Shield Block
-        if ((data.player1.is_blocking && !prevP1Blocking) || (data.player2.is_blocking && !prevP2Blocking)) {
-            window.AudioEngine.playShieldBlock();
-        }
         prevP1Blocking = !!data.player1.is_blocking;
         prevP2Blocking = !!data.player2.is_blocking;
 
         // 4. Dodge / Crouch
-        if ((data.player1.is_crouching && !prevP1Crouching) || (data.player2.is_crouching && !prevP2Crouching)) {
-            window.AudioEngine.playDodge();
+        if (!eventsHandled.has('evasion')) {
+            if ((data.player1.is_crouching && !prevP1Crouching) || (data.player2.is_crouching && !prevP2Crouching)) {
+                window.AudioEngine.playDodge();
+            }
         }
         prevP1Crouching = !!data.player1.is_crouching;
         prevP2Crouching = !!data.player2.is_crouching;

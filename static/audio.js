@@ -65,27 +65,28 @@
             return null;
         }
         if (!audioCtx) {
-            if (!hasUserInteracted && !forceCreate) {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) return null;
+                audioCtx = new AudioContextClass();
+
+                // Master BGM Gain (volume controlled)
+                masterBgmGain = audioCtx.createGain();
+                const initBgmGain = bgmEnabled ? 0.35 * bgmVolume : 0;
+                masterBgmGain.gain.setValueAtTime(initBgmGain, audioCtx.currentTime);
+                masterBgmGain.connect(audioCtx.destination);
+
+                // Master SFX Gain (volume controlled)
+                masterSfxGain = audioCtx.createGain();
+                const initSfxGain = sfxEnabled ? 0.60 * sfxVolume : 0;
+                masterSfxGain.gain.setValueAtTime(initSfxGain, audioCtx.currentTime);
+                masterSfxGain.connect(audioCtx.destination);
+            } catch (e) {
                 return null;
             }
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContextClass) return null;
-            audioCtx = new AudioContextClass();
-
-            // Master BGM Gain (volume controlled)
-            masterBgmGain = audioCtx.createGain();
-            const initBgmGain = bgmEnabled ? 0.35 * bgmVolume : 0;
-            masterBgmGain.gain.setValueAtTime(initBgmGain, audioCtx.currentTime);
-            masterBgmGain.connect(audioCtx.destination);
-
-            // Master SFX Gain (volume controlled)
-            masterSfxGain = audioCtx.createGain();
-            const initSfxGain = sfxEnabled ? 0.60 * sfxVolume : 0;
-            masterSfxGain.gain.setValueAtTime(initSfxGain, audioCtx.currentTime);
-            masterSfxGain.connect(audioCtx.destination);
         }
-        if (audioCtx.state === 'suspended' && (hasUserInteracted || forceCreate)) {
-            if (!document.hidden) {
+        if (audioCtx && audioCtx.state === 'suspended') {
+            if (!document.hidden && (hasUserInteracted || forceCreate)) {
                 audioCtx.resume().catch(() => {});
             }
         }
@@ -310,7 +311,7 @@
     // 1. Sword Swing (Crisp Swoosh)
     function playSwordSwing() {
         if (document.hidden) return;
-        const ctx = getAudioContext();
+        const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
         const duration = 0.15;
 
@@ -342,78 +343,283 @@
         } catch (e) {}
     }
 
-    // 2. Sword Clash (Loud Ringing Metallic Clang)
+    // 2. Sword Clash (Loud Ringing Dual Metallic Clang)
     function playSwordClash() {
         if (document.hidden) return;
-        const ctx = getAudioContext();
+        const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
-        [1760, 2400, 3200].forEach((freq, idx) => {
+        try {
+            const now = ctx.currentTime;
+            [1760, 2400, 3200].forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.88, now + 0.32);
+
+                const vol = idx === 0 ? 0.50 : 0.28;
+                gain.gain.setValueAtTime(vol, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+
+                osc.connect(gain);
+                gain.connect(masterSfxGain);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            });
+        } catch (e) {}
+    }
+
+    // 3. Shield Block (Crisp Metallic Clang + Resonant Shield Thump)
+    function playShieldBlock() {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        try {
+            const now = ctx.currentTime;
+            // 1. High metallic iron contact clang
+            const metalOsc = ctx.createOscillator();
+            const metalGain = ctx.createGain();
+            metalOsc.type = 'sine';
+            metalOsc.frequency.setValueAtTime(860, now);
+            metalOsc.frequency.exponentialRampToValueAtTime(320, now + 0.16);
+            metalGain.gain.setValueAtTime(0.45, now);
+            metalGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+            metalOsc.connect(metalGain);
+            metalGain.connect(masterSfxGain);
+            metalOsc.start(now);
+            metalOsc.stop(now + 0.18);
+
+            // 2. Heavy shield body resonant thump
+            const bodyOsc = ctx.createOscillator();
+            const bodyGain = ctx.createGain();
+            bodyOsc.type = 'triangle';
+            bodyOsc.frequency.setValueAtTime(190, now);
+            bodyOsc.frequency.exponentialRampToValueAtTime(55, now + 0.22);
+            bodyGain.gain.setValueAtTime(0.65, now);
+            bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            bodyOsc.connect(bodyGain);
+            bodyGain.connect(masterSfxGain);
+            bodyOsc.start(now);
+            bodyOsc.stop(now + 0.24);
+        } catch (e) {}
+    }
+
+    // 3.5. Shield Break (Heavy Cleave + Violent Metallic Shatter)
+    function playShieldBreak() {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        try {
+            const now = ctx.currentTime;
+            // 1. Visceral crushing low thump
+            const subOsc = ctx.createOscillator();
+            const subGain = ctx.createGain();
+            subOsc.type = 'sawtooth';
+            subOsc.frequency.setValueAtTime(150, now);
+            subOsc.frequency.exponentialRampToValueAtTime(30, now + 0.30);
+            subGain.gain.setValueAtTime(0.75, now);
+            subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
+            subOsc.connect(subGain);
+            subGain.connect(masterSfxGain);
+            subOsc.start(now);
+            subOsc.stop(now + 0.32);
+
+            // 2. Dual dissonant shattering metal cracks
+            [1200, 1800, 2450].forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.65, now + 0.36);
+                gain.gain.setValueAtTime(0.40 / (idx + 1), now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+                osc.connect(gain);
+                gain.connect(masterSfxGain);
+                osc.start(now);
+                osc.stop(now + 0.38);
+            });
+        } catch (e) {}
+    }
+
+    // 4. Damage Hit (Crisp Punch / Heavy Visceral Cleave)
+    function playDamageHit(isHeavy) {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        try {
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+
+            if (isHeavy) {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(170, now);
+                osc.frequency.exponentialRampToValueAtTime(35, now + 0.28);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, now);
+
+                gain.gain.setValueAtTime(0.78, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+                // Heavy sub-punch layer
+                const sub = ctx.createOscillator();
+                const subGain = ctx.createGain();
+                sub.type = 'triangle';
+                sub.frequency.setValueAtTime(80, now);
+                sub.frequency.exponentialRampToValueAtTime(25, now + 0.24);
+                subGain.gain.setValueAtTime(0.65, now);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+                sub.connect(subGain);
+                subGain.connect(masterSfxGain);
+                sub.start(now);
+                sub.stop(now + 0.26);
+            } else {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(240, now);
+                osc.frequency.exponentialRampToValueAtTime(60, now + 0.18);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(600, now);
+
+                gain.gain.setValueAtTime(0.60, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            }
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterSfxGain);
+            osc.start(now);
+            osc.stop(now + (isHeavy ? 0.30 : 0.20));
+        } catch (e) {}
+    }
+
+    // 4.5. Barrier Deflect (Harmonic Sci-Fi Shield Ping)
+    function playBarrierDeflect() {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        try {
+            const now = ctx.currentTime;
+            [1150, 1720].forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.22);
+                gain.gain.setValueAtTime(0.35 / (idx + 1), now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+                osc.connect(gain);
+                gain.connect(masterSfxGain);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            });
+        } catch (e) {}
+    }
+
+    // 4.6. Trig Fusion (Epic Kinetic Shockwave & Tangent Eruption)
+    function playTrigFusion() {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        try {
+            const now = ctx.currentTime;
+            // Sub-bass detonation
+            const sub = ctx.createOscillator();
+            const subGain = ctx.createGain();
+            sub.type = 'sine';
+            sub.frequency.setValueAtTime(140, now);
+            sub.frequency.exponentialRampToValueAtTime(30, now + 0.42);
+            subGain.gain.setValueAtTime(0.75, now);
+            subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+            sub.connect(subGain);
+            subGain.connect(masterSfxGain);
+            sub.start(now);
+            sub.stop(now + 0.45);
+
+            // High electric flare sizzle
+            const flare = ctx.createOscillator();
+            const flareGain = ctx.createGain();
+            flare.type = 'sawtooth';
+            flare.frequency.setValueAtTime(650, now);
+            flare.frequency.exponentialRampToValueAtTime(120, now + 0.26);
+            flareGain.gain.setValueAtTime(0.42, now);
+            flareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+            flare.connect(flareGain);
+            flareGain.connect(masterSfxGain);
+            flare.start(now);
+            flare.stop(now + 0.28);
+        } catch (e) {}
+    }
+
+    // 4.7. Wave Clash (Opposing Wave Mid-Air Dissipation)
+    function playWaveClash() {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        try {
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(420, now);
+            osc.frequency.exponentialRampToValueAtTime(150, now + 0.18);
+            gain.gain.setValueAtTime(0.48, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            osc.connect(gain);
+            gain.connect(masterSfxGain);
+            osc.start(now);
+            osc.stop(now + 0.20);
+        } catch (e) {}
+    }
+
+    // 4.8. Spell Slice (Thrown Blade Slicing Magic Energy)
+    function playSpellSlice() {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        try {
+            const now = ctx.currentTime;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(freq * 0.9, ctx.currentTime + 0.32);
-
-            const vol = idx === 0 ? 0.45 : 0.25;
-            gain.gain.setValueAtTime(vol, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.32);
-
+            osc.frequency.setValueAtTime(1800, now);
+            osc.frequency.exponentialRampToValueAtTime(750, now + 0.15);
+            gain.gain.setValueAtTime(0.45, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
             osc.connect(gain);
             gain.connect(masterSfxGain);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.35);
-        });
+            osc.start(now);
+            osc.stop(now + 0.18);
+        } catch (e) {}
     }
 
-    // 3. Shield Block (Solid Punchy Thud)
-    function playShieldBlock() {
+    // 4.9. Sword Catch (Boomerang Weapon Catch Snap)
+    function playSwordCatch() {
         if (document.hidden) return;
-        const ctx = getAudioContext();
+        const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(220, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(70, ctx.currentTime + 0.2);
-
-        gain.gain.setValueAtTime(0.55, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-
-        osc.connect(gain);
-        gain.connect(masterSfxGain);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.22);
-    }
-
-    // 4. Damage Hit (Crisp Punch Impact)
-    function playDamageHit() {
-        if (document.hidden) return;
-        const ctx = getAudioContext();
-        if (!ctx || !sfxEnabled) return;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(240, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.18);
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(600, ctx.currentTime);
-
-        gain.gain.setValueAtTime(0.60, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(masterSfxGain);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.2);
+        try {
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(480, now);
+            osc.frequency.exponentialRampToValueAtTime(260, now + 0.09);
+            gain.gain.setValueAtTime(0.42, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+            osc.connect(gain);
+            gain.connect(masterSfxGain);
+            osc.start(now);
+            osc.stop(now + 0.10);
+        } catch (e) {}
     }
 
     // 5. Trig Spells (Sci-Fi Laser / Wave)
     function playSpell(type) {
         if (document.hidden) return;
-        const ctx = getAudioContext();
+        const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
 
         if (type === 'sin_wave') {
@@ -479,7 +685,7 @@
     // 6. Dodge / Quick Dash
     function playDodge() {
         if (document.hidden) return;
-        const ctx = getAudioContext();
+        const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -691,15 +897,18 @@
         if (sfxEnabled) playClick();
     }
 
-    // Browser Autoplay Policy: resume AudioContext and start BGM on first user gesture
+    // Browser Autoplay Policy: One-Touch Seamless Auto-Wakeup
+    // Silently wakes up AudioContext on the very first touch/click/key anywhere on the page
+    const UNLOCK_EVENTS = ['click', 'pointerdown', 'mousedown', 'keydown', 'touchstart', 'focus'];
+
     function handleFirstUserGesture() {
-        if (document.hidden) return; // Do not unlock or resume on clicks while tab is hidden/closing!
+        if (document.hidden) return; // Do not unlock while tab is hidden
         hasUserInteracted = true;
         const ctx = getAudioContext(true);
         if (ctx) {
             if (ctx.state === 'suspended') {
                 ctx.resume().then(() => {
-                    console.log("🔊 AudioContext successfully unlocked!");
+                    console.log("🔊 AudioContext successfully unlocked on first user touch!");
                     if (bgmEnabled && !isBgmPlaying && !document.hidden) {
                         startBGM();
                     }
@@ -708,11 +917,22 @@
                 startBGM();
             }
         }
+
+        // Clean up one-touch capture listeners once unlocked
+        UNLOCK_EVENTS.forEach(evt => {
+            try {
+                window.removeEventListener(evt, handleFirstUserGesture, { capture: true });
+                document.removeEventListener(evt, handleFirstUserGesture, { capture: true });
+            } catch (e) {}
+        });
     }
 
-    ['click', 'pointerdown', 'keydown', 'touchstart'].forEach(evt => {
-        window.addEventListener(evt, handleFirstUserGesture, { passive: true });
-        document.addEventListener(evt, handleFirstUserGesture, { passive: true });
+    // Attach in capture phase (true) so clicks inside CodeMirror, iframe, canvas, or dialogs are captured first!
+    UNLOCK_EVENTS.forEach(evt => {
+        try {
+            window.addEventListener(evt, handleFirstUserGesture, { capture: true, passive: true });
+            document.addEventListener(evt, handleFirstUserGesture, { capture: true, passive: true });
+        } catch (e) {}
     });
 
     let wasBgmPlayingBeforeHide = false;
@@ -793,7 +1013,13 @@
         playSwordSwing: playSwordSwing,
         playSwordClash: playSwordClash,
         playShieldBlock: playShieldBlock,
+        playShieldBreak: playShieldBreak,
         playDamageHit: playDamageHit,
+        playBarrierDeflect: playBarrierDeflect,
+        playTrigFusion: playTrigFusion,
+        playWaveClash: playWaveClash,
+        playSpellSlice: playSpellSlice,
+        playSwordCatch: playSwordCatch,
         playSpell: playSpell,
         playDodge: playDodge,
         playClick: playClick,

@@ -777,6 +777,7 @@ def game_loop():
                                 }
                                 for s in getattr(room.engine, 'spells', [])
                             ],
+                            'combat_events': list(getattr(room.engine, 'combat_events', [])),
                             'clash': getattr(room.engine, 'clash_event', False)
                         }
                         socketio.emit('update_game_gui', data_to_send, to=room.room_id)

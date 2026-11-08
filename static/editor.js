@@ -253,6 +253,50 @@ function initCodeMirror() {
                             element.appendChild(descSpan);
                         }
                     };
+
+                    // Smart insertion handler: prevents double brackets & positions cursor accurately
+                    item.hint = function(cm, data, completion) {
+                        const cur = cm.getCursor();
+                        const lineText = cm.getLine(cur.line) || "";
+                        const after = lineText.slice(cur.ch);
+                        const insertText = completion.text;
+
+                        // Clean up existing trailing duplicate brackets
+                        let toCh = cur.ch;
+                        if (insertText.endsWith("()")) {
+                            if (after.startsWith("()")) {
+                                toCh += 2;
+                            } else if (after.startsWith(")")) {
+                                toCh += 1;
+                            }
+                        } else if (insertText.includes("(") && after.startsWith(")")) {
+                            toCh += 1;
+                        }
+
+                        const fromPos = CodeMirror.Pos(cur.line, start);
+                        const toPos = CodeMirror.Pos(cur.line, toCh);
+
+                        cm.replaceRange(insertText, fromPos, toPos, "complete");
+
+                        // Smart cursor placement:
+                        if (insertText.includes("(") && insertText.endsWith(")")) {
+                            const openIdx = insertText.indexOf("(");
+                            const closeIdx = insertText.lastIndexOf(")");
+                            if (closeIdx > openIdx + 1) {
+                                // Has default param like dash(3) -> select param for effortless overwriting
+                                cm.setSelection(
+                                    CodeMirror.Pos(cur.line, start + openIdx + 1),
+                                    CodeMirror.Pos(cur.line, start + closeIdx)
+                                );
+                            } else {
+                                // Empty parens like attack() -> place cursor at end
+                                cm.setCursor(CodeMirror.Pos(cur.line, start + insertText.length));
+                            }
+                        } else {
+                            cm.setCursor(CodeMirror.Pos(cur.line, start + insertText.length));
+                        }
+                    };
+
                     return item;
                 }),
                 from: CodeMirror.Pos(line, start),
@@ -278,6 +322,18 @@ function initCodeMirror() {
         });
 
         window.codeMirrorInstance = codeMirrorInstance;
+
+        // Auto-unlock AudioContext if user clicks or focuses in editor
+        codeMirrorInstance.on("focus", function() {
+            if (window.AudioEngine && window.AudioEngine.handleFirstUserGesture) {
+                window.AudioEngine.handleFirstUserGesture();
+            }
+        });
+        codeMirrorInstance.on("mousedown", function() {
+            if (window.AudioEngine && window.AudioEngine.handleFirstUserGesture) {
+                window.AudioEngine.handleFirstUserGesture();
+            }
+        });
 
         // Auto-show suggestions on typing letters or dot
         codeMirrorInstance.on("inputRead", function(cm, change) {
@@ -779,10 +835,16 @@ function insertSnippet(snippet) {
         const cursor = doc.getCursor();
         let toInsert = snippet;
         const currentLine = doc.getLine(cursor.line) || "";
-        if (currentLine.trim().length > 0) {
+        const needsNewlineBefore = currentLine.trim().length > 0;
+        if (needsNewlineBefore) {
             toInsert = "\n" + toInsert;
         }
         doc.replaceRange(toInsert + "\n", cursor);
+
+        // Move cursor cleanly to the end of the inserted snippet
+        const targetLine = cursor.line + (needsNewlineBefore ? 1 : 0);
+        doc.setCursor({ line: targetLine, ch: snippet.length });
+
         codeMirrorInstance.focus();
         codeMirrorInstance.save();
         return;

@@ -317,6 +317,50 @@ let activeSpellKeys = new Set();
 let prevGameOver = false;
 let prevClash = false;
 
+// --- DYNAMIC COMBAT SPARK SYSTEM ---
+const combatSparks = [];
+function spawnCombatSparks(x, y, color, count) {
+    if (combatSparks.length > 80) combatSparks.splice(0, 30); // prevent memory buildup
+    const total = count || 10;
+    for (let i = 0; i < total; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 5.0;
+        combatSparks.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1.2,
+            color: color || '#facc15',
+            alpha: 1.0,
+            radius: 1.5 + Math.random() * 2.5
+        });
+    }
+}
+
+function draw_combat_sparks() {
+    if (combatSparks.length === 0) return;
+    ctx.save();
+    for (let i = combatSparks.length - 1; i >= 0; i--) {
+        const s = combatSparks[i];
+        s.x += s.vx;
+        s.y += s.vy;
+        s.vy += 0.22; // subtle gravity
+        s.alpha *= 0.88;
+        if (s.alpha < 0.05) {
+            combatSparks.splice(i, 1);
+            continue;
+        }
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fillStyle = s.color;
+        ctx.globalAlpha = Math.max(0, Math.min(1, s.alpha));
+        ctx.shadowColor = s.color;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
 // --- SWORD TRAIL / MOTION BLUR SYSTEM ---
 const swordTrails = {
     p1: [],
@@ -399,62 +443,181 @@ function draw_on_camvas(data) {
         pausePlayerId = data.paused_by;
     }
 
-    // --- PROCEDURAL AUDIO SFX & COMBAT TELEMETRY EVENT TRIGGERS ---
+    // --- PROCEDURAL AUDIO SFX & COMBAT TELEMETRY EVENT STREAM ---
     if (!isPaused) {
-        // 1. Damage Hit
-        if (prevP1Heart !== null && data.player1.heart < prevP1Heart) {
-            if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit();
-            const dmg = prevP1Heart - data.player1.heart;
-            logCombatTelemetry('hit', '[DAMAGE HIT]', `💥 P1 took ${dmg} DMG! (Hearts: ${data.player1.heart}/10)`);
+        const eventsHandled = new Set();
+        const targetIsBot = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM);
+        const targetName = (t) => t === 1 ? 'P1' : (targetIsBot ? 'Bot' : 'P2');
+
+        // 1. Explicit Combat Event Stream from Server Physics Engine
+        if (data.combat_events && Array.isArray(data.combat_events) && data.combat_events.length > 0) {
+            data.combat_events.forEach(evt => {
+                const defenderLabel = targetName(evt.defender || evt.target || 2);
+                const attackerLabel = targetName(evt.attacker || (evt.defender === 1 ? 2 : 1));
+
+                switch (evt.type) {
+                    case 'sword_clash':
+                        if (!document.hidden && window.AudioEngine) window.AudioEngine.playSwordClash();
+                        const clashX = evt.x || ((data.player1.x + data.player2.x) / 2);
+                        const clashY = evt.y || 470;
+                        spawnCombatSparks(clashX, clashY, '#fef08a', 15);
+                        logCombatTelemetry('clash', '[SWORD CLASH]', '⚔️ Mid-air Sword Clash! Kinetic sparks erupted!');
+                        eventsHandled.add('clash');
+                        break;
+
+                    case 'shield_block':
+                        if (!document.hidden && window.AudioEngine) window.AudioEngine.playShieldBlock();
+                        const defX = (evt.defender === 1 ? data.player1.x : data.player2.x) + (evt.defender === 1 ? 25 : -25);
+                        spawnCombatSparks(defX, 470, '#38bdf8', 12);
+                        const weaponDesc = evt.projectile ? evt.projectile.replace('_', ' ') : 'sword strike';
+                        logCombatTelemetry('shield', '[SHIELD BLOCK]', `🛡️ ${defenderLabel}'s shield blocked incoming ${weaponDesc}!`);
+                        eventsHandled.add('shield_block');
+                        break;
+
+                    case 'shield_break':
+                        if (!document.hidden && window.AudioEngine) {
+                            if (window.AudioEngine.playShieldBreak) window.AudioEngine.playShieldBreak();
+                            else {
+                                window.AudioEngine.playShieldBlock();
+                                window.AudioEngine.playDamageHit(true);
+                            }
+                        }
+                        const breakX = (evt.defender === 1 ? data.player1.x : data.player2.x) + (evt.defender === 1 ? 25 : -25);
+                        spawnCombatSparks(breakX, 470, '#ef4444', 20);
+                        logCombatTelemetry('shield', '[SHIELD BREAK]', `💥 CRACK! ${defenderLabel}'s guard SHATTERED by heavy attack! (-1 Heart)`);
+                        eventsHandled.add('shield_break');
+                        eventsHandled.add('hit');
+                        break;
+
+                    case 'damage_hit':
+                        const isHeavy = !!evt.is_heavy;
+                        if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit(isHeavy);
+                        const tgtX = (evt.target === 1 ? data.player1.x : data.player2.x);
+                        spawnCombatSparks(tgtX, 470, isHeavy ? '#f43f5e' : '#fbbf24', isHeavy ? 15 : 8);
+                        const dmgVal = evt.damage || 1;
+                        const srcDesc = evt.projectile ? evt.projectile.replace('_', ' ') : (isHeavy ? 'Heavy Cleave' : 'Sword Slash');
+                        logCombatTelemetry('hit', '[DAMAGE HIT]', `💥 ${defenderLabel} struck by ${srcDesc}! (-${dmgVal} DMG)`);
+                        eventsHandled.add('hit');
+                        break;
+
+                    case 'barrier_absorb':
+                        if (!document.hidden && window.AudioEngine) {
+                            if (window.AudioEngine.playBarrierDeflect) window.AudioEngine.playBarrierDeflect();
+                            else window.AudioEngine.playShieldBlock();
+                        }
+                        const absorbX = (evt.defender === 1 ? data.player1.x : data.player2.x) + (evt.defender === 1 ? 25 : -25);
+                        spawnCombatSparks(absorbX, 470, '#c084fc', 12);
+                        const pName = (evt.projectile || 'spell').replace('_', ' ');
+                        logCombatTelemetry('spell', '[DEFENSE]', `🔮 ${defenderLabel}'s harmonic barrier absorbed incoming ${pName}!`);
+                        break;
+
+                    case 'evasion':
+                        if (!document.hidden && window.AudioEngine) window.AudioEngine.playDodge();
+                        logCombatTelemetry('dodge', '[EVASION]', `💨 ${defenderLabel} ducked / evaded incoming attack!`);
+                        eventsHandled.add('evasion');
+                        break;
+
+                    case 'trig_fusion':
+                        if (!document.hidden && window.AudioEngine) {
+                            if (window.AudioEngine.playTrigFusion) window.AudioEngine.playTrigFusion();
+                            else window.AudioEngine.playSwordClash();
+                        }
+                        spawnCombatSparks(evt.x || 400, evt.y || 470, '#38bdf8', 25);
+                        spawnCombatSparks(evt.x || 400, evt.y || 470, '#f43f5e', 15);
+                        logCombatTelemetry('spell', '[TRIG FUSION]', `⚡ Harmonic Fusion! Sin + Cos collided at X=${Math.round(evt.x || 400)} -> Shockwave & Spike!`);
+                        break;
+
+                    case 'wave_clash':
+                        if (!document.hidden && window.AudioEngine) {
+                            if (window.AudioEngine.playWaveClash) window.AudioEngine.playWaveClash();
+                            else window.AudioEngine.playDamageHit(false);
+                        }
+                        spawnCombatSparks(evt.x || 400, evt.y || 470, '#22d3ee', 14);
+                        logCombatTelemetry('spell', '[WAVE CLASH]', `💥 Wave Neutralization! Opposing waves collided and dissipated!`);
+                        break;
+
+                    case 'spell_slice':
+                        if (!document.hidden && window.AudioEngine) {
+                            if (window.AudioEngine.playSpellSlice) window.AudioEngine.playSpellSlice();
+                            else window.AudioEngine.playSwordSwing();
+                        }
+                        const sliceX = (data.player1.x + data.player2.x) / 2;
+                        spawnCombatSparks(sliceX, 470, '#fef08a', 14);
+                        const waveName = (evt.spell || 'wave').replace('_', ' ');
+                        logCombatTelemetry('clash', '[SPELL SLICE]', `🗡️ Mid-air Slice! Thrown sword severed incoming ${waveName}!`);
+                        break;
+
+                    case 'sword_catch':
+                        if (!document.hidden && window.AudioEngine) {
+                            if (window.AudioEngine.playSwordCatch) window.AudioEngine.playSwordCatch();
+                        }
+                        const ownerLbl = targetName(evt.player || 1);
+                        logCombatTelemetry('item', '[WEAPON RETURN]', `🪃 Boomerang sword returned to ${ownerLbl}'s hand!`);
+                        break;
+                }
+            });
         }
-        if (prevP2Heart !== null && data.player2.heart < prevP2Heart) {
-            if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit();
-            const dmg = prevP2Heart - data.player2.heart;
-            const target = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'Bot' : 'P2';
-            logCombatTelemetry('hit', '[DAMAGE HIT]', `💥 ${target} took ${dmg} DMG! (Hearts: ${data.player2.heart}/10)`);
+
+        // --- BACKWARD-COMPATIBLE FALLBACKS (State Diffing) ---
+        // 1. Damage Hit Fallback
+        if (!eventsHandled.has('hit')) {
+            if (prevP1Heart !== null && data.player1.heart < prevP1Heart) {
+                if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit(false);
+                const dmg = prevP1Heart - data.player1.heart;
+                logCombatTelemetry('hit', '[DAMAGE HIT]', `💥 P1 took ${dmg} DMG! (Hearts: ${data.player1.heart}/10)`);
+            }
+            if (prevP2Heart !== null && data.player2.heart < prevP2Heart) {
+                if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit(false);
+                const dmg = prevP2Heart - data.player2.heart;
+                const target = targetIsBot ? 'Bot' : 'P2';
+                logCombatTelemetry('hit', '[DAMAGE HIT]', `💥 ${target} took ${dmg} DMG! (Hearts: ${data.player2.heart}/10)`);
+            }
         }
         prevP1Heart = data.player1.heart;
         prevP2Heart = data.player2.heart;
 
-        // 2. Sword Swing & Dynamic Clash
+        // 2. Sword Swing & Dynamic Clash Fallback
         const p1Slashing = data.player1.has_sword && data.player1.attack_state === 2;
         const p2Slashing = data.player2.has_sword && data.player2.attack_state === 2;
 
         if (data.clash) {
-            if (!document.hidden && window.AudioEngine) window.AudioEngine.playSwordClash();
-            if (!prevClash) {
-                logCombatTelemetry('clash', '[SWORD CLASH]', '⚔️ Mid-air Sword Clash! Kinetic sparks erupted!');
+            if (!eventsHandled.has('clash')) {
+                if (!document.hidden && window.AudioEngine) window.AudioEngine.playSwordClash();
+                spawnCombatSparks((data.player1.x + data.player2.x) / 2, 470, '#fef08a', 12);
+                if (!prevClash) {
+                    logCombatTelemetry('clash', '[SWORD CLASH]', '⚔️ Mid-air Sword Clash! Kinetic sparks erupted!');
+                }
             }
         } else {
-            if (p1Slashing && !prevP1Attacking && !document.hidden && window.AudioEngine) window.AudioEngine.playSwordSwing();
-            if (p2Slashing && !prevP2Attacking && !document.hidden && window.AudioEngine) window.AudioEngine.playSwordSwing();
+            if (p1Slashing && !prevP1Attacking && !eventsHandled.has('clash') && !document.hidden && window.AudioEngine) window.AudioEngine.playSwordSwing();
+            if (p2Slashing && !prevP2Attacking && !eventsHandled.has('clash') && !document.hidden && window.AudioEngine) window.AudioEngine.playSwordSwing();
         }
         prevClash = !!data.clash;
         prevP1Attacking = p1Slashing;
         prevP2Attacking = p2Slashing;
 
-        // 3. Shield Block
+        // 3. Shield Raise Banner
         if (data.player1.is_blocking && !prevP1Blocking) {
-            if (!document.hidden && window.AudioEngine) window.AudioEngine.playShieldBlock();
             logCombatTelemetry('shield', '[DEFENSE]', '🛡️ P1 raised shield barrier');
         }
         if (data.player2.is_blocking && !prevP2Blocking) {
-            if (!document.hidden && window.AudioEngine) window.AudioEngine.playShieldBlock();
-            const target = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'Bot' : 'P2';
+            const target = targetIsBot ? 'Bot' : 'P2';
             logCombatTelemetry('shield', '[DEFENSE]', `🛡️ ${target} raised shield barrier`);
         }
         prevP1Blocking = !!data.player1.is_blocking;
         prevP2Blocking = !!data.player2.is_blocking;
 
-        // 4. Dodge / Crouch
-        if (data.player1.is_crouching && !prevP1Crouching) {
-            if (!document.hidden && window.AudioEngine) window.AudioEngine.playDodge();
-            logCombatTelemetry('dodge', '[EVASION]', '💨 P1 crouched / evaded');
-        }
-        if (data.player2.is_crouching && !prevP2Crouching) {
-            if (!document.hidden && window.AudioEngine) window.AudioEngine.playDodge();
-            const target = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'Bot' : 'P2';
-            logCombatTelemetry('dodge', '[EVASION]', `💨 ${target} crouched / evaded`);
+        // 4. Dodge / Crouch Fallback
+        if (!eventsHandled.has('evasion')) {
+            if (data.player1.is_crouching && !prevP1Crouching) {
+                if (!document.hidden && window.AudioEngine) window.AudioEngine.playDodge();
+                logCombatTelemetry('dodge', '[EVASION]', '💨 P1 crouched / evaded');
+            }
+            if (data.player2.is_crouching && !prevP2Crouching) {
+                if (!document.hidden && window.AudioEngine) window.AudioEngine.playDodge();
+                const target = targetIsBot ? 'Bot' : 'P2';
+                logCombatTelemetry('dodge', '[EVASION]', `💨 ${target} crouched / evaded`);
+            }
         }
         prevP1Crouching = !!data.player1.is_crouching;
         prevP2Crouching = !!data.player2.is_crouching;
@@ -466,7 +629,7 @@ function draw_on_camvas(data) {
                 if (!activeSpellKeys.has(sKey) && (s.t === undefined || s.t <= 2)) {
                     activeSpellKeys.add(sKey);
                     if (!document.hidden && window.AudioEngine) window.AudioEngine.playSpell(s.type);
-                    const ownerLabel = s.owner === 1 ? 'P1' : ((typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'Bot' : 'P2');
+                    const ownerLabel = s.owner === 1 ? 'P1' : (targetIsBot ? 'Bot' : 'P2');
                     logCombatTelemetry('spell', '[TRIG SPELL]', `✨ ${ownerLabel} cast ${s.type} (Power: ${s.power || 1})`);
                 }
             });
@@ -1037,6 +1200,9 @@ function draw_on_camvas(data) {
     }
 
     // Winner Banner - clean modern pill
+    // Render active kinetic combat sparks on top of players and weapons
+    draw_combat_sparks();
+
     let is_game_over = false;
     let winnerText = "";
     let winnerColor = "";
