@@ -360,6 +360,29 @@ function initCodeMirror() {
             }, 400);
         });
 
+        // Live Character Counter & Limit Indicator
+        function updateCharCounter() {
+            const counter = document.getElementById("char_counter");
+            if (!counter || !codeMirrorInstance) return;
+            const len = codeMirrorInstance.getValue().length;
+            counter.innerText = `${len}/2000`;
+            if (len > 2000) {
+                counter.style.color = "#ef4444";
+                counter.style.fontWeight = "bold";
+                counter.title = `Code exceeds maximum limit by ${len - 2000} characters!`;
+            } else if (len > 1800) {
+                counter.style.color = "#f59e0b";
+                counter.style.fontWeight = "normal";
+                counter.title = `${2000 - len} characters remaining`;
+            } else {
+                counter.style.color = "var(--text-secondary)";
+                counter.style.fontWeight = "normal";
+                counter.title = `${2000 - len} characters remaining`;
+            }
+        }
+        codeMirrorInstance.on("change", updateCharCounter);
+        updateCharCounter();
+
         // Initialize 10-slot Strategy Vault with active slot
         initStrategyVault();
 
@@ -968,7 +991,7 @@ function setupCommandsTableInsertButtons() {
 }
 
 // ==============================================================================
-// ↔️ COCKPIT LAYOUT SPLITTER & EDITOR WIDTH CONTROLLER ("এদিক-ওদিক" RESIZER)
+// ↔️ COCKPIT LAYOUT SPLITTER & EDITOR WIDTH CONTROLLER (HORIZONTAL RESIZER)
 // ==============================================================================
 const COCKPIT_LAYOUT_PRESETS = [
     { name: '30%', term: '20fr', arena: '50fr', editor: '30fr' },

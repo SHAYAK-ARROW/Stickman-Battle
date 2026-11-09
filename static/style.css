@@ -314,6 +314,7 @@ button { color: inherit; }
 #battle_layout {
     display: grid;
     grid-template-columns: var(--col-term, 20fr) var(--col-arena, 50fr) 8px var(--col-editor, 30fr);
+    grid-template-rows: minmax(0, 1fr);
     gap: 12px;
     align-items: stretch;
 }
@@ -326,8 +327,22 @@ button { color: inherit; }
 }
 .arena-panel, .editor-panel, .telemetry-sidebar-panel { padding: 16px; }
 .arena-panel { overflow: visible; }
-.editor-panel { overflow: hidden; display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.telemetry-sidebar-panel { overflow: hidden; display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.editor-panel {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 0;
+    min-height: 100%;
+    max-height: 100%;
+}
+.telemetry-sidebar-panel {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 0;
+    min-height: 100%;
+    max-height: 100%;
+}
 
 /* ── Interactive Layout Splitter (Drag to Resize Arena & Editor) ── */
 .layout-splitter {
@@ -656,12 +671,12 @@ button { color: inherit; }
 /* ── Responsive Mobile & Tablet Stack ──────────────────────── */
 @media (max-width: 960px) {
     .home-shell, .game-shell { width: min(100% - 24px, 860px); zoom: 1; }
-    #battle_layout { grid-template-columns: 1fr; gap: 14px; }
+    #battle_layout { grid-template-columns: 1fr; grid-template-rows: auto; gap: 14px; }
     .layout-splitter { display: none !important; }
     #battle_stage { order: 1; }
-    #code_eddior { order: 2; }
-    #combat_telemetry_terminal { order: 3; margin-top: 10px; }
-    #combat_telemetry_terminal .telemetry-feed { max-height: 110px; }
+    #code_eddior { order: 2; height: auto; min-height: auto; max-height: none; }
+    #combat_telemetry_terminal { order: 3; margin-top: 10px; height: auto; min-height: auto; max-height: none; }
+    #combat_telemetry_terminal .telemetry-feed { max-height: 120px; height: auto; flex: initial; }
     .editor-frame { height: 420px; }
 }
 
@@ -2929,10 +2944,11 @@ li.CodeMirror-hint-active .hint-desc {
 }
 
 .telemetry-sidebar-panel .telemetry-feed {
-    flex: 1 1 auto;
+    flex: 1 1 0px;
     min-height: 0;
-    max-height: none !important;
+    max-height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -2948,9 +2964,6 @@ li.CodeMirror-hint-active .hint-desc {
     gap: 6px 8px;
     font-size: 10.5px;
     color: #94a3b8;
-    font-family: var(--mono, monospace);
-    flex-shrink: 0;
-}
     font-family: var(--mono, monospace);
     flex-shrink: 0;
 }

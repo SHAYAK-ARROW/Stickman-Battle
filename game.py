@@ -477,7 +477,11 @@ def code_handler(data):
         
     raw_code = str(data.get('code', ''))
     if len(raw_code) > 2000:
-        raw_code = raw_code[:2000]
+        logger.warning(f"Room [{room_id}] -> Rejected Player {player_id} code: exceeds 2000 chars ({len(raw_code)}).")
+        socketio.emit('code_error', {
+            'error': f"Code size exceeds limit ({len(raw_code)}/2000 characters). Please shorten your script."
+        }, to=request.sid)
+        return
         
     room.last_activity = time.time()
     logger.info(f"Room [{room_id}] -> Authorized Player {player_id} Code Execution.")

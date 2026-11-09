@@ -248,10 +248,14 @@ def _sandbox_execute(code, sensors):
     })
 
     total_loop_steps = 0
+    loop_capped = False
     def _check_loop(loop_id):
-        nonlocal total_loop_steps
+        nonlocal total_loop_steps, loop_capped
         total_loop_steps += 1
-        return total_loop_steps <= 100
+        if total_loop_steps > 100:
+            loop_capped = True
+            return False
+        return True
 
     safe_env["_check_loop"] = _check_loop
 
@@ -275,7 +279,7 @@ def _sandbox_execute(code, sensors):
             f'{type(exc).__name__}: {exc}'
         )
         return ("error", type(exc).__name__, idle_err)
-    return ("ok", commands)
+    return ("ok", commands, loop_capped)
 
 
 def _sandbox_worker(connection):
@@ -548,13 +552,14 @@ def compiler(code, current_player, enemy_player=None):
 
     # Check code size limit
     if len(code) > MAX_CODE_LENGTH:
-        err = f"Security: Code size limit ({len(code)}>{MAX_CODE_LENGTH})"
+        err = f"Security: Code size limit ({len(code)}>{MAX_CODE_LENGTH} characters). Please shorten your code."
         logger.warning(err)
+        current_player.last_error = err
         if hasattr(current_player, 'say'):
             current_player.say(err[:40])
             if hasattr(current_player, 'execute_next_action'):
                 current_player.execute_next_action()
-        return
+        return {"success": False, "error": err}
 
     try:
         # Step 1: AST Static Security Analysis
@@ -599,7 +604,27 @@ def compiler(code, current_player, enemy_player=None):
                     current_player.execute_next_action()
             return {"success": False, "error": err}
 
-        _apply_commands(result[1], current_player)
+        commands = result[1]
+        loop_capped = result[2] if len(result) > 2 else False
+
+        if not commands:
+            if loop_capped:
+                err_msg = "Loop safety limit reached: while-loop stopped after 100 iterations with no actions performed."
+                logger.warning(err_msg)
+                current_player.last_error = err_msg
+                if hasattr(current_player, 'say'):
+                    current_player.say("Loop capped (100 iters)")
+                    if hasattr(current_player, 'execute_next_action'):
+                        current_player.execute_next_action()
+                return {"success": False, "error": err_msg}
+            current_player.speech_text = "No actions performed."
+            current_player.last_error = None
+            return {"success": True, "error": None}
+
+        _apply_commands(commands, current_player)
+
+        if loop_capped and hasattr(current_player, 'say') and not getattr(current_player, 'speech_text', ''):
+            current_player.say("Loop capped (100 iters)")
 
         logger.info("Code executed successfully! Actions queued.")
         current_player.last_error = None

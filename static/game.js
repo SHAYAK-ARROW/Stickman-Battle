@@ -1412,6 +1412,16 @@ function run() {
         }
         return;
     }
+    if (code.length > 2000) {
+        if (typeof showToast === 'function') {
+            showToast({
+                title: "Code Limit Exceeded",
+                message: `Code size (${code.length}/2000 characters) exceeds the maximum allowed limit. Please shorten your script.`,
+                type: "warning"
+            });
+        }
+        return;
+    }
     if (runBtn) {
         runBtn.disabled = true;
         runBtn.innerText = "Running...";
