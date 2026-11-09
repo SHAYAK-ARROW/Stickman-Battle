@@ -64,6 +64,8 @@ class GameRoom:
         self.room_id = room_id
         self.player1 = Body(name="Fighter1", x=200, y=300, direction=1)
         self.player2 = Body(name="Fighter2", x=600, y=300, direction=-1)
+        self.player1.target_y = 470
+        self.player2.target_y = 470
         self.engine = GameEngine()
         self.connected_players = set()
         self.sid_to_player = {}

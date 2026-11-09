@@ -537,6 +537,8 @@ def format_friendly_error(e) -> str:
                 hint = f"\n[Hint]: '{name}' is not defined. Check spelling or check Commands Manual."
     elif "IndentationError" in s or "unindent does not match" in s:
         hint = "\n[Hint]: Check your spaces! Code inside 'if', 'else', or 'for' must be indented by 4 spaces."
+    elif "division by zero" in s:
+        hint = "\n[Hint]: Division by zero! In trigonometry, cot(0), cosec(0), and tan(pi/2) are undefined. Check your math angles and formulas."
 
     return f"{s}{hint}"
 

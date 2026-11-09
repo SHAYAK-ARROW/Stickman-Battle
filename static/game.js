@@ -296,6 +296,13 @@ socket.on('player_left', (data) => {
         runBtn.disabled = true;
         runBtn.innerText = "Run (Waiting for Player...)";
     }
+    if (typeof showToast === 'function') {
+        showToast({
+            title: "Opponent Left",
+            message: `Player ${data.player_id} disconnected from the match. Waiting for reconnect...`,
+            type: "warning"
+        });
+    }
     if (MY_PLAYER_ID === 1 && data.player_id === 2) {
         const waitScreen = document.getElementById('wait_screen');
         if (waitScreen) {
@@ -1336,10 +1343,12 @@ function draw_on_camvas(data) {
         const p2Dead = (data.player2 && data.player2.heart <= 0);
         const wonMatch = (MY_PLAYER_ID === 1 && p2Dead) || (MY_PLAYER_ID === 2 && p1Dead);
         const nextBotMap = {
+            'easy': { key: 'turtle', label: 'Stage 2: Iron Turtle' },
             'rusher': { key: 'turtle', label: 'Stage 2: Iron Turtle' },
             'turtle': { key: 'weaver', label: 'Stage 3: Wave Weaver' },
             'weaver': { key: 'duelist', label: 'Stage 4: Shadow Duelist' },
             'duelist': { key: 'berserker', label: 'Stage 5: Berserker Ronin' },
+            'hard': { key: 'apex', label: 'Stage 6: Apex Sovereign' },
             'berserker': { key: 'apex', label: 'Stage 6: Apex Sovereign' }
         };
         const nextBot = (typeof BOT_DIFFICULTY !== 'undefined') ? nextBotMap[BOT_DIFFICULTY] : null;
