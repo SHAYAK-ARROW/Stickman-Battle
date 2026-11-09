@@ -1,33 +1,21 @@
-Custom Source-Available (View-Only) License
+MIT License
 
 Copyright (c) 2026 Shayak Sadhukhan (Arrows Development Hub).
-All Rights Reserved.
 
-==============================================================================
-TERMS AND CONDITIONS FOR ACCESS, VIEWING, AND EVALUATION
-==============================================================================
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-1. Permission to View and Inspect
-Permission is hereby granted to any person viewing this repository to inspect, study, and review the source code solely for personal, educational, and peer-review evaluation purposes.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-2. Prohibitions and Restrictions
-Except as expressly permitted in Section 1, you are strictly prohibited from:
-- Copying, cloning, mirroring, redistributing, publishing, sublicensing, or distributing the source code or binary assets, in whole or in part.
-- Deploying, hosting, or running a public or private instance or server of this software.
-- Modifying, transforming, adapting, or creating derivative works based on this codebase.
-- Utilizing this software, its algorithms, or game designs for any commercial purpose, monetization, or inclusion in commercial products.
-
-3. Proprietary Rights
-All title, ownership, and intellectual property rights in and to the software, including but not limited to the game loop mechanics, Python AST sandbox architecture, trigonometric spell mechanics, and user interface styling, remain the exclusive property of Shayak Sadhukhan (Arrows Development Hub).
-
-4. Disclaimer of Warranty
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE.
-
-5. Commercial License for Authorized Purchasers
-Any individual or entity that purchases an official copy of the source code package ("Developer Edition") from authorized distribution channels (including itch.io or direct acquisition from the author) is granted an explicit exemption from the restrictions in Section 2. Authorized purchasers receive full rights to inspect, modify, adapt, self-host on private or public servers, and incorporate this codebase into their own personal, educational, or commercial projects in accordance with the Commercial Developer License bundled with their purchase package. Standalone redistribution or resale of the unmodified source code or asset template remains strictly prohibited.
-
-==============================================================================
-For commercial licensing inquiries, permissions, or custom project requests:
-Email: shayaksadhukhan402@gmail.com
-==============================================================================
-
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
