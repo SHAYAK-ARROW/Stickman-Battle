@@ -50,7 +50,7 @@ Whether dueling friends in private token-authenticated rooms or sparring against
 ### 1. AST Security Analysis & Isolated Subprocess Sandboxing
 Executing arbitrary user-submitted Python code in real time is a significant security challenge. Stickman Battle solves this with a two-phase defense:
 * **Static AST Security Analysis ([`compiler.py`](compiler.py)):** Before execution, user code is parsed into an Abstract Syntax Tree (AST). The AST visitor strictly rejects forbidden primitives (`eval`, `exec`, `open`, `__import__`, `globals`, `locals`), enforces a hard loop-nesting limit (max 2 levels) to avoid CPU denial-of-service, and blocks recursive calls.
-* **Process-Isolated Execution Worker:** Validated code runs in an isolated subprocess worker with a hard execution deadline (0.5s). Memory and state leaks are prevented by passing only primitive sensor snapshots into the worker and returning structured action tuples.
+* **Process-Isolated Execution Worker:** Validated code runs in an isolated subprocess worker with a hard execution deadline (1.0s). Memory and state leaks are prevented by passing only primitive sensor snapshots into the worker and returning structured action tuples.
 
 ### 2. Action Queue Command Pattern
 If standard Python loops (`for i in range(5): attack()`) executed normally, all five attacks would fire instantly in zero milliseconds. Stickman Battle decouples code execution from physics frames using an **Action Queue**:
