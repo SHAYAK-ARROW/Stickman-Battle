@@ -140,7 +140,6 @@ class BattleBot:
 
         # Tactical sensor measurements
         dx = abs(player.x - bot.x)
-        dy = abs(player.y - bot.y)
 
         base_interval = random.uniform(cfg["interval"][0], cfg["interval"][1])
         # If far away, close distance with tighter pacing (0.7s - 1.2s) instead of idling 2.4s

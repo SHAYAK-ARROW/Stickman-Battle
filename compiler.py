@@ -284,6 +284,14 @@ def _sandbox_execute(code, sensors):
 
 def _sandbox_worker(connection):
     """Keep one isolated process warm and execute scripts on request."""
+    # Attempt to apply memory limit on POSIX systems
+    try:
+        import resource
+        mem_limit = 128 * 1024 * 1024  # 128 MB RAM limit per worker
+        resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
+    except (ImportError, AttributeError, ValueError, OSError):
+        pass
+
     try:
         connection.send(("ready",))
         while True:
@@ -384,8 +392,10 @@ class SecurityValidator(ast.NodeVisitor):
     FORBIDDEN_NAMES = {
         'eval', 'exec', 'compile', 'getattr', 'setattr', 'delattr',
         'globals', 'locals', 'vars', 'breakpoint', 'memoryview',
-        '__import__', 'open', 'exit', 'quit', 'help'
+        '__import__', 'open', 'exit', 'quit', 'help', 'format'
     }
+
+    FORBIDDEN_ATTRS = {'format', 'format_map', '__format__'}
 
     ALLOWED_MODULES = {'math', 'random'}
 
@@ -405,6 +415,15 @@ class SecurityValidator(ast.NodeVisitor):
     def visit_Attribute(self, node):
         if node.attr.startswith('_'):
             raise ValueError(f"Attribute '{node.attr}' is forbidden!")
+        if node.attr in self.FORBIDDEN_ATTRS:
+            raise ValueError(f"Attribute '{node.attr}' is restricted for battle security! Use f-strings for text formatting.")
+        self.generic_visit(node)
+
+    def visit_Constant(self, node):
+        if isinstance(node.value, str):
+            # Block format string exploit payloads like '{0.__globals__}'
+            if re.search(r'\{[^{}]*\.[_a-zA-Z]', node.value) and ('__' in node.value or 'globals' in node.value):
+                raise ValueError("String contains forbidden format attribute expression!")
         self.generic_visit(node)
 
     def visit_Name(self, node):
@@ -463,12 +482,20 @@ class SecurityValidator(ast.NodeVisitor):
 
     def visit_BinOp(self, node):
         if isinstance(node.op, ast.Mult):
+            # Check left side constant sequence
             if isinstance(node.left, ast.Constant) and isinstance(node.left.value, (str, list, tuple)):
-                if isinstance(node.right, ast.Constant) and isinstance(node.right.value, (int, float)) and node.right.value > 100:
+                if not isinstance(node.right, ast.Constant) or not isinstance(node.right.value, (int, float)) or node.right.value > 100 or node.right.value < 0:
                     raise ValueError("Multiplication repetition exceeds safety limit (max 100)!")
+            # Check right side constant sequence
             elif isinstance(node.right, ast.Constant) and isinstance(node.right.value, (str, list, tuple)):
-                if isinstance(node.left, ast.Constant) and isinstance(node.left.value, (int, float)) and node.left.value > 100:
+                if not isinstance(node.left, ast.Constant) or not isinstance(node.left.value, (int, float)) or node.left.value > 100 or node.left.value < 0:
                     raise ValueError("Multiplication repetition exceeds safety limit (max 100)!")
+        elif isinstance(node.op, ast.Pow):
+            if isinstance(node.right, ast.Constant) and isinstance(node.right.value, (int, float)) and node.right.value > 1000:
+                raise ValueError("Exponent exceeds safety limit (max 1000)!")
+            if isinstance(node.left, ast.Constant) and isinstance(node.left.value, (int, float)) and abs(node.left.value) > 100:
+                if not isinstance(node.right, ast.Constant) or node.right.value > 10:
+                    raise ValueError("Power operation exceeds safety limit!")
         self.generic_visit(node)
 
     def visit_Call(self, node):

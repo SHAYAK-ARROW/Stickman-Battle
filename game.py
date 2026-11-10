@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, abort, send_from_directory, jsonify
-from flask_socketio import SocketIO, join_room, leave_room
+from flask_socketio import SocketIO, join_room
 from char import Body, MAX_HEALTH
 import compiler
 from engine import GameEngine
@@ -173,6 +173,8 @@ class GameRoom:
 
 rooms = {}
 sid_auth = {} # sid -> {'room_id': str, 'player_id': int}
+player_run_cooldown = {} # (room_id, player_id) -> float (timestamp)
+RUN_CODE_COOLDOWN_SECONDS = 0.35
 
 def get_or_create_room(room_id):
     if not ROOM_ID_PATTERN.match(room_id):
@@ -453,6 +455,18 @@ def code_handler(data):
     room_id = auth['room_id']
     player_id = auth['player_id'] # Enforce authenticated player_id, reject client forgery
     
+    # Rate limit check (Bug #5: Cooldown between code executions)
+    now = time.time()
+    cooldown_key = (room_id, player_id)
+    last_run_time = player_run_cooldown.get(cooldown_key, 0)
+    if now - last_run_time < RUN_CODE_COOLDOWN_SECONDS:
+        remaining = round(RUN_CODE_COOLDOWN_SECONDS - (now - last_run_time), 2)
+        socketio.emit('code_error', {
+            'error': f'Cooldown active! Please wait {remaining}s before executing code again.'
+        }, to=request.sid)
+        return
+    player_run_cooldown[cooldown_key] = now
+
     room = rooms.get(room_id)
     if not room:
         socketio.emit('code_error', {'error': 'Room not found. Please return to lobby.'}, to=request.sid)
@@ -499,7 +513,13 @@ def code_handler(data):
     elif last_err:
         socketio.emit('code_error', {'error': str(last_err)}, to=request.sid)
     else:
-        socketio.emit('code_success', {'message': 'Code executed successfully!'}, to=request.sid)
+        warning_msg = None
+        if isinstance(res, dict) and res.get('loop_capped'):
+            warning_msg = "Loop safety: While loop stopped after 100 iterations."
+        socketio.emit('code_success', {
+            'message': 'Code executed successfully!',
+            'warning': warning_msg
+        }, to=request.sid)
 
 @socketio.on('emergency_action')
 def handle_emergency_action(data):
