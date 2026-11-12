@@ -152,6 +152,36 @@ class BattleBot:
         is_enemy_blocking = (hasattr(player, 'shield') and player.shield.block_timer > 0)
         make_mistake = (random.random() < self.mistake_rate)
 
+        try:
+            self._evaluate_tactics(room, bot, player, now, cfg, dx, is_enemy_attacking, is_enemy_blocking, make_mistake)
+        except Exception as e:
+            logger.error(f"Bot decision error: {e}. Executing immediate reflex fallback.")
+            self.last_decision_time = 0
+            try:
+                # Immediate Reflex Fallback:
+                spells = getattr(room.engine, 'spells', [])
+                incoming = any(
+                    s.get('owner') == player and not s.get('returning', False) and
+                    abs(bot.x - s.get('x', s.get('origin_x', 0))) < 220
+                    for s in spells
+                )
+                if incoming:
+                    if hasattr(bot, 'crouch'):
+                        bot.crouch()
+                    elif hasattr(bot, 'jump'):
+                        bot.jump(10)
+                elif is_enemy_attacking or dx < 100:
+                    if hasattr(bot, 'block'):
+                        bot.block()
+                    elif hasattr(bot, 'crouch'):
+                        bot.crouch()
+                else:
+                    if hasattr(bot, 'move'):
+                        bot.move(1 if (player.x > bot.x and bot.direction == 1) else -1)
+            except Exception as fe:
+                logger.error(f"Immediate reflex fallback execution error: {fe}")
+
+    def _evaluate_tactics(self, room, bot, player, now, cfg, dx, is_enemy_attacking, is_enemy_blocking, make_mistake):
         # 0. DIRECTION CHECK: face the enemy if opponent jumped behind
         if (player.x > bot.x and bot.direction == -1) or (player.x < bot.x and bot.direction == 1):
             bot.flip()

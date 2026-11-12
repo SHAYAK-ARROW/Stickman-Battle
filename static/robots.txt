@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://stickman-battle.onrender.com/sitemap.xml
