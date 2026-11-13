@@ -190,17 +190,76 @@ document.addEventListener('visibilitychange', sendPlayerTabState);
 window.addEventListener('pagehide', () => sendPlayerTabState());
 window.addEventListener('pageshow', () => sendPlayerTabState());
 
+function toggle_bot_pause() {
+    if (typeof socket !== 'undefined' && socket && socket.connected) {
+        socket.emit('toggle_bot_pause', { room_id: typeof ROOM_ID !== 'undefined' ? ROOM_ID : '' });
+    }
+}
+window.toggle_bot_pause = toggle_bot_pause;
+
+function updatePauseUI(isPaused, isManual) {
+    const pauseBtn = document.getElementById('pause_bot_btn');
+    const overlay = document.getElementById('pause_overlay');
+    const title = document.getElementById('pause_title');
+    const desc = document.getElementById('pause_desc');
+    const timerWrap = document.getElementById('pause_timer_wrap');
+    const subtext = document.getElementById('pause_subtext');
+    const cardResumeBtn = document.getElementById('pause_resume_card_btn');
+
+    if (pauseBtn) {
+        if (isPaused) {
+            pauseBtn.innerHTML = "▶️ Resume";
+            pauseBtn.classList.remove("button-secondary");
+            pauseBtn.classList.add("button-primary");
+            pauseBtn.style.color = "#10b981";
+            pauseBtn.style.borderColor = "rgba(16, 185, 129, 0.5)";
+            pauseBtn.title = "Resume Battle (Ctrl+P)";
+        } else {
+            pauseBtn.innerHTML = "⏸️ Pause";
+            pauseBtn.classList.remove("button-primary");
+            pauseBtn.classList.add("button-secondary");
+            pauseBtn.style.color = "#fbbf24";
+            pauseBtn.style.borderColor = "rgba(251, 191, 36, 0.4)";
+            pauseBtn.title = "Pause Battle (Ctrl+P)";
+        }
+    }
+
+    if (overlay) {
+        if (isPaused) {
+            overlay.style.display = 'flex';
+            if (isManual) {
+                if (title) title.innerText = "Battle Paused";
+                if (desc) desc.innerText = "Arena physics & AI bot are frozen. Edit your Python code or click Resume to continue.";
+                if (timerWrap) timerWrap.style.display = 'none';
+                if (subtext) subtext.innerText = "Press Ctrl+P or click below to resume the fight.";
+                if (cardResumeBtn) cardResumeBtn.style.display = 'inline-block';
+            } else {
+                if (title) title.innerText = "Game Paused";
+                if (desc) desc.innerText = "Player is away in another tab. Arena & physics are frozen.";
+                if (timerWrap) timerWrap.style.display = 'block';
+                if (subtext) subtext.innerText = "Return to this tab within 1 minute or the match will forfeit and exit.";
+                if (cardResumeBtn) cardResumeBtn.style.display = 'none';
+            }
+        } else {
+            overlay.style.display = 'none';
+        }
+    }
+}
+window.updatePauseUI = updatePauseUI;
+
 socket.on('game_paused', (data) => {
     isMatchPaused = true;
     pausePlayerId = data.paused_by;
-    pauseSecondsLeft = data.timeout || 60;
+    pauseSecondsLeft = data.timeout || 0;
     console.log("⏸️ Match paused by Player", data.paused_by);
+    updatePauseUI(true, !!data.manual);
 });
 
 socket.on('game_resumed', (data) => {
     isMatchPaused = false;
     pausePlayerId = null;
     console.log("▶️ Match resumed by Player", data.resumed_by);
+    updatePauseUI(false, !!data.manual);
 });
 
 socket.on('player_afk_timeout', (data) => {
@@ -1672,3 +1731,19 @@ window.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// --- ⏸️ OPTION 3: BOT DUEL PAUSE / RESUME HANDLERS (Ctrl + P) ---
+window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+        if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
+            e.preventDefault(); // Suppress browser print dialog
+            toggle_bot_pause();
+        }
+    }
+});
+
+// Enable pause button visibility in bot rooms on load
+if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
+    const pb = document.getElementById('pause_bot_btn');
+    if (pb) pb.style.display = 'inline-flex';
+}

@@ -286,19 +286,21 @@
 
         <div class="pause-card">
 
-            <div class="pause-badge">⏸️ MATCH PAUSED</div>
+            <div class="pause-badge" id="pause_badge">⏸️ MATCH PAUSED</div>
 
             <h3 id="pause_title">Game Paused</h3>
 
             <p id="pause_desc">Player is away in another tab. Arena & physics are frozen.</p>
 
-            <div class="pause-timer-wrap">
+            <div class="pause-timer-wrap" id="pause_timer_wrap">
 
                 Auto-exit countdown: <span id="pause_timer_seconds">60</span>s
 
             </div>
 
             <p class="pause-hint" id="pause_subtext">Return to this tab within 1 minute or the match will forfeit and exit.</p>
+
+            <button id="pause_resume_card_btn" type="button" class="button button-primary" onclick="toggle_bot_pause()" style="display: none; margin-top: 14px; width: 100%;">▶️ Resume Battle (Ctrl+P)</button>
 
         </div>
 
@@ -496,6 +498,8 @@ else:
         <button id="run_btn" class="button button-primary" onclick="run()" disabled>Run (Waiting for Player...)</button>
 
         <button class="button button-secondary" onclick="open_commands_dialog()">Commands manual</button>
+
+        <button id="pause_bot_btn" type="button" class="button button-secondary" onclick="toggle_bot_pause()" title="Pause / Resume Game (Ctrl+P)" style="display: none; border-color: rgba(251, 191, 36, 0.4); color: #fbbf24;">⏸️ Pause</button>
 
         <button id="restart_btn" class="button button-secondary" onclick="request_restart()" style="display: none;">Play again</button>
 

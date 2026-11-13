@@ -458,6 +458,45 @@ def handle_tab_state(data):
                 'resumed_by': player_id
             }, to=room_id)
 
+@socketio.on('toggle_bot_pause')
+def handle_toggle_bot_pause(data=None):
+    auth = sid_auth.get(request.sid)
+    if not auth:
+        return
+    room_id = auth.get('room_id')
+    room = rooms.get(room_id)
+    if not room or not getattr(room, 'is_match_active', False):
+        return
+    # ONLY permitted in bot rooms (single player practice / arcade)
+    if not getattr(room, 'is_bot_room', False):
+        return
+
+    player_id = auth.get('player_id', 1)
+    room.is_paused = not getattr(room, 'is_paused', False)
+    if room.is_paused:
+        room.paused_by = player_id
+        room.pause_start_time = time.time()
+        room.pause_timeout = 999999.0  # Indefinite pause until unpaused
+        logger.info(f"Room [{room_id}] -> Bot duel manually paused by Player {player_id}.")
+        socketio.emit('game_paused', {
+            'paused': True,
+            'paused_by': player_id,
+            'timeout': 0,
+            'is_bot_room': True,
+            'manual': True
+        }, to=room_id)
+    else:
+        room.paused_by = None
+        room.pause_start_time = None
+        room.pause_timeout = 60.0
+        logger.info(f"Room [{room_id}] -> Bot duel manually resumed by Player {player_id}.")
+        socketio.emit('game_resumed', {
+            'paused': False,
+            'resumed_by': player_id,
+            'is_bot_room': True,
+            'manual': True
+        }, to=room_id)
+
 @socketio.on('run_code')
 def code_handler(data):
     # Verify SID authentication binding
@@ -502,6 +541,19 @@ def code_handler(data):
         logger.info(f"Room [{room_id}] -> Match game over. Rematch required.")
         socketio.emit('code_error', {'error': 'Match is over! Click Play Again below to rematch.'}, to=request.sid)
         return
+
+    # If paused in a bot duel, running code resumes the fight seamlessly
+    if getattr(room, 'is_paused', False) and getattr(room, 'is_bot_room', False):
+        room.is_paused = False
+        room.paused_by = None
+        room.pause_start_time = None
+        room.pause_timeout = 60.0
+        socketio.emit('game_resumed', {
+            'paused': False,
+            'resumed_by': player_id,
+            'is_bot_room': True,
+            'manual': True
+        }, to=room_id)
         
     if not isinstance(data, dict):
         return
