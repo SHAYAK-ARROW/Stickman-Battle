@@ -178,17 +178,19 @@ let isMatchPaused = false;
 let pauseSecondsLeft = 60;
 let pausePlayerId = null;
 
-function sendPlayerTabState() {
-    const isHidden = !!document.hidden;
+function sendPlayerTabState(forceHidden) {
+    const isHidden = typeof forceHidden === 'boolean' ? forceHidden : (!!document.hidden);
     console.log("🎮 Tab visibility changed. Hidden:", isHidden);
     if (typeof socket !== 'undefined' && socket && socket.connected) {
         socket.emit('player_tab_state', { hidden: isHidden });
     }
 }
 
-document.addEventListener('visibilitychange', sendPlayerTabState);
-window.addEventListener('pagehide', () => sendPlayerTabState());
+document.addEventListener('visibilitychange', () => sendPlayerTabState());
+window.addEventListener('pagehide', () => sendPlayerTabState(true));
 window.addEventListener('pageshow', () => sendPlayerTabState());
+window.addEventListener('blur', () => sendPlayerTabState(true));
+window.addEventListener('focus', () => sendPlayerTabState(false));
 
 function toggle_bot_pause() {
     if (typeof socket !== 'undefined' && socket && socket.connected) {
@@ -279,10 +281,37 @@ socket.on('player_afk_timeout', (data) => {
 socket.on('connect', () => {
     console.log("Connected to server! Room:", typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default');
     updateConnectionStatus('connected');
+
+    let saceGrant = null;
+    try {
+        const rawGrant = localStorage.getItem('stickman_sace_brain_v2');
+        if (rawGrant) {
+            saceGrant = JSON.parse(rawGrant);
+        }
+    } catch (e) {
+        console.warn("Failed to read SACE grant from localStorage:", e);
+    }
+
     socket.emit('player_joined', { 
         room_id: ROOM_ID,
-        token: ROOM_TOKEN
+        token: ROOM_TOKEN,
+        sace_grant: saceGrant
     });
+
+    if (document.hidden) {
+        sendPlayerTabState(true);
+    }
+});
+
+socket.on('sace_brain_updated', function(data) {
+    if (data && data.weights) {
+        try {
+            localStorage.setItem('stickman_sace_brain_v2', JSON.stringify(data.weights));
+            console.log("SACE Master Bot brain memory updated in localStorage!");
+        } catch (err) {
+            console.warn("Failed to persist SACE grant to localStorage:", err);
+        }
+    }
 });
 
 socket.on('disconnect', (reason) => {
@@ -341,6 +370,17 @@ socket.on('match_start', () => {
     if (waitScreen) {
         waitScreen.style.display = 'none';
     }
+    const runBtn = document.getElementById('run_btn');
+    if (runBtn) {
+        runBtn.disabled = false;
+        runBtn.innerText = "Run";
+    }
+});
+
+socket.on('bot_ready', (data) => {
+    console.log("Bot ready in arena:", data);
+    const waitScreen = document.getElementById('wait_screen');
+    if (waitScreen) waitScreen.style.display = 'none';
     const runBtn = document.getElementById('run_btn');
     if (runBtn) {
         runBtn.disabled = false;
@@ -507,6 +547,12 @@ function draw_on_camvas(data) {
     }
     if (data.paused_by !== undefined) {
         pausePlayerId = data.paused_by;
+    }
+
+    if (window._lastKnownPaused !== isPaused) {
+        window._lastKnownPaused = isPaused;
+        const isManual = isPaused && (pauseSecondsLeft === 0 || (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM));
+        updatePauseUI(isPaused, isManual);
     }
 
     // --- PROCEDURAL AUDIO SFX & COMBAT TELEMETRY EVENT STREAM ---
@@ -1364,24 +1410,35 @@ function draw_on_camvas(data) {
 
         // 🏆 Progressive Arcade Unlock Record on Victory
         if (iWon && typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM && typeof BOT_DIFFICULTY !== 'undefined') {
-            const stageMap = { 'rusher': 1, 'easy': 1, 'turtle': 2, 'weaver': 3, 'duelist': 4, 'hard': 5, 'berserker': 5, 'apex': 6 };
-            const currentStage = stageMap[BOT_DIFFICULTY] || 1;
-            if (currentStage < 6) {
-                try {
-                    const prevUnlocked = parseInt(localStorage.getItem('stickman_arcade_unlocked') || '1', 10);
-                    const nextStage = Math.max(prevUnlocked, currentStage + 1);
-                    localStorage.setItem('stickman_arcade_unlocked', nextStage.toString());
-                    console.log(`🏆 Arcade milestone unlocked: Stage ${nextStage}!`);
-                    if (typeof showToast === 'function') {
-                        showToast({
-                            title: "Stage Unlocked! 🏆",
-                            message: `Congratulations! Stage ${nextStage} has been unlocked in the Arcade Ladder!`,
-                            type: "success",
-                            duration: 5000
-                        });
+            if (BOT_DIFFICULTY === 'master' || BOT_DIFFICULTY === 'sace') {
+                if (typeof showToast === 'function') {
+                    showToast({
+                        title: "Grandmaster Victor! 👑",
+                        message: "Incredible! You defeated the SACE Adaptive Master Bot!",
+                        type: "success",
+                        duration: 5000
+                    });
+                }
+            } else if (BOT_DIFFICULTY !== 'dummy') {
+                const stageMap = { 'rusher': 1, 'easy': 1, 'turtle': 2, 'weaver': 3, 'duelist': 4, 'hard': 5, 'berserker': 5, 'apex': 6 };
+                const currentStage = stageMap[BOT_DIFFICULTY];
+                if (currentStage && currentStage < 6) {
+                    try {
+                        const prevUnlocked = parseInt(localStorage.getItem('stickman_arcade_unlocked') || '1', 10);
+                        const nextStage = Math.max(prevUnlocked, currentStage + 1);
+                        localStorage.setItem('stickman_arcade_unlocked', nextStage.toString());
+                        console.log(`🏆 Arcade milestone unlocked: Stage ${nextStage}!`);
+                        if (typeof showToast === 'function') {
+                            showToast({
+                                title: "Stage Unlocked! 🏆",
+                                message: `Congratulations! Stage ${nextStage} has been unlocked in the Arcade Ladder!`,
+                                type: "success",
+                                duration: 5000
+                            });
+                        }
+                    } catch(e) {
+                        console.error("Failed to save arcade milestone to localStorage", e);
                     }
-                } catch(e) {
-                    console.error("Failed to save arcade milestone to localStorage", e);
                 }
             }
         }
@@ -1395,6 +1452,10 @@ function draw_on_camvas(data) {
     const exitMatchBtn = document.getElementById('exit_match_btn');
     if (exitMatchBtn) {
         exitMatchBtn.style.display = is_game_over ? 'inline-flex' : 'none';
+    }
+    const pauseBotBtn = document.getElementById('pause_bot_btn');
+    if (pauseBotBtn && typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
+        pauseBotBtn.style.display = is_game_over ? 'none' : 'inline-flex';
     }
     const nextStageBtn = document.getElementById('next_stage_btn');
     if (nextStageBtn) {
@@ -1427,8 +1488,13 @@ function draw_on_camvas(data) {
             runBtn.disabled = true;
             runBtn.innerText = "Match Over (Play Again to Rematch)";
         } else if (isPaused) {
-            runBtn.disabled = true;
-            runBtn.innerText = "⏸️ Match Paused";
+            if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
+                runBtn.disabled = false;
+                runBtn.innerText = "▶️ Run & Resume";
+            } else {
+                runBtn.disabled = true;
+                runBtn.innerText = "⏸️ Match Paused";
+            }
         } else if (data.is_match_active && runBtn.disabled && (runBtn.innerText.includes("Paused") || runBtn.innerText.includes("Waiting"))) {
             // Self-healing: if server reports active match and unpaused, ensure button is ready
             runBtn.disabled = false;
@@ -1442,6 +1508,12 @@ function draw_on_camvas(data) {
 function run() {
     dismissDiagnostics();
     if (window.AudioEngine) window.AudioEngine.playClick();
+
+    // Auto-dismiss battle start gate upon running combat code
+    const gate = document.getElementById('battle_start_gate');
+    if (gate && gate.style.display !== 'none' && typeof window.enterBattleGate === 'function') {
+        window.enterBattleGate();
+    }
 
     // Prevent multi-click spam within 350ms
     const now = Date.now();

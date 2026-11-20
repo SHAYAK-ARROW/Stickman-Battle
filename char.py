@@ -40,6 +40,11 @@ class Character:
         if len(self.action_queue) < 100:
             self.action_queue.append(('flip',))
 
+    def wait(self, duration=1):
+        ticks = max(1, min(300, int(_safe_float(duration, 1.0, 0.05, 10.0) * 30)))
+        if len(self.action_queue) < 100:
+            self.action_queue.append(('wait', ticks))
+
 class Body(Character):
     def __init__(self, name, x, y, direction=1):
         super().__init__(name=name, x=x, y=y, direction=direction)
@@ -210,9 +215,17 @@ class Body(Character):
         # Stamina / Energy Check: wait for passive recharge instead of dropping action
         current_energy = getattr(self, 'energy', MAX_ENERGY)
         if current_energy < cost:
+            self.energy_wait_ticks = getattr(self, 'energy_wait_ticks', 0) + 1
             self.speech_text = f"Low Energy ({int(current_energy)}/{cost}⚡)"
             self.speech_timer = 30
+            # If waited over 45 ticks (~0.75s) and still short on energy, drop stalled action
+            # to prevent permanently trapping the player in an energy-draining loop
+            if self.energy_wait_ticks > 45:
+                self.action_queue.pop(0)
+                self.energy_wait_ticks = 0
             return
+        
+        self.energy_wait_ticks = 0
         
         # Pop only when sufficient energy is confirmed
         self.action_queue.pop(0)
@@ -353,6 +366,10 @@ class Body(Character):
         elif action_type == 'block':
             if hasattr(self, 'shield'):
                 self.shield.block()
+        elif action_type == 'wait':
+            remaining = action[1] - 1
+            if remaining > 0:
+                self.action_queue.insert(0, ('wait', remaining))
         elif action_type == 'say':
             self.speech_text = action[1]
             self.speech_timer = 90

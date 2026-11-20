@@ -117,6 +117,22 @@
                         <span style="font-size: 11px; color: #94a3b8;">Milestones saved in browser</span>
                     </div>
 
+                    <!-- 🐣 Beginner Starter Bot (above ladder, always unlocked) -->
+                    <button type="button" class="button button-bot" onclick="play_bot('beginner')" title="Perfect for first-timers! Super slow & clumsy bot." style="width:100%; margin-bottom: 10px; border-color: rgba(134,239,172,0.5); background: rgba(134,239,172,0.07);">
+                        <div class="bot-logo-badge" title="Beginner Bot">
+                            <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+                                <rect width="36" height="36" rx="9" fill="#86efac" fill-opacity="0.14" stroke="#86efac" stroke-opacity="0.5" stroke-width="1.2"/>
+                                <circle cx="18" cy="14" r="6" fill="#86efac" fill-opacity="0.3" stroke="#86efac" stroke-width="1.8"/>
+                                <path d="M12 26c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#86efac" stroke-width="1.8" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="bot-btn-content">
+                            <span class="bot-btn-title" style="color:#86efac;">🐣 Beginner — Start Here!</span>
+                            <span style="font-size:10.5px; color:#94a3b8;">Slowest & clumsiest · Perfect for beginners</span>
+                        </div>
+                        <span class="btn-arrow" aria-hidden="true" style="color:#86efac;">→</span>
+                    </button>
+
                     <div class="arcade-ladder-grid">
                         <!-- Stage 1: Byte Rusher -->
                         <button type="button" class="button button-bot" onclick="play_bot('rusher')">
@@ -213,6 +229,57 @@
                                 <span class="bot-btn-title" style="color: #fbbf24;">👑 Apex Sovereign</span>
                             </div>
                             <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+                    </div>
+
+                    <!-- 👑 Grandmaster Trial: SACE Master Bot (Adaptive RL AI) -->
+                    <div style="margin: 18px 0 8px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: 11px; font-weight: 700; color: #f59e0b; letter-spacing: 0.8px; text-transform: uppercase;">👑 Grandmaster Trial · Adaptive AI</span>
+                        <span id="sace_section_intel" style="font-size: 11px; color: #c084fc; font-weight: 600;">5-Gram Memory · Learns Your Code</span>
+                    </div>
+
+                    <!-- 🎛️ SACE Master Bot Avatar Radio Toggle Selector -->
+                    <div class="sace-avatar-radio-group" role="radiogroup" aria-label="SACE Master Bot Avatar Level" style="display: flex; gap: 8px; margin-bottom: 10px; background: rgba(15, 23, 42, 0.65); padding: 5px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.22);">
+                        <button type="button" class="sace-avatar-radio-btn" id="sace_avatar_btn_1" role="radio" aria-checked="false" onclick="setSaceAvatarLevel(1)" style="flex: 1; padding: 7px 10px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: #94a3b8; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;">
+                            <span class="avatar-num" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); font-size: 11px; font-weight: 700;">1</span>
+                            <span>Apprentice</span>
+                        </button>
+                        <button type="button" class="sace-avatar-radio-btn" id="sace_avatar_btn_2" role="radio" aria-checked="false" onclick="setSaceAvatarLevel(2)" style="flex: 1; padding: 7px 10px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: #94a3b8; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;">
+                            <span class="avatar-num" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); font-size: 11px; font-weight: 700;">2</span>
+                            <span>Tactical</span>
+                        </button>
+                        <button type="button" class="sace-avatar-radio-btn is-active" id="sace_avatar_btn_3" role="radio" aria-checked="true" onclick="setSaceAvatarLevel(3)" style="flex: 1; padding: 7px 10px; border-radius: 7px; border: 1px solid rgba(245, 158, 11, 0.65); background: linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(168, 85, 247, 0.22) 100%); color: #fbbf24; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 0 12px rgba(245, 158, 11, 0.25); transition: all 0.2s ease;">
+                            <span class="avatar-num" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #fbbf24; color: #1e1b4b; font-size: 11px; font-weight: 800;">3</span>
+                            <span>Grandmaster</span>
+                        </button>
+                    </div>
+
+                    <div class="sace-master-card-container" style="width: 100%;">
+                        <button type="button" class="button button-bot button-sace-master" style="width: 100%; border-color: rgba(245, 158, 11, 0.55); background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(147, 51, 234, 0.16) 100%); box-shadow: 0 0 16px rgba(245, 158, 11, 0.12); display: flex; align-items: center; gap: 14px; padding: 14px 18px; box-sizing: border-box;" onclick="play_bot('master')">
+                            <div class="bot-logo-badge" title="SACE Master Bot">
+                                <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+                                    <rect width="36" height="36" rx="9" fill="#d97706" fill-opacity="0.22" stroke="#fbbf24" stroke-opacity="0.6" stroke-width="1.4"/>
+                                    <path d="M7 26L10 12L15 17L18 9L21 17L26 12L29 26H7Z" fill="url(#sace_crown_grad)" stroke="#fef08a" stroke-width="1.8" stroke-linejoin="round"/>
+                                    <circle cx="18" cy="9" r="2" fill="#fef08a"/>
+                                    <circle cx="10" cy="12" r="1.6" fill="#fef08a"/>
+                                    <circle cx="26" cy="12" r="1.6" fill="#fef08a"/>
+                                    <circle cx="18" cy="20" r="3.2" fill="#a855f7" stroke="#fbbf24" stroke-width="1.2"/>
+                                    <defs>
+                                        <linearGradient id="sace_crown_grad" x1="7" y1="9" x2="29" y2="26" gradientUnits="userSpaceOnUse">
+                                            <stop stop-color="#fbbf24" stop-opacity="0.6"/>
+                                            <stop offset="1" stop-color="#9333ea" stop-opacity="0.6"/>
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </div>
+                            <div class="bot-btn-content" style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span id="sace_card_title" class="bot-btn-title" style="color: #fbbf24; font-weight: 800; font-size: 14px; letter-spacing: 0.3px;">👑 SACE Master Bot (Avatar 3)</span>
+                                    <span id="sace_card_badge" style="font-size: 9.5px; padding: 2px 7px; background: rgba(168, 85, 247, 0.25); border: 1px solid rgba(168, 85, 247, 0.5); color: #e9d5ff; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Grandmaster</span>
+                                </div>
+                                <span id="sace_card_desc" style="font-size: 11.5px; color: #94a3b8; margin-top: 3px;">Full 5-Gram Neural SACE AI · Learns habits &amp; counters loops</span>
+                            </div>
+                            <span class="btn-arrow" aria-hidden="true" style="color: #fbbf24; font-weight: 700; font-size: 18px; margin-left: auto;">→</span>
                         </button>
                     </div>
 

@@ -4,6 +4,7 @@ from char import Body, MAX_HEALTH
 import compiler
 from engine import GameEngine
 from bot import BattleBot
+from sace import SaceBattleBot
 import os
 import json
 import time 
@@ -79,7 +80,9 @@ class GameRoom:
         self.is_bot_room = False
         self.bot_difficulty = None
         self.bot = None
+        self.sace_sync_done = False
         self.is_paused = False
+        self.is_manual_pause = False
         self.paused_by = None
         self.pause_start_time = None
         self.pause_timeout = 60.0
@@ -165,9 +168,11 @@ class GameRoom:
         self.player2_emergency_cooldowns = {}
         self.engine.spells = []
         self.is_paused = False
+        self.is_manual_pause = False
         self.paused_by = None
         self.pause_start_time = None
         self.pause_timeout = 60.0
+        self.sace_sync_done = False
         if getattr(self, 'is_bot_room', False) and getattr(self, 'bot', None):
             self.bot.reset()
 
@@ -244,6 +249,7 @@ def game_info():
 
 BOT_TITLES = {
     'dummy': '🥋 Training Dummy',
+    'beginner': '🐣 Beginner Bot',
     'easy': '🌱 Byte Rusher',
     'rusher': '🌱 Byte Rusher',
     'turtle': '🛡️ Iron Turtle',
@@ -252,6 +258,8 @@ BOT_TITLES = {
     'hard': '🔥 Berserker Ronin',
     'berserker': '🔥 Berserker Ronin',
     'apex': '👑 Apex Sovereign',
+    'master': '👑 SACE Master Bot (Adaptive AI)',
+    'sace': '👑 SACE Master Bot (Adaptive AI)',
 }
 
 @app.route('/wardrobe')
@@ -268,15 +276,28 @@ def api_wardrobe_eval():
 @app.route('/bot/<difficulty>')
 def play_vs_bot(difficulty):
     req_diff = str(difficulty).lower()
-    valid_diffs = ('easy', 'hard', 'dummy', 'rusher', 'turtle', 'weaver', 'duelist', 'berserker', 'apex')
+    valid_diffs = ('easy', 'hard', 'dummy', 'beginner', 'rusher', 'turtle', 'weaver', 'duelist', 'berserker', 'apex', 'master', 'sace')
     diff = req_diff if req_diff in valid_diffs else 'easy'
     room = create_private_room()
     if room is None:
         abort(503, "Server room limit reached. Please try again later.")
     room.is_bot_room = True
     room.bot_difficulty = diff
-    room.bot = BattleBot(diff)
-    room.player2.name = BOT_TITLES.get(diff, f"Bot ({diff.capitalize()})")
+    if diff in ('master', 'sace'):
+        level_str = str(request.args.get('level', '3')).strip()
+        level_map = {
+            '1': (0.25, '👑 SACE Master Bot (Avatar 1: Apprentice)'),
+            '2': (0.75, '👑 SACE Master Bot (Avatar 2: Tactical)'),
+            '3': (1.00, '👑 SACE Master Bot (Avatar 3: Grandmaster)')
+        }
+        diff_val, title = level_map.get(level_str, level_map['3'])
+        room.bot = SaceBattleBot(difficulty=diff_val, avatar_level=level_str)
+        room.bot_avatar_level = level_str
+        room.bot_title = title
+        room.player2.name = title
+    else:
+        room.bot = BattleBot(diff)
+        room.player2.name = BOT_TITLES.get(diff, f"Bot ({diff.capitalize()})")
     room.connected_players.add(2)
     return redirect(url_for('join_room_game', room_id=room.room_id,
                             token=room.player_tokens[1]))
@@ -329,6 +350,7 @@ def join_room_game(room_id):
         player2_token=room.player_tokens[2],
         is_bot_room=getattr(room, 'is_bot_room', False),
         bot_difficulty=getattr(room, 'bot_difficulty', '') or '',
+        bot_avatar_level=getattr(room, 'bot_avatar_level', '3'),
     )
 
 # --- SOCKET.IO EVENT HANDLERS WITH STRICT AUTHENTICATION ---
@@ -387,10 +409,21 @@ def handle_player_join(data):
             socketio.emit('match_start', to=room_id)
             return
         else:
+            # Player 1 connected to bot room: hydrate SACE brain if player provided saved grant
+            if getattr(room, 'bot_difficulty', '') in ('master', 'sace') and getattr(room, 'bot', None):
+                sace_grant = data.get('sace_grant') if isinstance(data, dict) else None
+                if sace_grant and hasattr(room.bot, 'load_grant'):
+                    room.bot.load_grant(sace_grant)
+
             room.connected_players.add(2)
-            room.is_match_active = True
-            logger.info(f"Room [{room_id}] -> Solo match started against {room.bot_difficulty} bot!")
-            socketio.emit('match_start', to=room_id)
+            room.is_match_active = False  # Standby until player clicks Enter Battle or executes code
+            if getattr(room, 'bot', None) and hasattr(room.bot, 'last_decision_time'):
+                room.bot.last_decision_time = time.time() + 1.0
+            logger.info(f"Room [{room_id}] -> Solo bot room standby against {room.bot_difficulty} bot. Waiting for battle gate enter.")
+            socketio.emit('bot_ready', {
+                'bot_title': getattr(room, 'bot_title', 'Bot'),
+                'is_bot_room': True
+            }, to=room_id)
             return
     elif room.is_match_active:
         # Match is already active; immediately unlock the returning/reconnecting player's Run button
@@ -420,6 +453,22 @@ def handle_player_customization(data):
     if 'sword' in data and data['sword']:
         target_player.sword_color = compiler.resolve_color(data['sword'])
 
+@socketio.on('start_match')
+def handle_start_match(data=None):
+    auth = sid_auth.get(request.sid)
+    if not auth:
+        return
+    room_id = auth.get('room_id')
+    room = rooms.get(room_id)
+    if not room:
+        return
+    if not room.is_match_active:
+        room.is_match_active = True
+        if getattr(room, 'bot', None) and hasattr(room.bot, 'last_decision_time'):
+            room.bot.last_decision_time = time.time() + 1.0  # 1.0s combat grace before bot moves
+        logger.info(f"Room [{room_id}] -> Match officially started by Player {auth.get('player_id', 1)} via Enter Battle.")
+        socketio.emit('match_start', to=room_id)
+
 @socketio.on('player_tab_state')
 def handle_tab_state(data):
     auth = sid_auth.get(request.sid)
@@ -433,30 +482,41 @@ def handle_tab_state(data):
 
     hidden = bool(data.get('hidden', False))
     now = time.time()
+    is_bot = getattr(room, 'is_bot_room', False)
 
     if hidden:
         if not getattr(room, 'is_paused', False):
             room.is_paused = True
+            room.is_manual_pause = False
             room.paused_by = player_id
             room.pause_start_time = now
-            room.pause_timeout = 60.0
-            logger.info(f"Room [{room_id}] -> Paused by Player {player_id} (switched tab). 1-minute timeout started.")
+            room.pause_timeout = 999999.0 if is_bot else 60.0
+            logger.info(f"Room [{room_id}] -> Paused by Player {player_id} (switched tab / unfocused).")
             socketio.emit('game_paused', {
                 'paused': True,
                 'paused_by': player_id,
-                'timeout': 60,
-                'is_bot_room': getattr(room, 'is_bot_room', False)
+                'timeout': 0 if is_bot else 60,
+                'is_bot_room': is_bot,
+                'manual': False
             }, to=room_id)
     else:
-        if getattr(room, 'is_paused', False) and getattr(room, 'paused_by', None) == player_id:
-            room.is_paused = False
-            room.paused_by = None
-            room.pause_start_time = None
-            logger.info(f"Room [{room_id}] -> Resumed by Player {player_id} (returned to tab).")
-            socketio.emit('game_resumed', {
-                'paused': False,
-                'resumed_by': player_id
-            }, to=room_id)
+        if getattr(room, 'is_paused', False):
+            # If match was manually paused by the user, DO NOT auto-unpause on tab focus!
+            if getattr(room, 'is_manual_pause', False):
+                logger.info(f"Room [{room_id}] -> Tab refocused, but match remains paused (manual pause active).")
+                return
+            if getattr(room, 'paused_by', None) == player_id:
+                room.is_paused = False
+                room.is_manual_pause = False
+                room.paused_by = None
+                room.pause_start_time = None
+                logger.info(f"Room [{room_id}] -> Resumed by Player {player_id} (returned to tab).")
+                socketio.emit('game_resumed', {
+                    'paused': False,
+                    'resumed_by': player_id,
+                    'is_bot_room': is_bot,
+                    'manual': False
+                }, to=room_id)
 
 @socketio.on('toggle_bot_pause')
 def handle_toggle_bot_pause(data=None):
@@ -470,10 +530,13 @@ def handle_toggle_bot_pause(data=None):
     # ONLY permitted in bot rooms (single player practice / arcade)
     if not getattr(room, 'is_bot_room', False):
         return
+    if room.player1.heart <= 0 or room.player2.heart <= 0:
+        return
 
     player_id = auth.get('player_id', 1)
     room.is_paused = not getattr(room, 'is_paused', False)
     if room.is_paused:
+        room.is_manual_pause = True
         room.paused_by = player_id
         room.pause_start_time = time.time()
         room.pause_timeout = 999999.0  # Indefinite pause until unpaused
@@ -486,9 +549,10 @@ def handle_toggle_bot_pause(data=None):
             'manual': True
         }, to=room_id)
     else:
+        room.is_manual_pause = False
         room.paused_by = None
         room.pause_start_time = None
-        room.pause_timeout = 60.0
+        room.pause_timeout = 999999.0
         logger.info(f"Room [{room_id}] -> Bot duel manually resumed by Player {player_id}.")
         socketio.emit('game_resumed', {
             'paused': False,
@@ -531,6 +595,8 @@ def code_handler(data):
         if (1 in room.connected_players and 2 in room.connected_players) or getattr(room, 'is_bot_room', False):
             logger.info(f"Room [{room_id}] -> Auto-activating match upon code run.")
             room.is_match_active = True
+            if getattr(room, 'bot', None) and hasattr(room.bot, 'last_decision_time'):
+                room.bot.last_decision_time = time.time() + 0.5
             socketio.emit('match_start', to=room_id)
         else:
             logger.info(f"Room [{room_id}] -> Match not active (waiting for Player 2). Code run blocked.")
@@ -541,19 +607,6 @@ def code_handler(data):
         logger.info(f"Room [{room_id}] -> Match game over. Rematch required.")
         socketio.emit('code_error', {'error': 'Match is over! Click Play Again below to rematch.'}, to=request.sid)
         return
-
-    # If paused in a bot duel, running code resumes the fight seamlessly
-    if getattr(room, 'is_paused', False) and getattr(room, 'is_bot_room', False):
-        room.is_paused = False
-        room.paused_by = None
-        room.pause_start_time = None
-        room.pause_timeout = 60.0
-        socketio.emit('game_resumed', {
-            'paused': False,
-            'resumed_by': player_id,
-            'is_bot_room': True,
-            'manual': True
-        }, to=room_id)
         
     if not isinstance(data, dict):
         return
@@ -580,6 +633,20 @@ def code_handler(data):
     elif last_err:
         socketio.emit('code_error', {'error': str(last_err)}, to=request.sid)
     else:
+        # Code compiled and actions queued successfully! Resume combat if match was paused.
+        if getattr(room, 'is_paused', False) and getattr(room, 'is_bot_room', False):
+            room.is_paused = False
+            room.is_manual_pause = False
+            room.paused_by = None
+            room.pause_start_time = None
+            room.pause_timeout = 999999.0
+            socketio.emit('game_resumed', {
+                'paused': False,
+                'resumed_by': player_id,
+                'is_bot_room': True,
+                'manual': True
+            }, to=room_id)
+
         warning_msg = None
         if isinstance(res, dict) and res.get('loop_capped'):
             warning_msg = "Loop safety: While loop stopped after 100 iterations."
@@ -743,24 +810,27 @@ def game_loop():
                     if room.is_match_active or room.connected_players or room.pending_disconnects:
                         # ⏸️ TAB-CHANGE PAUSE & 1-MINUTE AFK AUTO-EXIT CHECK
                         if getattr(room, 'is_paused', False):
-                            pause_elapsed = now - getattr(room, 'pause_start_time', now)
-                            timeout_limit = getattr(room, 'pause_timeout', 60.0)
-                            if pause_elapsed > timeout_limit:
-                                afk_pid = getattr(room, 'paused_by', 1)
-                                is_bot = getattr(room, 'is_bot_room', False)
-                                winner_pid = 2 if afk_pid == 1 else 1
-                                logger.info(f"Room [{room.room_id}] -> 1-minute AFK timeout reached for Player {afk_pid}!")
-                                socketio.emit('player_afk_timeout', {
-                                    'afk_player': afk_pid,
-                                    'winner': winner_pid if not is_bot else None,
-                                    'is_bot_room': is_bot,
-                                    'message': f"Match ended: Player {afk_pid} was away for more than 1 minute."
-                                }, to=room.room_id)
-                                room.is_match_active = False
-                                room.is_paused = False
-                                room.paused_by = None
-                                room.pause_start_time = None
-                                room.reset_match()
+                            # Only human vs human PvP enforces a 60s AFK timeout forfeit.
+                            # Bot practice matches pause indefinitely without timeout.
+                            if not getattr(room, 'is_bot_room', False):
+                                pause_elapsed = now - getattr(room, 'pause_start_time', now)
+                                timeout_limit = getattr(room, 'pause_timeout', 60.0)
+                                if pause_elapsed > timeout_limit:
+                                    afk_pid = getattr(room, 'paused_by', 1)
+                                    winner_pid = 2 if afk_pid == 1 else 1
+                                    logger.info(f"Room [{room.room_id}] -> 1-minute AFK timeout reached for Player {afk_pid}!")
+                                    socketio.emit('player_afk_timeout', {
+                                        'afk_player': afk_pid,
+                                        'winner': winner_pid,
+                                        'is_bot_room': False,
+                                        'message': f"Match ended: Player {afk_pid} was away for more than 1 minute."
+                                    }, to=room.room_id)
+                                    room.is_match_active = False
+                                    room.is_paused = False
+                                    room.is_manual_pause = False
+                                    room.paused_by = None
+                                    room.pause_start_time = None
+                                    room.reset_match()
                             # Freeze physics and bot updates during pause!
                         else:
                             if getattr(room, 'is_bot_room', False) and room.is_match_active and getattr(room, 'bot', None):
@@ -769,6 +839,15 @@ def game_loop():
                                 except Exception as be:
                                     logger.error(f"Bot tick error in room {room.room_id}: {be}")
                             room.engine.update()
+
+                            # SACE Brain Persistence Sync: dispatch learned memory on match end (KO)
+                            if getattr(room, 'is_bot_room', False) and getattr(room, 'bot_difficulty', '') in ('master', 'sace'):
+                                if (room.player1.heart <= 0 or room.player2.heart <= 0) and not getattr(room, 'sace_sync_done', False):
+                                    room.sace_sync_done = True
+                                    if getattr(room, 'bot', None) and hasattr(room.bot, 'export_grant'):
+                                        updated_weights = room.bot.export_grant()
+                                        socketio.emit('sace_brain_updated', {'weights': updated_weights}, to=room.room_id)
+                                        logger.info(f"Room [{room.room_id}] -> SACE Master Bot brain exported ({len(updated_weights)} keys) and dispatched to client.")
                         
                         # Opponent dialogue question dispatch
                         if getattr(room.player1, 'pending_question', None):

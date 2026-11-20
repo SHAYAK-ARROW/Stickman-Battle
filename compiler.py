@@ -21,7 +21,7 @@ _SANDBOX_CONNECTION = None
 NUMERIC_COMMANDS = {
     'move', 'run', 'run_to', 'dash', 'dodge', 'jump', 'long_jump',
     'project', 'set_sword', 'set_shield', 'sin_wave', 'cos_wave',
-    'tan_spike', 'sec_barrier', 'cosec_dome', 'cot_wall'
+    'tan_spike', 'sec_barrier', 'cosec_dome', 'cot_wall', 'wait'
 }
 
 def _record_command(commands, name, args):
@@ -129,6 +129,7 @@ def _sandbox_execute(code, sensors):
         "sec_barrier": "sec_barrier", "Sec_barrier": "sec_barrier",
         "cosec_dome": "cosec_dome", "Cosec_dome": "cosec_dome",
         "cot_wall": "cot_wall", "Cot_wall": "cot_wall",
+        "wait": "wait", "Wait": "wait",
     }
     for public_name, command_name in command_aliases.items():
         safe_env[public_name] = command(command_name)

@@ -11,6 +11,12 @@ BOT_CONFIGS = {
         "mistake": 0.0,
         "style": "peaceful"
     },
+    "beginner": {
+        "title": "🐣 Beginner Bot",
+        "interval": (2.5, 4.0),
+        "mistake": 0.80,
+        "style": "beginner"
+    },
     "easy": {
         "title": "🌱 Byte Rusher",
         "interval": (1.6, 2.4),
@@ -235,6 +241,37 @@ class BattleBot:
                 bot.say(random.choice(self.banter_phrases))
 
         style = cfg.get("style", "rusher")
+
+        # --- STYLE: BEGINNER (Very easy - mostly wanders, rarely attacks) ---
+        if style == "beginner":
+            # Beginner bot: slow reactions, rarely blocks, rarely attacks
+            if incoming_spell and not make_mistake:
+                # Only 30% chance to even try to dodge
+                if random.random() < 0.30 and hasattr(bot, 'crouch'):
+                    bot.crouch()
+                return
+
+            action_roll = random.random()
+            if action_roll < 0.50:
+                # Just walk towards/away slowly
+                step = 1 if dx > 150 else -1
+                bot.move(step)
+            elif action_roll < 0.65 and not make_mistake:
+                # Rare attack only when very close
+                if dx < 100 and hasattr(bot, 'attack'):
+                    bot.attack()
+                else:
+                    bot.move(1)
+            elif action_roll < 0.75:
+                if hasattr(bot, 'jump'):
+                    bot.jump(random.choice([6, 8]))
+            elif action_roll < 0.85 and not make_mistake:
+                if hasattr(bot, 'block'):
+                    bot.block()
+            else:
+                # Sometimes just stand still (confused)
+                pass
+            return
 
         # --- STYLE: PEACEFUL / TRAINING DUMMY (Active Sparring Sandbox) ---
         # Roams the entire arena, jumps, dashes, crouches, blocks, but NEVER attacks!

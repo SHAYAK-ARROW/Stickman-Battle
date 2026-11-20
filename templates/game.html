@@ -1066,6 +1066,7 @@ else:
     let IS_BOT_ROOM = {{ is_bot_room|tojson if is_bot_room is defined else false }};
 
     const BOT_DIFFICULTY = {{ bot_difficulty|tojson if bot_difficulty is defined else "" }};
+    const BOT_AVATAR_LEVEL = {{ bot_avatar_level|tojson if bot_avatar_level is defined else "3" }};
 
 
 
@@ -1287,7 +1288,18 @@ if (currentIsBotRoom) {
 
     const st = document.getElementById('status_text');
 
-    if (st) st.innerText = 'Solo vs Bot (' + (BOT_DIFFICULTY === 'hard' ? 'Hard' : 'Easy') + ')';
+    if (st) {
+        if (BOT_DIFFICULTY === 'master' || BOT_DIFFICULTY === 'sace') {
+            const avatarTitles = {
+                '1': '👑 SACE Master Bot (Avatar 1: Apprentice)',
+                '2': '👑 SACE Master Bot (Avatar 2: Tactical)',
+                '3': '👑 SACE Master Bot (Avatar 3: Grandmaster)'
+            };
+            st.innerText = avatarTitles[BOT_AVATAR_LEVEL] || '👑 SACE Master Bot (Avatar 3: Grandmaster)';
+        } else {
+            st.innerText = 'Solo vs Bot (' + (BOT_DIFFICULTY === 'hard' ? 'Hard' : (BOT_DIFFICULTY || 'Easy')) + ')';
+        }
+    }
 
 }
 
@@ -1311,23 +1323,29 @@ function close_commands_dialog() {
 
 const STAGE_TITLES = {
     'dummy': '🥋 Practice Dojo',
+    'beginner': '🐣 Beginner Bot',
     'rusher': '⚡ Stage 1: Byte Rusher',
     'turtle': '🛡️ Stage 2: Iron Turtle',
     'weaver': '🌊 Stage 3: Wave Weaver',
     'duelist': '🗡️ Stage 4: Shadow Duelist',
     'berserker': '🔥 Stage 5: Berserker Ronin',
     'apex': '👑 Stage 6: Apex Sovereign',
+    'master': (typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '1') ? '👑 SACE Master Bot (Avatar 1: Apprentice)' : ((typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '2') ? '👑 SACE Master Bot (Avatar 2: Tactical)' : '👑 SACE Master Bot (Avatar 3: Grandmaster)'),
+    'sace': (typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '1') ? '👑 SACE Master Bot (Avatar 1: Apprentice)' : ((typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '2') ? '👑 SACE Master Bot (Avatar 2: Tactical)' : '👑 SACE Master Bot (Avatar 3: Grandmaster)'),
     'easy': '🌱 Solo vs Bot (Easy)',
     'hard': '🔥 Solo vs Bot (Hard)'
 };
 
 const STAGE_INTEL = {
     'turtle': 'Heavy shield · Break with heavy_attack()',
-    'rusher': 'Direct charges · ~45% error rate · Punish whiffed dashes with sword_slash()',
+    'beginner': 'Very slow & clumsy · Great for your very first fight · Just attack!',
+    'rusher': 'Direct charges · ~65% error rate · Punish whiffed dashes with sword_slash()',
     'weaver': 'Trig spells (sin/cos) · Crouch or jump to evade, or clash with throw_sword()',
     'duelist': 'Agile dashes · Flips behind player · Turn around quickly or back-dodge',
     'berserker': 'Combos & rapid counters · High aggression · Block early and strike on cooldown',
     'apex': 'Grandmaster Boss · Sub-second reflex · Master all sensors and spell fusion',
+    'master': 'Adaptive Neural AI · Learns your habits across matches · Counters repetitive loops',
+    'sace': 'Adaptive Neural AI · Learns your habits across matches · Counters repetitive loops',
     'dummy': 'Infinite Health · Zero Pressure · Peaceful Combat Sandbox for test loops',
     'easy': 'Standard sparring bot · Great for testing basic movement and attacks',
     'hard': 'Tactical counter bot · Fast reactions and dynamic distance tracking'
@@ -1369,7 +1387,7 @@ function showBattleGateOnMatchStart() {
     const isBot = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM);
     if (isBot) {
         const title = STAGE_TITLES[BOT_DIFFICULTY] || '⚔️ Solo Bot Duel';
-        const label = BOT_DIFFICULTY === 'dummy' ? 'PEACEFUL DOJO' : 'ARCADE CHALLENGE';
+        const label = BOT_DIFFICULTY === 'dummy' ? 'PEACEFUL DOJO' : ((BOT_DIFFICULTY === 'master' || BOT_DIFFICULTY === 'sace') ? 'GRANDMASTER TRIAL' : (BOT_DIFFICULTY === 'beginner' ? 'BEGINNER CHALLENGE' : 'ARCADE CHALLENGE'));
         const intel = STAGE_INTEL[BOT_DIFFICULTY] || 'Prepare your Python battle algorithm and enter the arena!';
         showBattleGate(title, label, 'Duel begins the moment you step into the arena.', intel);
     } else {
@@ -1399,7 +1417,10 @@ function enterBattleGate(e) {
 
     }
 
-
+    // Inform server that player entered the battle
+    if (typeof socket !== 'undefined' && socket && socket.connected) {
+        socket.emit('start_match');
+    }
 
     // Unlock AudioContext and play fanfare + sword clash + BGM
 
@@ -1422,14 +1443,14 @@ function enterBattleGate(e) {
 
 
     // Focus Python code editor
-
-    const ed = document.getElementById('code_input');
-
-    if (ed) {
-
-        setTimeout(() => ed.focus(), 250);
-
-    }
+    setTimeout(() => {
+        if (window.codeMirrorInstance) {
+            window.codeMirrorInstance.focus();
+        } else {
+            const ed = document.getElementById('ide') || document.getElementById('code_input');
+            if (ed) ed.focus();
+        }
+    }, 250);
 
 }
 

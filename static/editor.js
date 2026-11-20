@@ -140,6 +140,7 @@ const BATTLE_HINTS = [
     { text: "flip()", displayText: "🔄 flip() · Face opposite direction" },
     { text: "crouch(30)", displayText: "🦆 crouch(duration) · Duck under high strikes" },
     { text: "move(2)", displayText: "🏃 move(step) · Walk forward" },
+    { text: "wait(1)", displayText: "⏳ wait(seconds) · Rest and recharge energy" },
     { text: "throw_sword()", displayText: "🗡️ throw_sword() · Ranged sword projectile" },
 
     // Trigonometric spells
@@ -195,9 +196,18 @@ function initCodeMirror() {
                 return null;
             }
 
-            const start = token.start;
-            const end = cur.ch;
-            const word = token.string.toLowerCase().replace(/^[^\w\.]+/, "");
+            let start = token.start;
+            let end = cur.ch;
+            let word = token.string.toLowerCase().replace(/^[^\w\.]+/, "");
+
+            // If cursor is right after dot (e.g. 'math.'), resolve parent module
+            if (token.string === "." || word === ".") {
+                const prevToken = cm.getTokenAt(CodeMirror.Pos(line, token.start));
+                if (prevToken && prevToken.string) {
+                    word = (prevToken.string.trim() + ".").toLowerCase();
+                    start = prevToken.start;
+                }
+            }
 
             if (!word) return null;
 
@@ -316,7 +326,17 @@ function initCodeMirror() {
             viewportMargin: Infinity,
             extraKeys: {
                 "Ctrl-Space": function(cm) {
-                    cm.showHint({ hint: CodeMirror.hint.python, completeSingle: false });
+                    cm.showHint({
+                        hint: CodeMirror.hint.python,
+                        completeSingle: false,
+                        closeCharacters: /[\s,;:>)]/,
+                        closeOnUnfocus: true
+                    });
+                },
+                "Esc": function(cm) {
+                    if (cm.state.completionActive) {
+                        cm.state.completionActive.close();
+                    }
                 }
             }
         });
@@ -339,8 +359,14 @@ function initCodeMirror() {
         codeMirrorInstance.on("inputRead", function(cm, change) {
             if (change.origin !== "+input") return;
             const ch = change.text[0];
-            if (/[a-zA-Z_\.]/.test(ch)) {
-                cm.showHint({ hint: CodeMirror.hint.python, completeSingle: false });
+            // Responsive auto-complete on typing identifiers or dot
+            if (ch === "." || /[a-zA-Z_]/.test(ch)) {
+                cm.showHint({
+                    hint: CodeMirror.hint.python,
+                    completeSingle: false,
+                    closeCharacters: /[\s,;:>)]/,
+                    closeOnUnfocus: true
+                });
             }
         });
 
@@ -386,56 +412,12 @@ function initCodeMirror() {
         // Initialize 10-slot Strategy Vault with active slot
         initStrategyVault();
 
-        // Render true VS Code-style vertical indent guides only for indented code blocks
-        codeMirrorInstance.on("renderLine", function(cm, line, elt) {
-            const text = line.text;
-            let spaces = 0;
-            while (spaces < text.length && text.charAt(spaces) === " ") spaces++;
-            let lvl = Math.floor(spaces / 4);
-
-            // If empty line, calculate surrounding indent level
-            if (text.trim().length === 0) {
-                const lineNo = cm.getLineNumber(line);
-                let prevLvl = 0;
-                for (let p = lineNo - 1; p >= 0; p--) {
-                    const pt = cm.getLine(p);
-                    if (pt && pt.trim().length > 0) {
-                        let sp = 0;
-                        while (sp < pt.length && pt.charAt(sp) === " ") sp++;
-                        prevLvl = Math.floor(sp / 4);
-                        break;
-                    }
-                }
-                let nextLvl = 0;
-                const total = cm.lineCount();
-                for (let n = lineNo + 1; n < total; n++) {
-                    const nt = cm.getLine(n);
-                    if (nt && nt.trim().length > 0) {
-                        let sp = 0;
-                        while (sp < nt.length && nt.charAt(sp) === " ") sp++;
-                        nextLvl = Math.floor(sp / 4);
-                        break;
-                    }
-                }
-                lvl = Math.min(prevLvl, nextLvl);
-            }
-
-            if (lvl > 0) {
-                const guides = document.createElement("div");
-                guides.className = "cm-indent-guides-bar";
-                guides.setAttribute("aria-hidden", "true");
-                for (let j = 0; j < lvl; j++) {
-                    const span = document.createElement("span");
-                    span.className = "cm-indent-guide-unit";
-                    guides.appendChild(span);
-                }
-                elt.insertBefore(guides, elt.firstChild);
-            }
-        });
-
         setTimeout(function() {
-            codeMirrorInstance.refresh();
-        }, 120);
+            if (codeMirrorInstance) codeMirrorInstance.refresh();
+        }, 50);
+        setTimeout(function() {
+            if (codeMirrorInstance) codeMirrorInstance.refresh();
+        }, 200);
     } else if (ide) {
         // Fallback for standalone/legacy mode without CodeMirror
         ide.addEventListener("input", updateEditorUI);

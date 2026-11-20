@@ -27,6 +27,11 @@ update_*.py
 
 # Unit test suites (kept on local machine, untracked from public repo)
 test_*.py
+test_muster/
+
+# Promo media & temporary archives
+reddit_preview.*
+*.zip
 
 # System & accidental artifacts
 SHAYAK
