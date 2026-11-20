@@ -56,11 +56,17 @@ const ARCADE_STAGES = {
 };
 
 function getUnlockedStage() {
+    let serverUnlocked = 1;
+    if (typeof window.SERVER_ARCADE_UNLOCKED === 'number') {
+        serverUnlocked = window.SERVER_ARCADE_UNLOCKED;
+    }
     try {
         const val = localStorage.getItem('stickman_arcade_unlocked');
-        return val ? parseInt(val, 10) : 1;
+        const localVal = val ? parseInt(val, 10) : 1;
+        const effective = Math.max(serverUnlocked, localVal);
+        return effective;
     } catch(e) {
-        return 1;
+        return serverUnlocked;
     }
 }
 

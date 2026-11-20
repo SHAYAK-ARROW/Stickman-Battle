@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, abort, send_from_directory, jsonify
+from flask import Flask, render_template, request, redirect, url_for, abort, send_from_directory, jsonify, session
 from flask_socketio import SocketIO, join_room
 from char import Body, MAX_HEALTH
 import compiler
@@ -12,6 +12,8 @@ import threading
 import re
 import logging
 import secrets
+import hmac
+import hashlib
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,6 +25,8 @@ ROOM_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{3,24}$')
 MAX_ROOMS = 100
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "stickman_battle_sace_v2_anti_cheat_secret_2026")
+SECRET_KEY_BYTES = app.secret_key.encode('utf-8')
 
 # Secure yet flexible CORS configuration (supports localhost, 127.0.0.1, LAN IPs & Render)
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS")
@@ -86,10 +90,14 @@ class GameRoom:
         self.paused_by = None
         self.pause_start_time = None
         self.pause_timeout = 60.0
+        self.match_start_time = None
+        self.victory_receipt_issued = False
         self.engine.add_player(self.player1, self.player2)
 
     def reset_match(self):
         self.last_activity = time.time()
+        self.match_start_time = None
+        self.victory_receipt_issued = False
         # Reset Player 1
         self.player1.heart = MAX_HEALTH
         self.player1.energy = 100
@@ -176,6 +184,28 @@ class GameRoom:
         if getattr(self, 'is_bot_room', False) and getattr(self, 'bot', None):
             self.bot.reset()
 
+ARCADE_STAGE_ORDER = {
+    'rusher': 1,
+    'turtle': 2,
+    'weaver': 3,
+    'duelist': 4,
+    'berserker': 5,
+    'apex': 6
+}
+
+def generate_victory_receipt(room_id, bot_diff, combat_time, hp_remaining):
+    """Generate tamper-proof cryptographic receipt for verified victory."""
+    payload = f"{room_id}:{bot_diff}:{combat_time:.1f}:{hp_remaining}"
+    sig = hmac.new(SECRET_KEY_BYTES, payload.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
+    return f"SB2-{sig.upper()}"
+
+def verify_victory_receipt(room_id, bot_diff, combat_time, hp_remaining, receipt_token):
+    """Validate that victory receipt was authentically signed by server."""
+    if not receipt_token or not str(receipt_token).startswith("SB2-"):
+        return False
+    expected = generate_victory_receipt(room_id, bot_diff, combat_time, hp_remaining)
+    return hmac.compare_digest(str(receipt_token), expected)
+
 rooms = {}
 sid_auth = {} # sid -> {'room_id': str, 'player_id': int}
 player_run_cooldown = {} # (room_id, player_id) -> float (timestamp)
@@ -213,7 +243,10 @@ def get_player_for_token(room, token):
 
 @app.route('/')
 def lobby_menu():
-    return render_template('index.html')
+    unlocked = session.get('arcade_unlocked', 1)
+    locked_diff = request.args.get('locked', '')
+    req_stage = request.args.get('required_stage', '')
+    return render_template('index.html', arcade_unlocked=unlocked, locked_diff=locked_diff, req_stage=req_stage)
 
 @app.route('/favicon.ico')
 def favicon():
@@ -273,11 +306,46 @@ def api_wardrobe_eval():
     res = compiler.eval_wardrobe_code(code)
     return jsonify(res)
 
+@app.route('/api/claim_victory', methods=['POST'])
+def api_claim_victory():
+    try:
+        data = request.get_json(silent=True) or {}
+        room_id = data.get('room_id', '')
+        diff = data.get('bot_difficulty', '')
+        combat_dur = float(data.get('combat_duration', 0))
+        p1_hp = int(data.get('hp_remaining', 0))
+        token = data.get('receipt_token', '')
+
+        if not verify_victory_receipt(room_id, diff, combat_dur, p1_hp, token):
+            logger.warning(f"Rejected unverified or fraudulent victory claim: room [{room_id}] token [{token}]")
+            return jsonify({'success': False, 'error': 'Invalid anti-cheat verification signature'}), 403
+
+        stage_num = ARCADE_STAGE_ORDER.get(diff, None)
+        if stage_num:
+            current_unlocked = session.get('arcade_unlocked', 1)
+            new_unlocked = max(current_unlocked, stage_num + 1)
+            session['arcade_unlocked'] = new_unlocked
+            logger.info(f"Anti-cheat verified victory for [{diff}]! Arcade unlocked advanced: {current_unlocked} -> {new_unlocked}")
+            return jsonify({'success': True, 'unlocked_stage': new_unlocked, 'verified_receipt': token})
+        return jsonify({'success': True, 'unlocked_stage': session.get('arcade_unlocked', 1), 'verified_receipt': token})
+    except Exception as e:
+        logger.error(f"Error in api_claim_victory: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+
 @app.route('/bot/<difficulty>')
 def play_vs_bot(difficulty):
     req_diff = str(difficulty).lower()
     valid_diffs = ('easy', 'hard', 'dummy', 'beginner', 'rusher', 'turtle', 'weaver', 'duelist', 'berserker', 'apex', 'master', 'sace')
     diff = req_diff if req_diff in valid_diffs else 'easy'
+
+    # 🔒 Server-Side Anti-Cheat Progression Lock for Arcade Stages
+    if diff in ARCADE_STAGE_ORDER:
+        req_stage = ARCADE_STAGE_ORDER[diff]
+        unlocked = session.get('arcade_unlocked', 1)
+        if req_stage > unlocked:
+            logger.warning(f"Player attempted to access locked stage {req_stage} ('{diff}') with current unlocked level {unlocked}.")
+            return redirect(url_for('lobby_menu', locked=diff, required_stage=req_stage - 1))
+
     room = create_private_room()
     if room is None:
         abort(503, "Server room limit reached. Please try again later.")
@@ -833,11 +901,14 @@ def game_loop():
                                     room.reset_match()
                             # Freeze physics and bot updates during pause!
                         else:
-                            if getattr(room, 'is_bot_room', False) and room.is_match_active and getattr(room, 'bot', None):
-                                try:
-                                    room.bot.tick(room)
-                                except Exception as be:
-                                    logger.error(f"Bot tick error in room {room.room_id}: {be}")
+                            if getattr(room, 'is_bot_room', False) and room.is_match_active:
+                                if getattr(room, 'match_start_time', None) is None:
+                                    room.match_start_time = now
+                                if getattr(room, 'bot', None):
+                                    try:
+                                        room.bot.tick(room)
+                                    except Exception as be:
+                                        logger.error(f"Bot tick error in room {room.room_id}: {be}")
                             room.engine.update()
 
                             # SACE Brain Persistence Sync: dispatch learned memory on match end (KO)
@@ -848,6 +919,29 @@ def game_loop():
                                         updated_weights = room.bot.export_grant()
                                         socketio.emit('sace_brain_updated', {'weights': updated_weights}, to=room.room_id)
                                         logger.info(f"Room [{room.room_id}] -> SACE Master Bot brain exported ({len(updated_weights)} keys) and dispatched to client.")
+
+                            # 🛡️ Server-Verified Victory Receipt for Anti-Cheat Progression & WhatsApp Brag
+                            if getattr(room, 'is_bot_room', False) and (room.player1.heart <= 0 or room.player2.heart <= 0) and not getattr(room, 'victory_receipt_issued', False):
+                                room.victory_receipt_issued = True
+                                if room.player2.heart <= 0 and room.player1.heart > 0:
+                                    combat_dur = round(max(1.0, now - (getattr(room, 'match_start_time', None) or now)), 1)
+                                    diff = getattr(room, 'bot_difficulty', 'easy')
+                                    p1_hp = max(1, room.player1.heart)
+                                    token = generate_victory_receipt(room.room_id, diff, combat_dur, p1_hp)
+                                    stage_num = ARCADE_STAGE_ORDER.get(diff, None)
+                                    opp_title = getattr(room, 'bot_title', None) or BOT_TITLES.get(diff, f"Bot ({diff})")
+                                    receipt = {
+                                        'winner': 1,
+                                        'receipt_token': token,
+                                        'combat_duration': combat_dur,
+                                        'hp_remaining': p1_hp,
+                                        'opponent_title': opp_title,
+                                        'bot_difficulty': diff,
+                                        'stage_number': stage_num,
+                                        'next_stage_unlocked': (stage_num + 1) if (stage_num and stage_num < 6) else None
+                                    }
+                                    socketio.emit('match_victory_receipt', receipt, to=room.room_id)
+                                    logger.info(f"Room [{room.room_id}] -> Issued Anti-Cheat Victory Receipt: {token} (Time: {combat_dur}s, HP: {p1_hp})")
                         
                         # Opponent dialogue question dispatch
                         if getattr(room.player1, 'pending_question', None):

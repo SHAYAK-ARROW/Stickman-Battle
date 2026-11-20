@@ -675,6 +675,22 @@ shield.change_color("gold")</code></pre>
                 closeInfoModal();
             }
         });
+
+        // 🔒 Server-Verified Anti-Cheat Progression Initialization
+        window.SERVER_ARCADE_UNLOCKED = {{ arcade_unlocked | default(1) | tojson }};
+        window.LOCKED_DIFF_NOTICE = {{ locked_diff | default('') | tojson }};
+        window.REQUIRED_STAGE_NOTICE = {{ req_stage | default('') | tojson }};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.LOCKED_DIFF_NOTICE && typeof showToast === 'function') {
+                showToast({
+                    title: "Stage Locked! 🔒",
+                    message: "Anti-Cheat Protection: You must defeat Stage " + window.REQUIRED_STAGE_NOTICE + " in the Arcade Ladder first!",
+                    type: "warning",
+                    duration: 5000
+                });
+            }
+        });
     </script>
 
 </body>
