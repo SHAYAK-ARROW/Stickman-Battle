@@ -12,7 +12,7 @@ logger = logging.getLogger("stickman_battle.compiler")
 MAX_CODE_LENGTH = 2000
 MAX_EXECUTION_SECONDS = 1.0
 MAX_ACTIONS = 100
-PROCESS_STARTUP_GRACE_SECONDS = 5.0
+PROCESS_STARTUP_GRACE_SECONDS = 10.0
 _SANDBOX_LOCK = threading.Lock()
 _SANDBOX_PROCESS = None
 _SANDBOX_CONNECTION = None
@@ -357,8 +357,11 @@ def _ensure_sandbox_worker():
 
 def warm_sandbox():
     """Start the sandbox before accepting players to avoid first-run delay."""
-    with _SANDBOX_LOCK:
-        _ensure_sandbox_worker()
+    try:
+        with _SANDBOX_LOCK:
+            _ensure_sandbox_worker()
+    except Exception as e:
+        logger.warning(f"Initial sandbox warm-up deferred: {e}")
 
 
 def _apply_commands(commands, current_player):

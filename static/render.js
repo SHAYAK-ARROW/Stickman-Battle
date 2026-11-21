@@ -614,6 +614,14 @@ function draw_on_camvas(data) {
     draw_health_bar(data.player1, "P1", 20, "left");
     draw_health_bar(data.player2, p2Label, canvas.width - 20, "right");
 
+    // Tension Audio: Critical HP Heartbeat when player <= 2 hearts
+    if (window.AudioEngine && typeof window.AudioEngine.checkHeartbeat === 'function' && !data.game_over) {
+        const myP = (typeof MY_ROLE !== 'undefined' && MY_ROLE === 'player2') ? data.player2 : data.player1;
+        if (myP && myP.heart > 0 && myP.heart <= 2) {
+            window.AudioEngine.checkHeartbeat();
+        }
+    }
+
     // --- SPELLS & RANGED PROJECTILES RENDER ---
     if (data.spells && Array.isArray(data.spells)) {
         data.spells.forEach(spell => {

@@ -1,26 +1,26 @@
 // ==============================================================================
-// ⚔️ STICKMAN BATTLE - PROCEDURAL WEB AUDIO ENGINE (V3 Seamless & Volume Control)
+// ⚔️ STICKMAN BATTLE - PROCEDURAL WEB AUDIO ENGINE (V4 Dynamic Action & Visceral SFX)
 // Features:
-// 1. Dual Independent Channels: Audible Relaxing Lo-Fi BGM + Punchy Combat SFX
-// 2. Seamless Gapless Crossfade (Zero awkward pauses between chord progressions)
-// 3. Smooth Volume Sliders with localStorage Persistence
-// 4. Global Availability (Home Lobby + Battle Arena)
-// 5. Safe Storage (Edge Tracking Prevention Proof) & Instant Autoplay Unlocking
+// 1. Dual-Mode Dynamic BGM: Relaxing Lobby Lo-Fi Pad <-> High-Octane Cyberpunk Battle Beat (124 BPM)
+// 2. Visceral Punchy SFX: Razor-sharp steel blade clash with noise friction + 808 Sub-Bass Impact
+// 3. Anti-Fatigue Pitch Jitter Engine (every sword strike & swing sounds distinct)
+// 4. Critical HP Tension Heartbeat (rhythmic lub-dub when <= 2 HP)
+// 5. Tactical Emergency Defense Activation sound (Alt+S Shield / Alt+D Dodge)
+// 6. Zero External Assets (100% Procedural Web Audio API, Zero CORS, Zero Download Latency)
+// 7. Full Local Volume Sliders & Storage Persistence with Auto-Wakeup
 // ==============================================================================
 
 (function() {
     'use strict';
 
-    // Safe Storage helper
+    // Safe Storage helper (Edge Tracking Prevention Proof)
     function safeGet(key, defaultVal) {
         try {
             if (typeof window !== 'undefined' && window.localStorage) {
                 const val = window.localStorage.getItem(key);
                 return val !== null ? val : defaultVal;
             }
-        } catch (e) {
-            // Edge Tracking Prevention or sandboxed storage exception
-        }
+        } catch (e) {}
         return defaultVal;
     }
 
@@ -29,9 +29,7 @@
             if (typeof window !== 'undefined' && window.localStorage) {
                 window.localStorage.setItem(key, val);
             }
-        } catch (e) {
-            // Ignored
-        }
+        } catch (e) {}
     }
 
     let audioCtx = null;
@@ -44,21 +42,35 @@
     let bgmVolume = parseFloat(safeGet('sb_bgm_vol', '0.70'));
     let sfxVolume = parseFloat(safeGet('sb_sfx_vol', '0.80'));
 
-    // BGM State
+    // BGM State & Mode
     let isBgmPlaying = false;
+    let bgmMode = 'lobby'; // 'lobby' (ambient pad) or 'battle' (cyberpunk action beat)
     let bgmTimer = null;
+    let battleBeatTimer = null;
     let bgmStep = 0;
+    let battleStep = 0;
     let hasUserInteracted = false;
 
-    // Audible Relaxing Lo-Fi Ambient Chord Progression (Cmaj7 -> Am7 -> Fmaj7 -> G7)
+    // Random Pitch Jitter Helper (±range around base value, e.g. 0.08 = ±8%)
+    function getJitter(range) {
+        const r = range || 0.08;
+        return 1.0 + (Math.random() * (r * 2) - r);
+    }
+
+    // Audible Relaxing Lo-Fi Ambient Chord Progression for Lobby (Cmaj7 -> Am7 -> Fmaj7 -> G7)
     const CHORD_PROGRESSION = [
         [261.63, 329.63, 392.00, 493.88], // C4, E4, G4, B4 (Cmaj7)
         [220.00, 261.63, 329.63, 392.00], // A3, C4, E4, G4 (Am7)
         [174.61, 220.00, 261.63, 329.63], // F3, A3, C4, E4 (Fmaj7)
         [196.00, 246.94, 293.66, 349.23]  // G3, B3, D4, F4 (G7)
     ];
-
     const SPARKLE_NOTES = [523.25, 659.25, 783.99, 1046.50, 1174.66];
+
+    // Battle Driving Bassline Notes (C2 -> Eb2 -> F2 -> G2 -> Bb1 -> C2)
+    const BATTLE_BASS_NOTES = [
+        65.41, 65.41, 77.78, 65.41, 87.31, 77.78, 98.00, 87.31,
+        65.41, 65.41, 58.27, 65.41, 77.78, 87.31, 98.00, 116.54
+    ];
 
     function getAudioContext(forceCreate) {
         if (document.hidden && !forceCreate) {
@@ -78,7 +90,7 @@
 
                 // Master SFX Gain (volume controlled)
                 masterSfxGain = audioCtx.createGain();
-                const initSfxGain = sfxEnabled ? 0.60 * sfxVolume : 0;
+                const initSfxGain = sfxEnabled ? 0.65 * sfxVolume : 0;
                 masterSfxGain.gain.setValueAtTime(initSfxGain, audioCtx.currentTime);
                 masterSfxGain.connect(audioCtx.destination);
             } catch (e) {
@@ -93,8 +105,7 @@
         return audioCtx;
     }
 
-    // --- RELAXING AMBIENT BACKGROUND MUSIC ENGINE ---
-    // Seamless Gapless Crossfading: duration 5.5s, step timer 3.2s
+    // --- 1. LOBBY AMBIENT DRONE & CHORD ENGINE ---
     let droneOsc1 = null;
     let droneOsc2 = null;
     let droneFilter = null;
@@ -103,9 +114,8 @@
     let activeChordGain = null;
     let sparkleTimer = null;
 
-    // Parallel "straight line" ambient drone / synth pad (warm root & fifth grounding bed)
     function startDronePad() {
-        if (!bgmEnabled || document.hidden) return;
+        if (!bgmEnabled || document.hidden || bgmMode === 'battle') return;
         const ctx = getAudioContext(true);
         if (!ctx || droneOsc1) return;
 
@@ -117,7 +127,6 @@
 
             droneGain = ctx.createGain();
             droneGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-            // Gentle fade-in over 2.0s to a subtle background grounding bed
             droneGain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 2.0);
 
             droneOsc1 = ctx.createOscillator();
@@ -127,7 +136,7 @@
             droneOsc2 = ctx.createOscillator();
             droneOsc2.type = 'triangle';
             droneOsc2.frequency.setValueAtTime(196.00, ctx.currentTime); // G3 5th
-            droneOsc2.detune.setValueAtTime(3, ctx.currentTime); // Gentle chorus width
+            droneOsc2.detune.setValueAtTime(3, ctx.currentTime);
 
             droneOsc1.connect(droneFilter);
             droneOsc2.connect(droneFilter);
@@ -136,9 +145,7 @@
 
             droneOsc1.start();
             droneOsc2.start();
-        } catch (e) {
-            console.warn("Drone pad initialization skipped:", e);
-        }
+        } catch (e) {}
     }
 
     function stopDronePad(immediate) {
@@ -179,9 +186,8 @@
     function playAmbientChord(freqs, duration) {
         if (!duration) duration = 5.5;
         const ctx = getAudioContext(true);
-        if (!ctx || !bgmEnabled || document.hidden) return;
+        if (!ctx || !bgmEnabled || document.hidden || bgmMode === 'battle') return;
 
-        // Clean up any lingering chord oscillators before starting next step
         activeChordOscs.forEach(o => {
             try { o.stop(); o.disconnect(); } catch (e) {}
         });
@@ -194,11 +200,10 @@
         const chordGain = ctx.createGain();
         activeChordGain = chordGain;
         chordGain.gain.setValueAtTime(0.001, ctx.currentTime);
-        chordGain.gain.exponentialRampToValueAtTime(0.30, ctx.currentTime + 1.0); // Gentle 1s swell
-        chordGain.gain.setValueAtTime(0.30, ctx.currentTime + 2.8); // Steady sustain
-        chordGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration); // Smooth decay
+        chordGain.gain.exponentialRampToValueAtTime(0.28, ctx.currentTime + 1.0);
+        chordGain.gain.setValueAtTime(0.28, ctx.currentTime + 2.8);
+        chordGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
-        // Warm Lowpass Filter (keeps warm chiptune warmth, no harsh high buzz)
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
         filter.frequency.setValueAtTime(1200, ctx.currentTime);
@@ -223,11 +228,10 @@
             };
         });
 
-        // Gentle sparkle bell
         if (Math.random() > 0.3) {
             if (sparkleTimer) clearTimeout(sparkleTimer);
             sparkleTimer = setTimeout(() => {
-                if (!bgmEnabled || !audioCtx || document.hidden) return;
+                if (!bgmEnabled || !audioCtx || document.hidden || bgmMode === 'battle') return;
                 playSparkleBell();
             }, 1000 + Math.random() * 1200);
         }
@@ -235,7 +239,7 @@
 
     function playSparkleBell() {
         const ctx = getAudioContext(true);
-        if (!ctx || !bgmEnabled || document.hidden) return;
+        if (!ctx || !bgmEnabled || document.hidden || bgmMode === 'battle') return;
         const note = SPARKLE_NOTES[Math.floor(Math.random() * SPARKLE_NOTES.length)];
         const bellGain = ctx.createGain();
         bellGain.gain.setValueAtTime(0.001, ctx.currentTime);
@@ -252,17 +256,150 @@
         osc.stop(ctx.currentTime + 1.3);
     }
 
-    function bgmLoop() {
-        if (!bgmEnabled || document.hidden) {
-            isBgmPlaying = false;
+    function lobbyBgmLoop() {
+        if (!bgmEnabled || document.hidden || bgmMode !== 'lobby') {
             return;
         }
         isBgmPlaying = true;
         const chord = CHORD_PROGRESSION[bgmStep % CHORD_PROGRESSION.length];
         bgmStep++;
         playAmbientChord(chord, 5.5);
-        // Start next chord at 3.2s to smoothly crossfade over the decaying chord! Zero gap!
-        bgmTimer = setTimeout(bgmLoop, 3200);
+        bgmTimer = setTimeout(lobbyBgmLoop, 3200);
+    }
+
+    // --- 2. HIGH-OCTANE CYBERPUNK BATTLE BEAT SEQUENCER (124 BPM) ---
+    // 124 BPM -> 1 Beat = ~484ms, 16th note step = ~121ms
+    const STEP_INTERVAL_MS = 121;
+
+    function playSynthesizedKick(ctx, now) {
+        try {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            // Heavy 808-style downward pitch punch
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(38, now + 0.08);
+
+            gain.gain.setValueAtTime(0.55, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+            osc.connect(gain);
+            gain.connect(masterBgmGain);
+            osc.start(now);
+            osc.stop(now + 0.18);
+        } catch (e) {}
+    }
+
+    function playSynthesizedHiHat(ctx, now, isAccent) {
+        try {
+            const dur = isAccent ? 0.05 : 0.03;
+            const bufferSize = Math.floor(ctx.sampleRate * dur);
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.setValueAtTime(isAccent ? 7500 : 8800, now);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(isAccent ? 0.22 : 0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterBgmGain);
+            noise.start(now);
+        } catch (e) {}
+    }
+
+    function playSynthesizedBassNote(ctx, now, freq) {
+        try {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, now);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(450, now);
+            filter.frequency.exponentialRampToValueAtTime(180, now + 0.11);
+            filter.Q.setValueAtTime(2.2, now);
+
+            gain.gain.setValueAtTime(0.28, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterBgmGain);
+
+            osc.start(now);
+            osc.stop(now + 0.12);
+        } catch (e) {}
+    }
+
+    function battleBeatStep() {
+        if (!bgmEnabled || document.hidden || bgmMode !== 'battle') {
+            return;
+        }
+        isBgmPlaying = true;
+        const ctx = getAudioContext(true);
+        if (ctx) {
+            const now = ctx.currentTime;
+            const step16 = battleStep % 16;
+
+            // Kick on beats 0, 4, 8, 12 (4-on-the-floor rhythm)
+            if (step16 % 4 === 0) {
+                playSynthesizedKick(ctx, now);
+            }
+
+            // Hi-hats on off-beats & fast groove
+            if (step16 % 2 === 0) {
+                playSynthesizedHiHat(ctx, now, step16 % 4 === 2);
+            } else if (step16 === 14 || step16 === 15) {
+                // Roll into next bar
+                playSynthesizedHiHat(ctx, now, false);
+            }
+
+            // Driving synth bass note on every 16th step
+            const bassFreq = BATTLE_BASS_NOTES[step16];
+            playSynthesizedBassNote(ctx, now, bassFreq);
+        }
+
+        battleStep++;
+        battleBeatTimer = setTimeout(battleBeatStep, STEP_INTERVAL_MS);
+    }
+
+    function setBgmMode(newMode) {
+        if (newMode !== 'lobby' && newMode !== 'battle') return;
+        if (bgmMode === newMode && isBgmPlaying) return;
+        console.log(`🎵 Switching BGM mode from [${bgmMode}] to [${newMode}]`);
+        bgmMode = newMode;
+
+        if (bgmMode === 'battle') {
+            // Stop lobby ambient cleanly
+            if (bgmTimer) { clearTimeout(bgmTimer); bgmTimer = null; }
+            if (sparkleTimer) { clearTimeout(sparkleTimer); sparkleTimer = null; }
+            stopDronePad(false);
+            battleStep = 0;
+            if (battleBeatTimer) clearTimeout(battleBeatTimer);
+            if (bgmEnabled && !document.hidden) {
+                battleBeatStep();
+            }
+        } else {
+            // Transition back to lobby ambient
+            if (battleBeatTimer) { clearTimeout(battleBeatTimer); battleBeatTimer = null; }
+            startDronePad();
+            if (bgmTimer) clearTimeout(bgmTimer);
+            if (bgmEnabled && !document.hidden) {
+                lobbyBgmLoop();
+            }
+        }
     }
 
     function startBGM() {
@@ -271,24 +408,22 @@
         if (!ctx) return;
         if (masterBgmGain) {
             masterBgmGain.gain.cancelScheduledValues(ctx.currentTime);
-            masterBgmGain.gain.setValueAtTime(0.38 * bgmVolume, ctx.currentTime);
+            masterBgmGain.gain.setValueAtTime(0.35 * bgmVolume, ctx.currentTime);
         }
-        startDronePad();
-        if (!isBgmPlaying) {
-            bgmLoop();
+        if (bgmMode === 'battle') {
+            if (!battleBeatTimer) battleBeatStep();
+        } else {
+            startDronePad();
+            if (!isBgmPlaying) lobbyBgmLoop();
         }
     }
 
     function stopBGM(immediate) {
         isBgmPlaying = false;
-        if (bgmTimer) {
-            clearTimeout(bgmTimer);
-            bgmTimer = null;
-        }
-        if (sparkleTimer) {
-            clearTimeout(sparkleTimer);
-            sparkleTimer = null;
-        }
+        if (bgmTimer) { clearTimeout(bgmTimer); bgmTimer = null; }
+        if (battleBeatTimer) { clearTimeout(battleBeatTimer); battleBeatTimer = null; }
+        if (sparkleTimer) { clearTimeout(sparkleTimer); sparkleTimer = null; }
+
         activeChordOscs.forEach(o => {
             try { o.stop(); o.disconnect(); } catch (e) {}
         });
@@ -298,6 +433,7 @@
             activeChordGain = null;
         }
         stopDronePad(immediate !== false);
+
         if (audioCtx && masterBgmGain) {
             try {
                 masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
@@ -306,14 +442,16 @@
         }
     }
 
-    // --- AUDIBLE COMBAT ACTION SFX ---
+    // --- 3. HIGH-IMPACT COMBAT SFX (PUNCHY, METALLIC & CRISP) ---
 
-    // 1. Sword Swing (Crisp Swoosh)
+    // 1. Sword Swing (Fast Aerodynamic Blade Whoosh)
     function playSwordSwing() {
         if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
-        const duration = 0.15;
+
+        const jitter = getJitter(0.12);
+        const duration = 0.14;
 
         try {
             const bufferSize = Math.floor(ctx.sampleRate * duration);
@@ -327,12 +465,12 @@
 
             const filter = ctx.createBiquadFilter();
             filter.type = 'bandpass';
-            filter.frequency.setValueAtTime(950, ctx.currentTime);
-            filter.frequency.exponentialRampToValueAtTime(350, ctx.currentTime + duration);
-            filter.Q.setValueAtTime(2.5, ctx.currentTime);
+            filter.frequency.setValueAtTime(1350 * jitter, ctx.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(320 * jitter, ctx.currentTime + duration);
+            filter.Q.setValueAtTime(2.8, ctx.currentTime);
 
             const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.40, ctx.currentTime);
+            gain.gain.setValueAtTime(0.48, ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
             noise.connect(filter);
@@ -343,96 +481,55 @@
         } catch (e) {}
     }
 
-    // 2. Sword Clash (Loud Ringing Dual Metallic Clang)
+    // 2. Sword Clash (Razor-Sharp Steel Scrape + Ringing Inharmonic Partials)
     function playSwordClash() {
         if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
+
+        const jitter = getJitter(0.09);
+        const now = ctx.currentTime;
+
         try {
-            const now = ctx.currentTime;
-            [1760, 2400, 3200].forEach((freq, idx) => {
+            // Layer 1: Metallic contact friction scrape (ultra-fast noise transient)
+            const noiseDur = 0.035;
+            const bufferSize = Math.floor(ctx.sampleRate * noiseDur);
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+
+            const noiseFilter = ctx.createBiquadFilter();
+            noiseFilter.type = 'highpass';
+            noiseFilter.frequency.setValueAtTime(3200 * jitter, now);
+
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.45, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(masterSfxGain);
+            noise.start(now);
+
+            // Layer 2: Real Inharmonic Steel Partials (1880Hz, 2640Hz, 3850Hz, 4920Hz)
+            const freqs = [1880, 2640, 3850, 4920];
+            freqs.forEach((baseFreq, idx) => {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, now);
-                osc.frequency.exponentialRampToValueAtTime(freq * 0.88, now + 0.32);
 
-                const vol = idx === 0 ? 0.50 : 0.28;
+                osc.type = idx === 0 ? 'triangle' : 'sine';
+                const f = baseFreq * jitter;
+                osc.frequency.setValueAtTime(f, now);
+                osc.frequency.exponentialRampToValueAtTime(f * 0.94, now + 0.35);
+
+                const vol = idx === 0 ? 0.55 : (0.35 / (idx + 1));
                 gain.gain.setValueAtTime(vol, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
-                osc.connect(gain);
-                gain.connect(masterSfxGain);
-                osc.start(now);
-                osc.stop(now + 0.35);
-            });
-        } catch (e) {}
-    }
-
-    // 3. Shield Block (Crisp Metallic Clang + Resonant Shield Thump)
-    function playShieldBlock() {
-        if (document.hidden) return;
-        const ctx = getAudioContext(true);
-        if (!ctx || !sfxEnabled) return;
-        try {
-            const now = ctx.currentTime;
-            // 1. High metallic iron contact clang
-            const metalOsc = ctx.createOscillator();
-            const metalGain = ctx.createGain();
-            metalOsc.type = 'sine';
-            metalOsc.frequency.setValueAtTime(860, now);
-            metalOsc.frequency.exponentialRampToValueAtTime(320, now + 0.16);
-            metalGain.gain.setValueAtTime(0.45, now);
-            metalGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-            metalOsc.connect(metalGain);
-            metalGain.connect(masterSfxGain);
-            metalOsc.start(now);
-            metalOsc.stop(now + 0.18);
-
-            // 2. Heavy shield body resonant thump
-            const bodyOsc = ctx.createOscillator();
-            const bodyGain = ctx.createGain();
-            bodyOsc.type = 'triangle';
-            bodyOsc.frequency.setValueAtTime(190, now);
-            bodyOsc.frequency.exponentialRampToValueAtTime(55, now + 0.22);
-            bodyGain.gain.setValueAtTime(0.65, now);
-            bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-            bodyOsc.connect(bodyGain);
-            bodyGain.connect(masterSfxGain);
-            bodyOsc.start(now);
-            bodyOsc.stop(now + 0.24);
-        } catch (e) {}
-    }
-
-    // 3.5. Shield Break (Heavy Cleave + Violent Metallic Shatter)
-    function playShieldBreak() {
-        if (document.hidden) return;
-        const ctx = getAudioContext(true);
-        if (!ctx || !sfxEnabled) return;
-        try {
-            const now = ctx.currentTime;
-            // 1. Visceral crushing low thump
-            const subOsc = ctx.createOscillator();
-            const subGain = ctx.createGain();
-            subOsc.type = 'sawtooth';
-            subOsc.frequency.setValueAtTime(150, now);
-            subOsc.frequency.exponentialRampToValueAtTime(30, now + 0.30);
-            subGain.gain.setValueAtTime(0.75, now);
-            subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
-            subOsc.connect(subGain);
-            subGain.connect(masterSfxGain);
-            subOsc.start(now);
-            subOsc.stop(now + 0.32);
-
-            // 2. Dual dissonant shattering metal cracks
-            [1200, 1800, 2450].forEach((freq, idx) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(freq, now);
-                osc.frequency.exponentialRampToValueAtTime(freq * 0.65, now + 0.36);
-                gain.gain.setValueAtTime(0.40 / (idx + 1), now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
                 osc.connect(gain);
                 gain.connect(masterSfxGain);
                 osc.start(now);
@@ -441,57 +538,163 @@
         } catch (e) {}
     }
 
-    // 4. Damage Hit (Crisp Punch / Heavy Visceral Cleave)
+    // 3. Shield Block (Solid Iron/Wood Impact Thump + Metallic Deflection Ring)
+    function playShieldBlock() {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+
+        const jitter = getJitter(0.08);
+        const now = ctx.currentTime;
+
+        try {
+            // 1. Solid body impact thump
+            const bodyOsc = ctx.createOscillator();
+            const bodyGain = ctx.createGain();
+            bodyOsc.type = 'triangle';
+            bodyOsc.frequency.setValueAtTime(220 * jitter, now);
+            bodyOsc.frequency.exponentialRampToValueAtTime(45 * jitter, now + 0.20);
+            bodyGain.gain.setValueAtTime(0.72, now);
+            bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
+            bodyOsc.connect(bodyGain);
+            bodyGain.connect(masterSfxGain);
+            bodyOsc.start(now);
+            bodyOsc.stop(now + 0.22);
+
+            // 2. High iron plate contact ping
+            const plateOsc = ctx.createOscillator();
+            const plateGain = ctx.createGain();
+            plateOsc.type = 'sine';
+            plateOsc.frequency.setValueAtTime(1240 * jitter, now);
+            plateOsc.frequency.exponentialRampToValueAtTime(480 * jitter, now + 0.16);
+            plateGain.gain.setValueAtTime(0.50, now);
+            plateGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+            plateOsc.connect(plateGain);
+            plateGain.connect(masterSfxGain);
+            plateOsc.start(now);
+            plateOsc.stop(now + 0.18);
+        } catch (e) {}
+    }
+
+    // 3.5. Shield Break (Heavy Cleave + Violent Metallic Shatter)
+    function playShieldBreak() {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        const jitter = getJitter(0.08);
+        const now = ctx.currentTime;
+
+        try {
+            // Visceral crushing sub thump
+            const subOsc = ctx.createOscillator();
+            const subGain = ctx.createGain();
+            subOsc.type = 'sawtooth';
+            subOsc.frequency.setValueAtTime(160 * jitter, now);
+            subOsc.frequency.exponentialRampToValueAtTime(28 * jitter, now + 0.32);
+            subGain.gain.setValueAtTime(0.82, now);
+            subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+            subOsc.connect(subGain);
+            subGain.connect(masterSfxGain);
+            subOsc.start(now);
+            subOsc.stop(now + 0.34);
+
+            // Dissonant shattering metal shards
+            [1300, 1950, 2800].forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq * jitter, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.55 * jitter, now + 0.38);
+                gain.gain.setValueAtTime(0.45 / (idx + 1), now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+                osc.connect(gain);
+                gain.connect(masterSfxGain);
+                osc.start(now);
+                osc.stop(now + 0.40);
+            });
+        } catch (e) {}
+    }
+
+    // 4. Damage Hit (Crisp Cutting Flesh Slice vs Heavy 808 Visceral Cleave)
     function playDamageHit(isHeavy) {
         if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
+
+        const jitter = getJitter(0.10);
+        const now = ctx.currentTime;
+
         try {
-            const now = ctx.currentTime;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            const filter = ctx.createBiquadFilter();
-
             if (isHeavy) {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(170, now);
-                osc.frequency.exponentialRampToValueAtTime(35, now + 0.28);
-
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(800, now);
-
-                gain.gain.setValueAtTime(0.78, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-
-                // Heavy sub-punch layer
+                // Heavy Cleave: 808 Sub-bass drop + Impact Crunch
                 const sub = ctx.createOscillator();
                 const subGain = ctx.createGain();
-                sub.type = 'triangle';
-                sub.frequency.setValueAtTime(80, now);
-                sub.frequency.exponentialRampToValueAtTime(25, now + 0.24);
-                subGain.gain.setValueAtTime(0.65, now);
-                subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+                sub.type = 'sine';
+                sub.frequency.setValueAtTime(145 * jitter, now);
+                sub.frequency.exponentialRampToValueAtTime(28 * jitter, now + 0.30);
+                subGain.gain.setValueAtTime(0.88, now);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
                 sub.connect(subGain);
                 subGain.connect(masterSfxGain);
                 sub.start(now);
-                sub.stop(now + 0.26);
+                sub.stop(now + 0.32);
+
+                // Mid crunch saw
+                const mid = ctx.createOscillator();
+                const midGain = ctx.createGain();
+                const midFilter = ctx.createBiquadFilter();
+                mid.type = 'sawtooth';
+                mid.frequency.setValueAtTime(260 * jitter, now);
+                mid.frequency.exponentialRampToValueAtTime(45 * jitter, now + 0.22);
+                midFilter.type = 'lowpass';
+                midFilter.frequency.setValueAtTime(950, now);
+                midGain.gain.setValueAtTime(0.70, now);
+                midGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+                mid.connect(midFilter);
+                midFilter.connect(midGain);
+                midGain.connect(masterSfxGain);
+                mid.start(now);
+                mid.stop(now + 0.24);
             } else {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(240, now);
-                osc.frequency.exponentialRampToValueAtTime(60, now + 0.18);
+                // Light Hit: Fast sharp blade slice + mid thump
+                const sliceDur = 0.08;
+                const bufferSize = Math.floor(ctx.sampleRate * sliceDur);
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
 
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(600, now);
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1900 * jitter, now);
+                filter.frequency.exponentialRampToValueAtTime(450 * jitter, now + sliceDur);
+                filter.Q.setValueAtTime(2.2, now);
 
-                gain.gain.setValueAtTime(0.60, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                const noiseGain = ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.60, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + sliceDur);
+
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(masterSfxGain);
+                noise.start(now);
+
+                // Body thump
+                const thump = ctx.createOscillator();
+                const thumpGain = ctx.createGain();
+                thump.type = 'triangle';
+                thump.frequency.setValueAtTime(220 * jitter, now);
+                thump.frequency.exponentialRampToValueAtTime(50 * jitter, now + 0.16);
+                thumpGain.gain.setValueAtTime(0.65, now);
+                thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                thump.connect(thumpGain);
+                thumpGain.connect(masterSfxGain);
+                thump.start(now);
+                thump.stop(now + 0.18);
             }
-
-            osc.connect(filter);
-            filter.connect(gain);
-            gain.connect(masterSfxGain);
-            osc.start(now);
-            osc.stop(now + (isHeavy ? 0.30 : 0.20));
         } catch (e) {}
     }
 
@@ -500,15 +703,16 @@
         if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
+        const jitter = getJitter(0.07);
+        const now = ctx.currentTime;
         try {
-            const now = ctx.currentTime;
-            [1150, 1720].forEach((freq, idx) => {
+            [1250, 1850].forEach((freq, idx) => {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, now);
-                osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.22);
-                gain.gain.setValueAtTime(0.35 / (idx + 1), now);
+                osc.frequency.setValueAtTime(freq * jitter, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.5 * jitter, now + 0.22);
+                gain.gain.setValueAtTime(0.38 / (idx + 1), now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
                 osc.connect(gain);
                 gain.connect(masterSfxGain);
@@ -518,38 +722,36 @@
         } catch (e) {}
     }
 
-    // 4.6. Trig Fusion (Epic Kinetic Shockwave & Tangent Eruption)
+    // 4.6. Trig Fusion (Detonation Shockwave)
     function playTrigFusion() {
         if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
+        const now = ctx.currentTime;
         try {
-            const now = ctx.currentTime;
-            // Sub-bass detonation
             const sub = ctx.createOscillator();
             const subGain = ctx.createGain();
             sub.type = 'sine';
-            sub.frequency.setValueAtTime(140, now);
-            sub.frequency.exponentialRampToValueAtTime(30, now + 0.42);
-            subGain.gain.setValueAtTime(0.75, now);
-            subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+            sub.frequency.setValueAtTime(160, now);
+            sub.frequency.exponentialRampToValueAtTime(28, now + 0.45);
+            subGain.gain.setValueAtTime(0.85, now);
+            subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
             sub.connect(subGain);
             subGain.connect(masterSfxGain);
             sub.start(now);
-            sub.stop(now + 0.45);
+            sub.stop(now + 0.48);
 
-            // High electric flare sizzle
             const flare = ctx.createOscillator();
             const flareGain = ctx.createGain();
             flare.type = 'sawtooth';
-            flare.frequency.setValueAtTime(650, now);
-            flare.frequency.exponentialRampToValueAtTime(120, now + 0.26);
-            flareGain.gain.setValueAtTime(0.42, now);
-            flareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+            flare.frequency.setValueAtTime(750, now);
+            flare.frequency.exponentialRampToValueAtTime(100, now + 0.30);
+            flareGain.gain.setValueAtTime(0.48, now);
+            flareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
             flare.connect(flareGain);
             flareGain.connect(masterSfxGain);
             flare.start(now);
-            flare.stop(now + 0.28);
+            flare.stop(now + 0.32);
         } catch (e) {}
     }
 
@@ -558,19 +760,19 @@
         if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
+        const now = ctx.currentTime;
         try {
-            const now = ctx.currentTime;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(420, now);
-            osc.frequency.exponentialRampToValueAtTime(150, now + 0.18);
-            gain.gain.setValueAtTime(0.48, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            osc.frequency.setValueAtTime(460, now);
+            osc.frequency.exponentialRampToValueAtTime(140, now + 0.20);
+            gain.gain.setValueAtTime(0.52, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
             osc.connect(gain);
             gain.connect(masterSfxGain);
             osc.start(now);
-            osc.stop(now + 0.20);
+            osc.stop(now + 0.22);
         } catch (e) {}
     }
 
@@ -579,15 +781,15 @@
         if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
+        const now = ctx.currentTime;
         try {
-            const now = ctx.currentTime;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(1800, now);
-            osc.frequency.exponentialRampToValueAtTime(750, now + 0.15);
-            gain.gain.setValueAtTime(0.45, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.frequency.setValueAtTime(2100, now);
+            osc.frequency.exponentialRampToValueAtTime(700, now + 0.16);
+            gain.gain.setValueAtTime(0.50, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
             osc.connect(gain);
             gain.connect(masterSfxGain);
             osc.start(now);
@@ -595,24 +797,24 @@
         } catch (e) {}
     }
 
-    // 4.9. Sword Catch (Boomerang Weapon Catch Snap)
+    // 4.9. Sword Catch
     function playSwordCatch() {
         if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
+        const now = ctx.currentTime;
         try {
-            const now = ctx.currentTime;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(480, now);
-            osc.frequency.exponentialRampToValueAtTime(260, now + 0.09);
-            gain.gain.setValueAtTime(0.42, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+            osc.frequency.setValueAtTime(520, now);
+            osc.frequency.exponentialRampToValueAtTime(280, now + 0.10);
+            gain.gain.setValueAtTime(0.45, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
             osc.connect(gain);
             gain.connect(masterSfxGain);
             osc.start(now);
-            osc.stop(now + 0.10);
+            osc.stop(now + 0.11);
         } catch (e) {}
     }
 
@@ -621,85 +823,81 @@
         if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
+        const now = ctx.currentTime;
 
         if (type === 'sin_wave') {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(280, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.28);
-
-            gain.gain.setValueAtTime(0.45, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-
+            osc.frequency.setValueAtTime(260, now);
+            osc.frequency.exponentialRampToValueAtTime(940, now + 0.28);
+            gain.gain.setValueAtTime(0.48, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
             osc.connect(gain);
             gain.connect(masterSfxGain);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.32);
+            osc.start(now);
+            osc.stop(now + 0.32);
         } else if (type === 'cos_wave') {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(980, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.28);
-
-            gain.gain.setValueAtTime(0.45, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-
+            osc.frequency.setValueAtTime(1020, now);
+            osc.frequency.exponentialRampToValueAtTime(310, now + 0.28);
+            gain.gain.setValueAtTime(0.48, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
             osc.connect(gain);
             gain.connect(masterSfxGain);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.32);
+            osc.start(now);
+            osc.stop(now + 0.32);
         } else if (type === 'tan_spike') {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(90, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.22);
-
-            gain.gain.setValueAtTime(0.50, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.24);
-
+            osc.frequency.setValueAtTime(95, now);
+            osc.frequency.exponentialRampToValueAtTime(680, now + 0.22);
+            gain.gain.setValueAtTime(0.55, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
             osc.connect(gain);
             gain.connect(masterSfxGain);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.26);
+            osc.start(now);
+            osc.stop(now + 0.26);
         } else if (type === 'throw_sword') {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(500, ctx.currentTime);
-            osc.frequency.linearRampToValueAtTime(800, ctx.currentTime + 0.1);
-            osc.frequency.linearRampToValueAtTime(400, ctx.currentTime + 0.22);
-
-            gain.gain.setValueAtTime(0.40, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.26);
-
+            osc.frequency.setValueAtTime(520, now);
+            osc.frequency.linearRampToValueAtTime(850, now + 0.10);
+            osc.frequency.linearRampToValueAtTime(380, now + 0.22);
+            gain.gain.setValueAtTime(0.44, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
             osc.connect(gain);
             gain.connect(masterSfxGain);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.28);
+            osc.start(now);
+            osc.stop(now + 0.28);
         }
     }
 
-    // 6. Dodge / Quick Dash
+    // 6. Dodge / Quick Dash Whoosh
     function playDodge() {
         if (document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx || !sfxEnabled) return;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(440, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.12);
+        const jitter = getJitter(0.10);
+        const now = ctx.currentTime;
 
-        gain.gain.setValueAtTime(0.35, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-
-        osc.connect(gain);
-        gain.connect(masterSfxGain);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.14);
+        try {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(480 * jitter, now);
+            osc.frequency.exponentialRampToValueAtTime(160 * jitter, now + 0.14);
+            gain.gain.setValueAtTime(0.42, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+            osc.connect(gain);
+            gain.connect(masterSfxGain);
+            osc.start(now);
+            osc.stop(now + 0.16);
+        } catch (e) {}
     }
 
     // 7. Tactical Click (Distinct High-Pitch Double Chime)
@@ -712,10 +910,8 @@
             const gain = ctx.createGain();
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(freq, ctx.currentTime + (idx * 0.04));
-
             gain.gain.setValueAtTime(0.35, ctx.currentTime + (idx * 0.04));
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (idx * 0.04) + 0.07);
-
             osc.connect(gain);
             gain.connect(masterSfxGain);
             osc.start(ctx.currentTime + (idx * 0.04));
@@ -723,53 +919,174 @@
         });
     }
 
-    // 8. Match Start Chime (523Hz -> 783Hz Ready Bell)
+    // 8. Match Start: Heavy War Drum Boom & Brassy Gong (Ready... FIGHT!)
     function playMatchStart() {
         if (document.hidden) return;
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
-        [523.25, 783.99].forEach((freq, i) => {
-            setTimeout(() => {
-                if (document.hidden || !sfxEnabled) return;
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        const now = ctx.currentTime;
 
-                gain.gain.setValueAtTime(0.40, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        try {
+            // Sub War Drum Boom (130Hz -> 32Hz)
+            const drum = ctx.createOscillator();
+            const drumGain = ctx.createGain();
+            drum.type = 'sine';
+            drum.frequency.setValueAtTime(130, now);
+            drum.frequency.exponentialRampToValueAtTime(32, now + 0.40);
+            drumGain.gain.setValueAtTime(0.85, now);
+            drumGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+            drum.connect(drumGain);
+            drumGain.connect(masterSfxGain);
+            drum.start(now);
+            drum.stop(now + 0.48);
 
-                osc.connect(gain);
-                gain.connect(masterSfxGain);
-                osc.start(ctx.currentTime);
-                osc.stop(ctx.currentTime + 0.38);
-            }, i * 160);
-        });
+            // Brassy Gong Overtone
+            [380, 760].forEach((freq, i) => {
+                const gong = ctx.createOscillator();
+                const gongGain = ctx.createGain();
+                gong.type = 'triangle';
+                gong.frequency.setValueAtTime(freq, now);
+                gong.frequency.exponentialRampToValueAtTime(freq * 0.85, now + 0.65);
+                gongGain.gain.setValueAtTime(0.35 / (i + 1), now);
+                gongGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+                gong.connect(gongGain);
+                gongGain.connect(masterSfxGain);
+                gong.start(now);
+                gong.stop(now + 0.70);
+            });
+        } catch (e) {}
+
+        // Automatically trigger battle beat mode for BGM!
+        setBgmMode('battle');
     }
 
-    // 9. Game Over (Victory / Defeat)
+    // 9. Game Over (Dramatic K.O. Boom + Fanfare or Defeat Tone)
     function playGameOver(isWinner) {
         if (document.hidden) return;
         const ctx = getAudioContext();
         if (!ctx || !sfxEnabled) return;
+        const now = ctx.currentTime;
+
+        try {
+            // Massive K.O. Impact Sub-drop
+            const koSub = ctx.createOscillator();
+            const koGain = ctx.createGain();
+            koSub.type = 'sine';
+            koSub.frequency.setValueAtTime(120, now);
+            koSub.frequency.exponentialRampToValueAtTime(25, now + 0.60);
+            koGain.gain.setValueAtTime(0.90, now);
+            koGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+            koSub.connect(koGain);
+            koGain.connect(masterSfxGain);
+            koSub.start(now);
+            koSub.stop(now + 0.70);
+        } catch (e) {}
+
+        // Transition back to lobby ambient BGM
+        setBgmMode('lobby');
+
         const notes = isWinner ? [523.25, 659.25, 783.99, 1046.50] : [440.00, 392.00, 349.23, 261.63];
         notes.forEach((freq, idx) => {
             setTimeout(() => {
-                if (document.hidden || !sfxEnabled) return;
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
+                if (document.hidden || !sfxEnabled || !audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
                 osc.type = isWinner ? 'triangle' : 'sine';
-                osc.frequency.setValueAtTime(freq, ctx.currentTime);
-
-                gain.gain.setValueAtTime(0.45, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.45, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
                 osc.connect(gain);
                 gain.connect(masterSfxGain);
-                osc.start(ctx.currentTime);
-                osc.stop(ctx.currentTime + 0.55);
-            }, idx * 180);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.55);
+            }, 250 + idx * 160);
         });
+    }
+
+    // 10. Low HP Tension Heartbeat (Rhythmic Sub-bass lub-dub when <= 2 HP)
+    let lastHeartbeatTime = 0;
+    function playHeartbeat() {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        const now = ctx.currentTime;
+
+        try {
+            // First beat: Lub (62Hz -> 32Hz)
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(62, now);
+            osc1.frequency.exponentialRampToValueAtTime(32, now + 0.12);
+            gain1.gain.setValueAtTime(0.55, now);
+            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+            osc1.connect(gain1);
+            gain1.connect(masterSfxGain);
+            osc1.start(now);
+            osc1.stop(now + 0.15);
+
+            // Second beat: Dub (55Hz -> 28Hz, 130ms later)
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(55, now + 0.13);
+            osc2.frequency.exponentialRampToValueAtTime(28, now + 0.25);
+            gain2.gain.setValueAtTime(0.48, now + 0.13);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+            osc2.connect(gain2);
+            gain2.connect(masterSfxGain);
+            osc2.start(now + 0.13);
+            osc2.stop(now + 0.28);
+        } catch (e) {}
+    }
+
+    function checkHeartbeat() {
+        const now = Date.now();
+        // Throttle heartbeat to every 1050ms
+        if (now - lastHeartbeatTime >= 1050) {
+            lastHeartbeatTime = now;
+            playHeartbeat();
+        }
+    }
+
+    // 11. Tactical Emergency Panic Action (Alt+S Shield / Alt+D Dodge)
+    function playEmergencyPanic(action) {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        const now = ctx.currentTime;
+
+        try {
+            if (action === 'shield') {
+                // High-tech power-barrier hum
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(1400, now + 0.18);
+                gain.gain.setValueAtTime(0.55, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+                osc.connect(gain);
+                gain.connect(masterSfxGain);
+                osc.start(now);
+                osc.stop(now + 0.24);
+                playShieldBlock();
+            } else {
+                // High-speed phase dodge
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(750, now);
+                osc.frequency.exponentialRampToValueAtTime(180, now + 0.15);
+                gain.gain.setValueAtTime(0.40, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                osc.connect(gain);
+                gain.connect(masterSfxGain);
+                osc.start(now);
+                osc.stop(now + 0.18);
+                playDodge();
+            }
+        } catch (e) {}
     }
 
     // --- CONTROLS & VOLUME ADJUSTMENT ---
@@ -863,7 +1180,7 @@
         safeSet('sb_sfx_enabled', sfxEnabled ? '1' : '0');
         if (masterSfxGain && audioCtx) {
             masterSfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
-            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0, audioCtx.currentTime);
+            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.65 * sfxVolume : 0, audioCtx.currentTime);
         }
         updateUI();
         if (sfxEnabled) {
@@ -891,18 +1208,17 @@
         }
         if (masterSfxGain && audioCtx) {
             masterSfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
-            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0, audioCtx.currentTime);
+            masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.65 * sfxVolume : 0, audioCtx.currentTime);
         }
         updateUI();
         if (sfxEnabled) playClick();
     }
 
     // Browser Autoplay Policy: One-Touch Seamless Auto-Wakeup
-    // Silently wakes up AudioContext on the very first touch/click/key anywhere on the page
     const UNLOCK_EVENTS = ['click', 'pointerdown', 'mousedown', 'keydown', 'touchstart', 'focus'];
 
     function handleFirstUserGesture() {
-        if (document.hidden) return; // Do not unlock while tab is hidden
+        if (document.hidden) return;
         hasUserInteracted = true;
         const ctx = getAudioContext(true);
         if (ctx) {
@@ -918,7 +1234,6 @@
             }
         }
 
-        // Clean up one-touch capture listeners once unlocked
         UNLOCK_EVENTS.forEach(evt => {
             try {
                 window.removeEventListener(evt, handleFirstUserGesture, { capture: true });
@@ -927,7 +1242,6 @@
         });
     }
 
-    // Attach in capture phase (true) so clicks inside CodeMirror, iframe, canvas, or dialogs are captured first!
     UNLOCK_EVENTS.forEach(evt => {
         try {
             window.addEventListener(evt, handleFirstUserGesture, { capture: true, passive: true });
@@ -937,7 +1251,6 @@
 
     let wasBgmPlayingBeforeHide = false;
 
-    // Complete Audio Mute/Teardown on Tab Switch or Minimize
     function handleAudioVisibility(isHidden) {
         if (isHidden) {
             wasBgmPlayingBeforeHide = isBgmPlaying;
@@ -962,7 +1275,7 @@
                 audioCtx.resume().then(() => {
                     if (masterSfxGain) {
                         masterSfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
-                        masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.60 * sfxVolume : 0, audioCtx.currentTime);
+                        masterSfxGain.gain.setValueAtTime(sfxEnabled ? 0.65 * sfxVolume : 0, audioCtx.currentTime);
                     }
                     if (masterBgmGain) {
                         masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
@@ -985,8 +1298,6 @@
     document.addEventListener('visibilitychange', () => {
         handleAudioVisibility(!!document.hidden);
     });
-
-    // Handle tab close or page navigation
     window.addEventListener('pagehide', () => {
         handleAudioVisibility(true);
     });
@@ -1008,6 +1319,7 @@
         stopBGM: stopBGM,
         toggleBGM: toggleBGM,
         setBGMVolume: setBGMVolume,
+        setBgmMode: setBgmMode,
         toggleSFX: toggleSFX,
         setSFXVolume: setSFXVolume,
         playSwordSwing: playSwordSwing,
@@ -1025,6 +1337,9 @@
         playClick: playClick,
         playMatchStart: playMatchStart,
         playGameOver: playGameOver,
+        playHeartbeat: playHeartbeat,
+        checkHeartbeat: checkHeartbeat,
+        playEmergencyPanic: playEmergencyPanic,
         isBGMEnabled: () => bgmEnabled,
         isSFXEnabled: () => sfxEnabled
     };

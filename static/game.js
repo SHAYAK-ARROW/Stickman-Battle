@@ -1847,8 +1847,13 @@ function triggerEmergency(action) {
         return;
     }
     if (window.AudioEngine) {
-        if (action === 'shield') window.AudioEngine.playShieldBlock();
-        else if (action === 'dodge') window.AudioEngine.playDodge();
+        if (typeof window.AudioEngine.playEmergencyPanic === 'function') {
+            window.AudioEngine.playEmergencyPanic(action);
+        } else if (action === 'shield') {
+            window.AudioEngine.playShieldBlock();
+        } else if (action === 'dodge') {
+            window.AudioEngine.playDodge();
+        }
     }
     socket.emit('emergency_action', { action: action });
 }
