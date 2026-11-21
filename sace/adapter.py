@@ -40,11 +40,8 @@ def execute_action(character, action_name: str, param: int = 0):
     elif clean == "dodge":
         character.dodge(max(1, p) if p != 0 else 2)
     elif clean == "jump":
-        if character.y < 470 or character.jump_pixel != 0:
-            return
-        if hasattr(character, "action_queue") and any(a[0] in ("jump", "long_jump") for a in character.action_queue):
-            return
-        character.jump(max(5, p) if p != 0 else 10)
+        # SACE Master Bot stays grounded: jumping into projectile arcs is tactically fatal
+        return
     elif clean == "crouch":
         if getattr(character, "crouch_timer", 0) > 0:
             return
@@ -95,15 +92,15 @@ class SaceBattleBot:
         self.brain = MasterBotBrain(difficulty=difficulty)
 
         # Pacing intervals calibrated per avatar level:
-        # Avatar 3 (Master / SACE): 0.85s - 1.25s (smart predictive pacing, fair to human coders)
-        # Avatar 2 (Tactical): 1.10s - 1.50s (moderate cadence)
-        # Avatar 1 (Apprentice): 2.00s - 3.00s (slow, beginner-friendly — easier than Bot Ladder rusher)
+        # Avatar 3 (Master / SACE): 0.35s - 0.50s (competitive tournament AI reflexes)
+        # Avatar 2 (Tactical): 0.60s - 0.85s (swift cadence)
+        # Avatar 1 (Apprentice): 1.80s - 2.50s (forgiving, beginner-friendly)
         if self.avatar_level == "1":
-            self.interval_range = (2.00, 3.00)
+            self.interval_range = (1.80, 2.50)
         elif self.avatar_level == "2":
-            self.interval_range = (1.10, 1.50)
+            self.interval_range = (0.60, 0.85)
         else:
-            self.interval_range = (0.85, 1.25)
+            self.interval_range = (0.35, 0.50)
         self.decision_interval = random.uniform(*self.interval_range)
         self.last_decision_time = time.time()
         self.last_banter_time = time.time()
@@ -113,6 +110,7 @@ class SaceBattleBot:
         self.last_known_health = 10
         self.consecutive_hits_taken = 0
         self.last_hit_time = 0.0
+        self.is_enraged = False
 
         self.player_last_action = None
         self.last_tracked_action_id = None
@@ -122,6 +120,9 @@ class SaceBattleBot:
             "Fascinating algorithm! Adapting strategy...",
             "Tactical pattern observed: Shifting counter-guard!",
             "My 5-gram weights are evolving in real-time! ⚡",
+            "Trig calculus engaged: Wave trajectory predicted! 📐",
+            "Shield angle computed: Counter-strike ready! 🛡️",
+            "SACE Neural Model active: All functions decoded! 🧠",
             "Can your next function break my prediction?",
             "Optimizing counter-trajectory... 📐",
             "Sharpen your loops, coder! ⚔️"
@@ -137,6 +138,13 @@ class SaceBattleBot:
         self.last_known_health = 10
         self.consecutive_hits_taken = 0
         self.last_hit_time = 0.0
+        self.is_enraged = False
+        if self.avatar_level == "1":
+            self.interval_range = (1.80, 2.50)
+        elif self.avatar_level == "2":
+            self.interval_range = (0.60, 0.85)
+        else:
+            self.interval_range = (0.35, 0.50)
         self.decision_interval = random.uniform(*self.interval_range)
         self.player_last_action = None
 
@@ -182,6 +190,15 @@ class SaceBattleBot:
         now = time.time()
         real_dist = abs(player_char.x - bot_char.x)
         dist_cat = perceive_distance(real_dist, noise_rate=0.03 if self.avatar_level == "3" else 0.07)
+
+        # 0. PHASE 2 ENRAGE TRIGGER (Avatar 3 Grandmaster enters Hyper-Overclock when HP <= 4)
+        if self.avatar_level == "3" and bot_char.heart <= 4 and not getattr(self, "is_enraged", False):
+            self.is_enraged = True
+            self.interval_range = (0.20, 0.35)
+            self.decision_interval = random.uniform(*self.interval_range)
+            bot_char.speech_text = "🔥 PHASE 2: HYPER-OVERCLOCK ACTIVATED!"
+            bot_char.speech_timer = 90
+            logger.info("👑 SACE Master Bot entered PHASE 2 ENRAGE MODE (HP <= 4)!")
 
         # 1. CONTINUOUS 60 FPS REAL-TIME PERCEPTION
         # Track player actions every single frame so repetitive loops are never missed!
@@ -246,13 +263,13 @@ class SaceBattleBot:
         # 3. EMERGENCY TACTICAL REFLEX (Shuts down mindless attack spam!)
         # If enemy is swinging sword in close quarters, instantly react with block/parry
         # Avatar 1 (Apprentice): Only 15% reflex chance — misses most attacks, beginner-friendly
-        reflex_rate = 0.78 if self.avatar_level == "3" else (0.60 if self.avatar_level == "2" else 0.15)
+        reflex_rate = 0.95 if getattr(self, "is_enraged", False) else (0.85 if self.avatar_level == "3" else (0.65 if self.avatar_level == "2" else 0.15))
         is_player_attacking_near = (
             real_dist < 110
             and hasattr(player_char, "sword")
             and player_char.sword.attack_state != 0
         )
-        if is_player_attacking_near and (now - self.last_melee_reflex_time > 0.40):
+        if is_player_attacking_near and (now - self.last_melee_reflex_time > 0.30):
             bot_sword_busy = hasattr(bot_char, "sword") and bot_char.sword.attack_state != 0
             bot_shield_active = hasattr(bot_char, "shield") and bot_char.shield.block_timer > 0
             bot_crouching = getattr(bot_char, "crouch_timer", 0) > 0
@@ -261,16 +278,16 @@ class SaceBattleBot:
                     self.last_melee_reflex_time = now
                     if hasattr(bot_char, "action_queue"):
                         bot_char.action_queue.clear()
+                    bot_energy = getattr(bot_char, "energy", 100)
                     if getattr(player_char.sword, "is_heavy", False):
-                        # Close-quarters heavy attacks (<65px) cannot be cleanly hopped over;
-                        # Bot raises shield which gets shattered by the heavy strike!
-                        if real_dist >= 65 and random.random() < 0.30 and getattr(bot_char, "jump_pixel", 0) == 0:
-                            execute_action(bot_char, "jump", 8)
+                        # Close-quarters heavy attacks (<65px) cannot be safely blocked;
+                        # Bot rolls backward away from heavy strike (costs 10 energy)
+                        if real_dist >= 65 and bot_energy >= 10:
+                            execute_action(bot_char, "dodge", 2)
+                        elif hasattr(bot_char, "shield"):
+                            bot_char.shield.block()
                         else:
-                            if hasattr(bot_char, "shield"):
-                                bot_char.shield.block()
-                            else:
-                                execute_action(bot_char, "block", 0)
+                            execute_action(bot_char, "block", 0)
                     else:
                         if hasattr(bot_char, "shield"):
                             bot_char.shield.block()
@@ -279,12 +296,13 @@ class SaceBattleBot:
                     self.last_decision_time = now
                     return
 
-        # 3. IN-FLIGHT SPELL REFLEX (Reacts once per projectile, never spams crouch/jump)
+        # 3. IN-FLIGHT SPELL REFLEX (Reacts with Shield Deflection, Harmonic Barrier, or Low Duck — NEVER JUMPS!)
         active_spells = getattr(room.engine, "spells", [])
         current_spell_ids = {id(s) for s in active_spells}
         self.evaded_spell_ids = {sid for sid in self.evaded_spell_ids if sid in current_spell_ids}
 
-        if active_spells and (now - self.last_evasion_time > 0.55):
+        evasion_cd = 0.20 if (getattr(self, "is_enraged", False) or self.avatar_level == "3") else (0.35 if self.avatar_level == "2" else 0.55)
+        if active_spells and (now - self.last_evasion_time > evasion_cd):
             for s in active_spells:
                 s_id = id(s)
                 if s_id in self.evaded_spell_ids:
@@ -299,29 +317,71 @@ class SaceBattleBot:
                     sx = s.get("x", 0)
                     sdir = s.get("dir", 0)
                     incoming = (sdir == 1 and sx < bot_char.x) or (sdir == -1 and sx > bot_char.x)
-                    if incoming and abs(sx - bot_char.x) < 140:
-                        evasion_rate = 0.90 if self.avatar_level == "3" else (0.70 if self.avatar_level == "2" else 0.20)
+                    if incoming and abs(sx - bot_char.x) < 160:
+                        evasion_rate = 1.0 if getattr(self, "is_enraged", False) else (0.95 if self.avatar_level == "3" else (0.75 if self.avatar_level == "2" else 0.20))
                         self.evaded_spell_ids.add(s_id)
                         if random.random() < evasion_rate:
                             self.last_evasion_time = now
                             if hasattr(bot_char, "action_queue"):
                                 bot_char.action_queue.clear()
 
+                            bot_energy = getattr(bot_char, "energy", 100)
                             if stype in ("sin_wave", "cos_wave"):
-                                if getattr(bot_char, "crouch_timer", 0) <= 0:
-                                    execute_action(bot_char, "crouch", 0)
-                                    self.last_decision_time = now
-                                    return
-                            elif stype == "tan_spike":
-                                if bot_char.y >= 470 and bot_char.jump_pixel == 0:
-                                    execute_action(bot_char, "jump", 10)
-                                    self.last_decision_time = now
-                                    return
-                            elif stype == "throw_sword":
-                                if not (hasattr(bot_char, "shield") and bot_char.shield.block_timer > 0):
+                                # STAMINA OPTIMIZED DEFENSE:
+                                # Shield block costs only 10 energy and blocks waves with 100% reliability (0 dmg)!
+                                if bot_energy >= 50 and real_dist >= 140 and random.random() < 0.40:
+                                    counter_act = "cos_wave" if stype == "sin_wave" else "sin_wave"
+                                    execute_action(bot_char, counter_act, 45)
+                                    if hasattr(bot_char, "say") and random.random() < 0.35:
+                                        bot_char.say("Trig Fusion Counter! ⚡")
+                                elif bot_energy >= 10:
                                     execute_action(bot_char, "block", 0)
-                                    self.last_decision_time = now
-                                    return
+                                else:
+                                    # Low energy: zero-energy crouch ducks under high sinusoidal arcs
+                                    execute_action(bot_char, "crouch", 0)
+                                self.last_decision_time = now
+                                return
+
+                            elif stype == "tan_spike":
+                                # Ground spikes avoided via rolling back or running away (NEVER JUMP into air!)
+                                if bot_energy >= 10:
+                                    execute_action(bot_char, "dodge", 2)
+                                else:
+                                    execute_action(bot_char, "run", 2)
+                                self.last_decision_time = now
+                                return
+
+                            elif stype == "throw_sword":
+                                if bot_energy >= 10 and hasattr(bot_char, "shield"):
+                                    execute_action(bot_char, "block", 0)
+                                else:
+                                    execute_action(bot_char, "crouch", 0)
+                                self.last_decision_time = now
+                                return
+
+        # 4. CAST-LAG PUNISHMENT (Punish vulnerable player during spell casting animation)
+        is_player_casting = getattr(player_char, "cast_timer", 0) > 0
+        if self.avatar_level in ("2", "3") and is_player_casting:
+            if now - self.last_decision_time > 0.30:
+                bot_energy = getattr(bot_char, "energy", 100)
+                if hasattr(bot_char, "action_queue"):
+                    bot_char.action_queue.clear()
+                
+                # Sprint forward for FREE (run costs 0 energy!)
+                if real_dist > 130:
+                    execute_action(bot_char, "run", 4)
+                elif real_dist <= 85:
+                    if bot_energy >= 35:
+                        execute_action(bot_char, "heavy_attack", 0)
+                    elif bot_energy >= 5:
+                        execute_action(bot_char, "attack", 0)
+                elif bot_energy >= 45:
+                    execute_action(bot_char, "dash", 2)
+                    execute_action(bot_char, "attack", 0)
+                self.last_decision_time = now
+                if hasattr(bot_char, "say") and random.random() < 0.30:
+                    bot_char.say("Punishing casting lag! ⚡")
+                return
 
         # Clear stalled action queue if bot doesn't have energy to execute it
         if hasattr(bot_char, "action_queue") and len(bot_char.action_queue) > 0:
@@ -365,6 +425,30 @@ class SaceBattleBot:
                 current_frame=getattr(room.engine, "frame_count", None)
             )
             execute_action(bot_char, action_name, param)
+
+            # --- DEADLY MICRO-COMBOS (Energy Disciplined: Only when close and energy >= 40) ---
+            if self.avatar_level in ("2", "3") and hasattr(bot_char, "energy"):
+                b_energy = bot_char.energy
+                # Strict Energy Conservation: Never combo if energy is below 40
+                if b_energy >= 40:
+                    combo_chance = 0.80 if getattr(self, "is_enraged", False) else 0.50
+                    
+                    if dist_cat == "CLOSE" and real_dist <= 85 and random.random() < combo_chance:
+                        # If player is hiding behind shield, crush it with heavy attack!
+                        if hasattr(player_char, "shield") and player_char.shield.block_timer > 0:
+                            if b_energy >= 30 and action_name != "heavy_attack":
+                                execute_action(bot_char, "heavy_attack", 0)
+                        elif action_name == "heavy_attack" and b_energy >= 15:
+                            execute_action(bot_char, "swing", 0)
+                        elif action_name == "swing" and b_energy >= 15:
+                            execute_action(bot_char, "attack", 0)
+                        elif action_name == "block" and b_energy >= 15:
+                            execute_action(bot_char, "swing", 0) # Parry riposte
+
+                    elif dist_cat == "MID" and real_dist <= 110 and random.random() < combo_chance:
+                        # Only follow up with attack if enemy is within blade distance
+                        if action_name in ("dash", "run") and b_energy >= 15:
+                            execute_action(bot_char, "attack", 0)
         except Exception as e:
             logger.error(f"SACE decision error: {e}")
 

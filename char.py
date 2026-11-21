@@ -227,6 +227,20 @@ class Body(Character):
         
         self.energy_wait_ticks = 0
         
+        # Melee Attack Chaining: If sword is mid-swing and shield is not blocking (queued riposte),
+        # wait for current swing to return to idle before executing next melee strike
+        if action_type in ('attack', 'swing', 'heavy_attack'):
+            if hasattr(self, 'sword') and getattr(self.sword, 'attack_state', 0) != 0:
+                if not (hasattr(self, 'shield') and self.shield.block_timer > 0):
+                    self.attack_wait_ticks = getattr(self, 'attack_wait_ticks', 0) + 1
+                    if self.attack_wait_ticks < 35:
+                        return
+                    else:
+                        self.attack_wait_ticks = 0
+                        if hasattr(self, 'sword'):
+                            self.sword.attack_state = 0
+        self.attack_wait_ticks = 0
+
         # Pop only when sufficient energy is confirmed
         self.action_queue.pop(0)
         

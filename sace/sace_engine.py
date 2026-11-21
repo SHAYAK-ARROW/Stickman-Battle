@@ -169,7 +169,7 @@ BASE_COUNTERS = {
     ("CLOSE", "sec_barrier"): ("dodge", 2),       # Close barrier avoided by spacing out
     ("CLOSE", "throw_sword"): ("block", 0),       # Deflect point-blank throw
     ("CLOSE", "cosec_dome"): ("dodge", 2),        # Step out of dome perimeter
-    ("CLOSE", "cot_wall"): ("jump", 4),           # Hop over close barrier
+    ("CLOSE", "cot_wall"): ("swing", 0),           # Cut through close barrier
 
     # --- MID RANGE (125 - 320 px) ---
     ("MID", "dash"): ("dash", 3),                 # Meet rusher with aggressive forward dash
@@ -182,18 +182,18 @@ BASE_COUNTERS = {
     ("MID", "heavy_attack"): ("dash", 3),         # Heavy startup / recovery punished with forward dash
     ("MID", "crouch"): ("dash", 3),               # Ducking opponent closed in on
     ("MID", "sin_wave"): ("sec_barrier", 45),     # Neutralized by barrier (prevents high-low ground spike lock!)
-    ("MID", "cos_wave"): ("jump", 10),            # Mid-range cosine wave avoided via jump
-    ("MID", "tan_spike"): ("jump", 10),           # Mid-range floor spike leaped over
+    ("MID", "cos_wave"): ("block", 0),            # Mid-range cosine wave blocked with shield (10 energy, 0 dmg!)
+    ("MID", "tan_spike"): ("dodge", 2),           # Mid-range floor spike avoided via backward dodge
     ("MID", "block"): ("dash", 3),                # Mid-range turtle closed in on with heavy strike
     ("MID", "sec_barrier"): ("dash", 3),           # Close gap into melee range (barrier only blocks spells, not sword!)
     ("MID", "throw_sword"): ("block", 0),         # Thrown sword deflected by shield
     ("MID", "cosec_dome"): ("dodge", 2),          # Reposition out of dome radius
-    ("MID", "cot_wall"): ("jump", 10),            # Leap over wall obstacle
+    ("MID", "cot_wall"): ("dash", 3),             # Pass wall obstacle
 
     # --- FAR RANGE (> 320 px) ---
     ("FAR", "sin_wave"): ("sec_barrier", 45),     # Long-range wave absorbed by barrier (prevents ground spike trap!)
     ("FAR", "cos_wave"): ("sec_barrier", 45),     # Cosine wave neutralized by barrier
-    ("FAR", "tan_spike"): ("jump", 10),           # Distant ground spike avoided by leap
+    ("FAR", "tan_spike"): ("dodge", 2),           # Distant ground spike avoided by dodge (stays grounded!)
     ("FAR", "dash"): ("dash", 4),                 # Meet rusher head-on with equal forward dash
     ("FAR", "run"): ("dash", 4),                  # Meet running opponent head-on
     ("FAR", "move"): ("dash", 5),                 # Close the vast gap aggressively
@@ -1955,26 +1955,26 @@ class MasterBotBrain:
             return random.choice(candidates)
         elif dist_cat == "MID":
             candidates = []
-            if self_energy >= 10:
-                # Actively advance into close melee sword range
-                candidates.extend([("dash", 3), ("dash", 2), ("run", 3)])
+            if self_energy < 40:
+                # Energy conservation: use free sprint and tactical shield
+                candidates.extend([("run", 3), ("move", 2)])
+                if self_energy >= 10:
+                    candidates.append(("block", 0))
             else:
-                candidates.append(("move", 2))
-            if self_energy >= 15:
-                candidates.append(("sin_wave", 45))
-            if self_energy >= 18:
-                candidates.append(("tan_spike", 45))
+                candidates.extend([("run", 3), ("dash", 2)])
+                if self_energy >= 50:
+                    candidates.append(("sin_wave", 45))
+                if self_energy >= 60:
+                    candidates.append(("tan_spike", 45))
             return random.choice(candidates)
         else:
             candidates = []
-            if self_energy >= 10:
-                # Long range: aggressive approach
-                candidates.extend([("dash", 5), ("run", 4), ("dash", 4)])
-            else:
-                candidates.extend([("move", 3), ("run", 3)])
-            if self_energy >= 18:
-                candidates.append(("tan_spike", 60))
-            if self_energy >= 15:
+            # Long range: Use free sprint (run costs 0 energy!) to conserve stamina
+            candidates.extend([("run", 4), ("run", 5), ("move", 3)])
+            # Only use dash or offensive spells if energy is high (>= 55)
+            if self_energy >= 55:
+                candidates.append(("dash", 3))
+            if self_energy >= 60:
                 candidates.append(("sin_wave", 45))
             return random.choice(candidates)
 
@@ -2033,14 +2033,19 @@ class MasterBotBrain:
                         if stype == 'tan_spike':
                             spike_x = s.get('target_x', s.get('x', self_x))
                             if abs(spike_x - self_x) <= 55 and 10 <= s.get('t', 0) <= 45:
-                                chosen = ("jump", 10)
+                                chosen = ("dodge", 2) if self_energy >= 10 else ("crouch", 0)
                                 break
                         elif stype in ('sin_wave', 'cos_wave'):
                             spell_x = s.get('x', 0)
                             spell_dir = s.get('dir', 0)
                             is_incoming = (spell_dir == 1 and spell_x < self_x) or (spell_dir == -1 and spell_x > self_x)
-                            if is_incoming and abs(spell_x - self_x) <= 130:
-                                chosen = ("sec_barrier", 45) if self_energy >= 20 else ("crouch", 0)
+                            if is_incoming and abs(spell_x - self_x) <= 140:
+                                if self_energy >= 50 and random.random() < 0.40:
+                                    chosen = ("cos_wave", 45) if stype == "sin_wave" else ("sin_wave", 45)
+                                elif self_energy >= 10:
+                                    chosen = ("block", 0)
+                                else:
+                                    chosen = ("crouch", 0)
                                 break
                         elif stype == 'throw_sword':
                             spell_x = s.get('x', 0)
@@ -2058,9 +2063,14 @@ class MasterBotBrain:
                     if t["impact_min"] <= curr_t <= t["impact_max"]:
                         act = t["action"]
                         if act == "tan_spike":
-                            chosen = ("jump", 10)
+                            chosen = ("dodge", 2) if self_energy >= 10 else ("crouch", 0)
                         elif act in ("sin_wave", "cos_wave"):
-                            chosen = ("sec_barrier", 45) if self_energy >= 20 else ("crouch", 0)
+                            if self_energy >= 50 and random.random() < 0.40:
+                                chosen = ("cos_wave", 45) if act == "sin_wave" else ("sin_wave", 45)
+                            elif self_energy >= 10:
+                                chosen = ("block", 0)
+                            else:
+                                chosen = ("crouch", 0)
                         elif act == "throw_sword":
                             chosen = ("block", 0) if self_energy >= 10 else ("crouch", 0)
                         if chosen:

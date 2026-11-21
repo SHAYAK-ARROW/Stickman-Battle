@@ -174,8 +174,8 @@ class BattleBot:
                 if incoming:
                     if hasattr(bot, 'crouch'):
                         bot.crouch()
-                    elif hasattr(bot, 'jump'):
-                        bot.jump(10)
+                    elif hasattr(bot, 'dodge') and getattr(bot, 'energy', 100) >= 15:
+                        bot.dodge(2)
                 elif is_enemy_attacking or dx < 100:
                     if hasattr(bot, 'block'):
                         bot.block()
@@ -222,12 +222,26 @@ class BattleBot:
                     return
 
             if spell_type in ('sin_wave', 'cos_wave'):
-                if hasattr(bot, 'crouch'):
+                if self.difficulty in ('hard', 'berserker', 'apex', 'weaver') and getattr(bot, 'energy', 100) >= 20 and not make_mistake:
+                    if random.random() < 0.50 and hasattr(bot, 'cos_wave'):
+                        counter_spell = 'cos_wave' if spell_type == 'sin_wave' else 'sin_wave'
+                        getattr(bot, counter_spell)(1)
+                        return
+                    elif hasattr(bot, 'sec_barrier'):
+                        bot.sec_barrier(1)
+                        return
+                elif hasattr(bot, 'shield') and getattr(bot, 'energy', 100) >= 10 and not make_mistake:
+                    bot.shield.block()
+                    return
+                elif hasattr(bot, 'crouch'):
                     bot.crouch()
                     return
             elif spell_type == 'tan_spike':
-                if hasattr(bot, 'jump'):
-                    bot.jump(12)
+                if hasattr(bot, 'dodge') and getattr(bot, 'energy', 100) >= 15:
+                    bot.dodge(2)
+                    return
+                elif hasattr(bot, 'crouch'):
+                    bot.crouch()
                     return
             else:
                 if hasattr(bot, 'dodge') and getattr(bot, 'energy', 100) >= 15:
@@ -353,8 +367,11 @@ class BattleBot:
                     return
             elif dx <= 90:
                 if is_enemy_blocking and not make_mistake:
-                    if hasattr(bot, 'jump'):
-                        bot.jump(12)
+                    if hasattr(bot, 'heavy_attack') and bot.energy >= 25:
+                        bot.heavy_attack()
+                        return
+                    elif hasattr(bot, 'dash') and bot.energy >= 15:
+                        bot.dash(-2)
                         return
                 else:
                     if hasattr(bot, 'attack'):
@@ -410,8 +427,8 @@ class BattleBot:
                 bot.move(2)
             elif hasattr(bot, 'dodge') and getattr(bot, 'energy', 100) >= 15:
                 bot.dodge(1)
-            elif hasattr(bot, 'jump') and getattr(bot, 'jump_pixel', 0) == 0 and not make_mistake and random.random() < 0.20:
-                bot.jump(8)
+            elif hasattr(bot, 'dodge') and getattr(bot, 'energy', 100) >= 15:
+                bot.dodge(1)
             else:
                 bot.move(1)
             return
