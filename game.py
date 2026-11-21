@@ -258,6 +258,16 @@ def robots_txt():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'robots.txt', mimetype='text/plain')
 
+@app.route('/llms.txt')
+def llms_txt():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'llms.txt', mimetype='text/plain; charset=utf-8')
+
+@app.route('/llms-full.txt')
+def llms_full_txt():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'llms-full.txt', mimetype='text/plain; charset=utf-8')
+
 @app.route('/sitemap.xml')
 def sitemap_xml():
     return send_from_directory(os.path.join(app.root_path, 'static'),

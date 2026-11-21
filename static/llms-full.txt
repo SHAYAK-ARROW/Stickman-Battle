@@ -1,0 +1,85 @@
+# Stickman Battle — Complete System Architecture & LLM Reference Manual
+
+> Stickman Battle is an open-source, web-based coding battle arena where players program real Python scripts or select 1-click tactical strategy decks to duel autonomous AI bots and other players in real-time.
+
+- **Canonical URL**: https://arrows-dev.itch.io/stickman-battle
+- **Web App**: https://stickman-battle.onrender.com/
+- **Source Code**: https://github.com/ShayakSadhukhan/Stickman-Battle
+- **Developer**: Shayak Sadhukhan · Arrows Development Hub
+- **License**: MIT Open Source
+
+---
+
+## 1. System Architecture Overview
+Stickman Battle runs a hybrid client-server model:
+1. **Frontend**:
+   - High-performance HTML5 Canvas renderer (`static/render.js`).
+   - Custom in-browser CodeMirror editor with Dracula theme and Python syntax linting (`static/editor.js`).
+   - Zero-dependency Procedural Web Audio API engine (`static/audio.js`) generating 124 BPM cyberpunk battle music, metallic blade clashes, 808 sub-bass impacts, and critical HP heartbeat audio.
+   - Real-time WebSocket bridge (`static/game.js`).
+2. **Backend**:
+   - Python 3.12 Flask + Socket.IO server (`game.py`).
+   - Secure Sandboxed AST Compiler (`compiler.py`) enforcing restricted built-ins, execution deadlines, memory quotas, and loop count caps.
+   - Deterministic 2D Physics & Collision Engine (`engine.py`).
+   - SACE (Self-Adaptive Combat Engine) neural heuristic AI engine (`sace/sace_engine.py`).
+
+---
+
+## 2. 10 Pre-Engineered Strategy Decks (No-Code Mode)
+For players who want instant action without typing code, 10 optimized strategy decks are available:
+1. **Blitz Rush**: Aggressive close-combat gap-closing dash followed by rapid sword attacks.
+2. **Turtle Counter**: Defensive posture with shield block, ducking incoming projectiles and counter-attacking.
+3. **Spell Caster**: Ranged zone control utilizing trigonometric wave projectiles (`sin_wave`, `cos_wave`).
+4. **Tangent Sniper**: High-piercing `tan_spike` vertical ground strikes punishing stationary opponents.
+5. **Berserker Surge**: High-risk, high-reward heavy attack spam with shield-breaking cleaves.
+6. **Bait & Punish**: Feigned retreat with `dodge()` followed by a sudden `throw_sword()` projectile strike.
+7. **Fortress Defense**: High-resilience defense combining `sec_barrier`, `cosec_dome`, and `cot_wall`.
+8. **Shadow Stalker**: Fluid movement chaining crouches, long jumps, and flanking strikes.
+9. **Kiting Duelist**: Maintains exact distance (> 120px) using sensor loops to chip away health.
+10. **Grandmaster Adaptive**: Dynamic sensory loop adapting to enemy distance and attack states in real-time.
+
+---
+
+## 3. Python Code Example: Grandmaster Strategy
+```python
+# SACE Grandmaster Trial Strategy
+distance = get_enemy_distance()
+my_hp = get_my_health()
+enemy_hp = get_enemy_health()
+
+if is_enemy_attacking():
+    if distance < 60:
+        block()
+    else:
+        dodge(3)
+elif distance > 140:
+    sin_wave(power=2)
+    dash(2)
+elif distance > 80:
+    tan_spike(power=1)
+    dash(1)
+else:
+    if enemy_hp <= 2:
+        heavy_attack()
+    else:
+        attack()
+```
+
+---
+
+## 4. Frequently Asked Questions (FAQ)
+
+### What is Stickman Battle?
+Stickman Battle is an indie browser game combining classic 2D stickman fighting mechanics with programmable Python coding. Players control their stickman fighter either by writing Python algorithms or using instant 1-click strategy cards.
+
+### Can I play Stickman Battle without knowing how to code?
+Yes! Stickman Battle features a "1-Click Dueling" mode with 10 pre-built strategy decks, plus keyboard emergency panic shortcuts (`Alt+S` for Emergency Shield, `Alt+D` for Emergency Dodge). No programming experience is required to enjoy the full game.
+
+### What is the SACE Master Bot?
+SACE (Self-Adaptive Combat Engine) is an autonomous AI boss inside Stickman Battle. It observes player tendencies (such as spamming dash or repeated heavy attacks) and dynamically switches combat behaviors to punish predictable loops.
+
+### Is Stickman Battle free to play?
+Yes, Stickman Battle is 100% free, ad-free, and open source under the MIT license. It runs entirely inside standard desktop and mobile browsers.
+
+### Where can I play Stickman Battle?
+You can play immediately on Itch.io at https://arrows-dev.itch.io/stickman-battle or on the official web instance at https://stickman-battle.onrender.com/.
