@@ -406,10 +406,12 @@ class BattleBot:
                 bot.dash(2)
             elif roll < 0.70 and hasattr(bot, 'sin_wave') and getattr(bot, 'energy', 100) >= 20 and not make_mistake:
                 bot.sin_wave(random.uniform(1.0, 1.4))
-            elif roll < 0.85 and hasattr(bot, 'move'):
+            elif roll < 0.88 and hasattr(bot, 'move'):
                 bot.move(2)
-            elif hasattr(bot, 'jump') and not make_mistake:
-                bot.jump(10)
+            elif hasattr(bot, 'dodge') and getattr(bot, 'energy', 100) >= 15:
+                bot.dodge(1)
+            elif hasattr(bot, 'jump') and getattr(bot, 'jump_pixel', 0) == 0 and not make_mistake and random.random() < 0.20:
+                bot.jump(8)
             else:
                 bot.move(1)
             return

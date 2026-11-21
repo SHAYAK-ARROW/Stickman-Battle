@@ -264,8 +264,8 @@ class SaceBattleBot:
                     if getattr(player_char.sword, "is_heavy", False):
                         # Close-quarters heavy attacks (<65px) cannot be cleanly hopped over;
                         # Bot raises shield which gets shattered by the heavy strike!
-                        if real_dist >= 65 and random.random() < 0.55:
-                            execute_action(bot_char, "jump", 10)
+                        if real_dist >= 65 and random.random() < 0.30 and getattr(bot_char, "jump_pixel", 0) == 0:
+                            execute_action(bot_char, "jump", 8)
                         else:
                             if hasattr(bot_char, "shield"):
                                 bot_char.shield.block()

@@ -517,7 +517,10 @@ function drawTrigCurve(context, options) {
 
 socket.on('match_start', () => {
     console.log("Match started!");
-    if (window.AudioEngine) window.AudioEngine.playMatchStart();
+    if (window.AudioEngine) {
+        if (typeof window.AudioEngine.setBgmMode === 'function') window.AudioEngine.setBgmMode('battle');
+        window.AudioEngine.playMatchStart();
+    }
     const waitScreen = document.getElementById('wait_screen');
     if (waitScreen) {
         waitScreen.style.display = 'none';
@@ -531,6 +534,9 @@ socket.on('match_start', () => {
 
 socket.on('bot_ready', (data) => {
     console.log("Bot ready in arena:", data);
+    if (window.AudioEngine && typeof window.AudioEngine.setBgmMode === 'function') {
+        window.AudioEngine.setBgmMode('battle');
+    }
     const waitScreen = document.getElementById('wait_screen');
     if (waitScreen) waitScreen.style.display = 'none';
     const runBtn = document.getElementById('run_btn');

@@ -44,7 +44,7 @@
 
     // BGM State & Mode
     let isBgmPlaying = false;
-    let bgmMode = 'lobby'; // 'lobby' (ambient pad) or 'battle' (cyberpunk action beat)
+    let bgmMode = (typeof document !== 'undefined' && document.getElementById('gui_screen')) ? 'battle' : 'lobby'; // 'lobby' (ambient pad) or 'battle' (cyberpunk action beat)
     let bgmTimer = null;
     let battleBeatTimer = null;
     let bgmStep = 0;
@@ -277,16 +277,16 @@
             const gain = ctx.createGain();
             osc.type = 'sine';
             // Heavy 808-style downward pitch punch
-            osc.frequency.setValueAtTime(140, now);
-            osc.frequency.exponentialRampToValueAtTime(38, now + 0.08);
+            osc.frequency.setValueAtTime(145, now);
+            osc.frequency.exponentialRampToValueAtTime(36, now + 0.09);
 
-            gain.gain.setValueAtTime(0.55, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+            gain.gain.setValueAtTime(0.72, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
 
             osc.connect(gain);
             gain.connect(masterBgmGain);
             osc.start(now);
-            osc.stop(now + 0.18);
+            osc.stop(now + 0.20);
         } catch (e) {}
     }
 
@@ -331,7 +331,7 @@
             filter.frequency.exponentialRampToValueAtTime(180, now + 0.11);
             filter.Q.setValueAtTime(2.2, now);
 
-            gain.gain.setValueAtTime(0.28, now);
+            gain.gain.setValueAtTime(0.42, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
 
             osc.connect(filter);
@@ -377,7 +377,6 @@
 
     function setBgmMode(newMode) {
         if (newMode !== 'lobby' && newMode !== 'battle') return;
-        if (bgmMode === newMode && isBgmPlaying) return;
         console.log(`🎵 Switching BGM mode from [${bgmMode}] to [${newMode}]`);
         bgmMode = newMode;
 
@@ -406,9 +405,13 @@
         if (!bgmEnabled || document.hidden) return;
         const ctx = getAudioContext(true);
         if (!ctx) return;
+        // In the arena, ensure battle beat is active
+        if (typeof document !== 'undefined' && document.getElementById('gui_screen')) {
+            bgmMode = 'battle';
+        }
         if (masterBgmGain) {
             masterBgmGain.gain.cancelScheduledValues(ctx.currentTime);
-            masterBgmGain.gain.setValueAtTime(0.35 * bgmVolume, ctx.currentTime);
+            masterBgmGain.gain.setValueAtTime(0.40 * bgmVolume, ctx.currentTime);
         }
         if (bgmMode === 'battle') {
             if (!battleBeatTimer) battleBeatStep();
@@ -1308,7 +1311,12 @@
         handleAudioVisibility(true);
     });
 
-    document.addEventListener('DOMContentLoaded', updateUI);
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof document !== 'undefined' && document.getElementById('gui_screen')) {
+            bgmMode = 'battle';
+        }
+        updateUI();
+    });
 
     console.log("🔊 Stickman Battle Audio Engine loaded. BGM:", bgmEnabled ? "ON" : "OFF", "| SFX:", sfxEnabled ? "ON" : "OFF");
 
