@@ -652,7 +652,14 @@ def compiler(code, current_player, enemy_player=None):
                 return {"success": False, "error": err_msg}
             current_player.speech_text = "No actions performed."
             current_player.last_error = None
-            return {"success": True, "error": None}
+            dist = round(sensors.get("enemy_distance", 999))
+            return {
+                "success": True,
+                "error": None,
+                "no_action": True,
+                "distance": dist,
+                "reason": f"Distance is {dist}px — 0 actions triggered (check 'if' condition)"
+            }
 
         _apply_commands(commands, current_player)
 

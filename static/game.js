@@ -828,6 +828,25 @@ function draw_on_camvas(data) {
             });
         }
 
+        // 1.5 Action Sequence Completion & Queued Snippet Execution
+        const myPlayer = (MY_PLAYER_ID === 1) ? data.player1 : data.player2;
+        const myActionsCount = (myPlayer && typeof myPlayer.actions_count === 'number') ? myPlayer.actions_count : 0;
+        if (window._prevActionsCount !== undefined && window._prevActionsCount > 0 && myActionsCount === 0) {
+            logCombatTelemetry('code', '[COMPLETE]', 'Action sequence finished · Ready for next command!');
+            
+            // Pop queued snippet if any from fast 1-click combo buffer
+            if (window._snippetQueue && window._snippetQueue.length > 0) {
+                const nextSnippet = window._snippetQueue.shift();
+                logCombatTelemetry('code', '[COMBO POP]', `Executing queued combo: ${nextSnippet} (${window._snippetQueue.length} remaining)`);
+                setTimeout(() => {
+                    if (typeof window.executeSnippetDirect === 'function') {
+                        window.executeSnippetDirect(nextSnippet);
+                    }
+                }, 100);
+            }
+        }
+        window._prevActionsCount = myActionsCount;
+
         // --- BACKWARD-COMPATIBLE FALLBACKS (State Diffing) ---
         // 1. Damage Hit Fallback
         if (!eventsHandled.has('hit')) {
@@ -1663,7 +1682,7 @@ function draw_on_camvas(data) {
     }
 }
 
-function run() {
+function run(customSnippet) {
     dismissDiagnostics();
     if (window.AudioEngine) window.AudioEngine.playClick();
 
@@ -1673,33 +1692,65 @@ function run() {
         window.enterBattleGate();
     }
 
-    // Prevent multi-click spam within 350ms
-    const now = Date.now();
-    if (window._lastCodeRunTime && (now - window._lastCodeRunTime < 350)) {
-        return;
-    }
-    window._lastCodeRunTime = now;
-
     const runBtn = document.getElementById("run_btn");
-    if (runBtn && runBtn.disabled) {
+
+    // Only block if match is actually over
+    if (prevGameOver) {
         if (typeof showToast === 'function') {
             const hintMsg = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM)
                 ? "The match is over. Click Rematch below to duel the bot again!"
-                : "The match is over or Player 2 has not joined yet. Start a rematch or wait for Player 2.";
+                : "The match is over. Start a rematch or wait for Player 2.";
             showToast({
-                title: "Player Not Ready",
+                title: "Match Ended",
                 message: hintMsg,
                 type: "warning"
             });
-        } else {
-            console.warn("The match is over or Player 2 is not ready.");
         }
         return;
     }
-    if (window.codeMirrorInstance) {
+
+    // 1-Click Chip Combo Queuing: if button is busy, buffer the snippet!
+    if (customSnippet && runBtn && (runBtn.disabled || runBtn.innerText === "Running...")) {
+        window._snippetQueue = window._snippetQueue || [];
+        if (window._snippetQueue.length < 5) {
+            window._snippetQueue.push(customSnippet);
+            logCombatTelemetry('code', '[QUEUED]', `Combo queued: ${customSnippet} (#${window._snippetQueue.length})`);
+            if (typeof showToast === 'function') {
+                showToast({
+                    title: "⚡ Combo Queued",
+                    message: `Queued: ${customSnippet} (#${window._snippetQueue.length})`,
+                    type: "info",
+                    duration: 1000
+                });
+            }
+        }
+        return;
+    }
+
+    // Prevent multi-click spam within 350ms for manual "Run" clicks
+    const now = Date.now();
+    if (!customSnippet && window._lastCodeRunTime && (now - window._lastCodeRunTime < 350)) {
+        return;
+    }
+    if (!customSnippet) {
+        window._lastCodeRunTime = now;
+    }
+
+    if (runBtn && runBtn.disabled) {
+        if (typeof showToast === 'function') {
+            showToast({
+                title: "Execution in Progress",
+                message: "Current combat routine is executing. Your next actions will queue when ready.",
+                type: "info",
+                duration: 1200
+            });
+        }
+        return;
+    }
+    if (window.codeMirrorInstance && !customSnippet) {
         window.codeMirrorInstance.save();
     }
-    const code = document.getElementById("ide").value;
+    const code = customSnippet || document.getElementById("ide").value;
     if (!code || !code.trim()) {
         if (typeof showToast === 'function') {
             showToast({
@@ -1735,7 +1786,8 @@ function run() {
     const activeLines = code.trim().split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
     const firstCmd = activeLines[0] || code.trim().split('\n')[0] || "custom algorithm";
     const shortCmd = firstCmd.length > 30 ? firstCmd.slice(0, 27) + '...' : firstCmd;
-    logCombatTelemetry('code', `[P${MY_PLAYER_ID} CODE]`, `Sent: ${shortCmd}`);
+    const sentDesc = customSnippet ? `Combo action: ${customSnippet}` : `Sent: ${shortCmd}`;
+    logCombatTelemetry('code', `[P${MY_PLAYER_ID} CODE]`, sentDesc);
 
     // Safety timeout: Auto-recover from "Running..." if network hangs
     clearTimeout(window._runCodeSafetyTimeout);
@@ -1748,6 +1800,18 @@ function run() {
     }, 2500);
 }
 
+window.executeSnippetDirect = function(snippet) {
+    if (!snippet) return;
+    if (window.codeMirrorInstance) {
+        window.codeMirrorInstance.setValue(snippet);
+        window.codeMirrorInstance.save();
+    } else {
+        const ide = document.getElementById("ide");
+        if (ide) ide.value = snippet;
+    }
+    run(snippet);
+};
+
 function request_restart() {
     socket.emit('restart_game', {
         "room_id": typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default'
@@ -1758,6 +1822,7 @@ socket.on('game_restarted', () => {
     console.log("Game restarted!");
     closeVictoryDialog();
     prevGameOver = false;
+    window._snippetQueue = [];
     const restartBtn = document.getElementById('restart_btn');
     if (restartBtn) {
         restartBtn.style.display = 'none';
@@ -1787,6 +1852,10 @@ function showDiagnostics(msg) {
 function dismissDiagnostics() {
     const diag = document.getElementById("editor_diagnostics");
     if (diag) diag.style.display = "none";
+    if (window.codeMirrorInstance && window._prevErrorLine !== undefined) {
+        window.codeMirrorInstance.removeLineClass(window._prevErrorLine, 'background', 'cm-line-error');
+        window._prevErrorLine = undefined;
+    }
 }
 
 socket.on('code_error', (data) => {
@@ -1799,25 +1868,68 @@ socket.on('code_error', (data) => {
     }
     if (data && data.error) {
         showDiagnostics(data.error);
-        const firstErr = (data.error.split('\n')[0] || data.error);
-        logCombatTelemetry('error', '[COMPILE ERR]', firstErr.slice(0, 42));
+
+        // Remove previous line highlight if any
+        if (window.codeMirrorInstance && window._prevErrorLine !== undefined) {
+            window.codeMirrorInstance.removeLineClass(window._prevErrorLine, 'background', 'cm-line-error');
+            window._prevErrorLine = undefined;
+        }
+
+        const rawLines = String(data.error).split('\n').map(l => l.trim()).filter(Boolean);
+        const errLine = rawLines.slice().reverse().find(l => 
+            l.includes('Error:') || l.includes('Exception:') || l.includes('Error') || l.startsWith('Security:')
+        ) || rawLines[rawLines.length - 1] || 'Syntax/Runtime Error';
+        
+        const lineMatch = data.error.match(/line (\d+)/i);
+        const lineNumStr = lineMatch ? ` (Line ${lineMatch[1]})` : '';
+        const cleanErr = (errLine.length > 45 ? errLine.slice(0, 42) + '...' : errLine);
+        const displayErr = cleanErr.includes('Line') || !lineNumStr ? cleanErr : `${cleanErr}${lineNumStr}`;
+        
+        logCombatTelemetry('error', '[COMPILE ERR]', displayErr);
+
+        if (window.codeMirrorInstance && lineMatch) {
+            const lineIdx = parseInt(lineMatch[1], 10) - 1;
+            if (lineIdx >= 0 && lineIdx < window.codeMirrorInstance.lineCount()) {
+                window.codeMirrorInstance.addLineClass(lineIdx, 'background', 'cm-line-error');
+                window._prevErrorLine = lineIdx;
+            }
+        }
     }
 });
 
-socket.on('code_success', () => {
+socket.on('code_success', (data) => {
     dismissDiagnostics();
     clearTimeout(window._runCodeSafetyTimeout);
-    logCombatTelemetry('success', '[ACCEPTED]', 'Combat instructions verified & running');
+
+    if (data && data.no_action) {
+        logCombatTelemetry('warn', '[NO ACTION]', data.reason || '0 actions queued (check distance/conditions!)');
+    } else {
+        logCombatTelemetry('success', '[ACCEPTED]', 'Combat instructions verified & running');
+    }
+
     const runBtn = document.getElementById("run_btn");
     if (runBtn) {
         runBtn.disabled = false;
-        runBtn.innerText = "✓ Executed";
+        runBtn.innerText = (data && data.no_action) ? "Ready" : "✓ Executed";
         runBtn.style.opacity = "1";
         setTimeout(() => {
-            if (runBtn && !runBtn.disabled && runBtn.innerText === "✓ Executed") {
+            if (runBtn && !runBtn.disabled && (runBtn.innerText === "✓ Executed" || runBtn.innerText === "Ready")) {
                 runBtn.innerText = "Run";
             }
         }, 1200);
+    }
+
+    // Drain queued snippets if player is idle / no pending actions
+    if (window._snippetQueue && window._snippetQueue.length > 0) {
+        if (!window._prevActionsCount || window._prevActionsCount === 0 || (data && data.no_action)) {
+            const nextSnippet = window._snippetQueue.shift();
+            logCombatTelemetry('code', '[COMBO POP]', `Executing queued combo: ${nextSnippet} (${window._snippetQueue.length} remaining)`);
+            setTimeout(() => {
+                if (typeof window.executeSnippetDirect === 'function') {
+                    window.executeSnippetDirect(nextSnippet);
+                }
+            }, 120);
+        }
     }
 });
 

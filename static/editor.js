@@ -918,7 +918,7 @@ function runSnippet(snippet) {
     }
 
     if (typeof run === 'function') {
-        run();
+        run(snippet);
     }
 }
 

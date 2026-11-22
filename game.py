@@ -728,9 +728,21 @@ def code_handler(data):
         warning_msg = None
         if isinstance(res, dict) and res.get('loop_capped'):
             warning_msg = "Loop safety: While loop stopped after 100 iterations."
+        
+        no_action = False
+        reason = None
+        distance = None
+        if isinstance(res, dict) and res.get('no_action'):
+            no_action = True
+            reason = res.get('reason')
+            distance = res.get('distance')
+
         socketio.emit('code_success', {
             'message': 'Code executed successfully!',
-            'warning': warning_msg
+            'warning': warning_msg,
+            'no_action': no_action,
+            'reason': reason,
+            'distance': distance
         }, to=request.sid)
 
 @socketio.on('emergency_action')
@@ -1011,7 +1023,8 @@ def game_loop():
                                 'speech': _get_public_speech(room.player1),
                                 'body_color': getattr(room.player1, 'body_color', None),
                                 'shield_color': getattr(room.player1, 'shield_color', None),
-                                'sword_color': getattr(room.player1, 'sword_color', None)
+                                'sword_color': getattr(room.player1, 'sword_color', None),
+                                'actions_count': len(getattr(room.player1, 'action_queue', []))
                             },
                             'player2': {
                                 'x': room.player2.x,
@@ -1038,7 +1051,8 @@ def game_loop():
                                 'speech': _get_public_speech(room.player2),
                                 'body_color': getattr(room.player2, 'body_color', None),
                                 'shield_color': getattr(room.player2, 'shield_color', None),
-                                'sword_color': getattr(room.player2, 'sword_color', None)
+                                'sword_color': getattr(room.player2, 'sword_color', None),
+                                'actions_count': len(getattr(room.player2, 'action_queue', []))
                             },
                             'spells': [
                                 {
