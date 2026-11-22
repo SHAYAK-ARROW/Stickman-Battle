@@ -1,0 +1,10 @@
+# GitHub Linguist Overrides
+# Ensure repository language statistics reflect the core Python game engine and server
+
+# Third-party vendor libraries
+static/lib/** linguist-vendored
+
+# Exclude presentation templates and CSS styles from language breakdown
+templates/** linguist-detectable=false
+static/style.css linguist-detectable=false
+static/*.html linguist-detectable=false
