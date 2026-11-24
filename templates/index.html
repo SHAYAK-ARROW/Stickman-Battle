@@ -124,11 +124,6 @@
                 </div>
             </a>
             <div class="header-right">
-                <div class="user-profile-pill" onclick="editProfileName(event)" title="Fighter Identity (Click to customize name)">
-                    <span class="profile-avatar-icon">🥋</span>
-                    <span class="profile-display-name">Fighter</span>
-                    <button type="button" class="profile-edit-btn" onclick="editProfileName(event)" aria-label="Edit Fighter Name" title="Edit Fighter Name">✏️</button>
-                </div>
                 <div class="audio-control-group" title="Relaxing Background Music">
                     <button id="bgm_toggle_btn" type="button" class="action-chip-btn audio-toggle-btn is-active" onclick="window.AudioEngine &amp;&amp; window.AudioEngine.toggleBGM()" title="Mute/Unmute Music">
                         <span id="bgm_icon">🎵</span> <span id="bgm_text">Music</span>
@@ -139,7 +134,13 @@
                 <button type="button" class="button button-secondary" onclick="openHandbook()" style="padding: 6px 12px; font-size: 12px; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">📖 Handbook</button>
                 <button type="button" class="header-info-link" onclick="openInfoModal()" style="background: none; border: none; font: inherit; color: var(--text-secondary); cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 4px;" title="About, Release Specs & Feedback">About &amp; Info</button>
                 <span class="status-pill"><span class="status-pulse"></span>Online PvP</span>
-                <span class="header-note">CODE · FIGHT · OUTPLAY</span>
+
+                <!-- Profile & Combos Hub Pill on edge (dharer dike) -->
+                <div class="user-profile-pill" onclick="openProfileModal(event)" title="Fighter Profile & Combos (Click to open Pop-up)">
+                    <span class="profile-avatar-icon">🥋</span>
+                    <span class="profile-display-name">Fighter</span>
+                    <span class="profile-rank-badge">LVL 1</span>
+                </div>
             </div>
         </header>
 
@@ -761,6 +762,7 @@ shield.change_color("gold")</code></pre>
             if (e.key === 'Escape') {
                 closeHandbook();
                 closeInfoModal();
+                if (typeof closeProfileModal === 'function') closeProfileModal();
             }
         });
 

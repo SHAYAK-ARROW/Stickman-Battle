@@ -540,15 +540,32 @@ function draw_on_camvas(data) {
     draw_player(data.player1, "#ff5c5c", "p1");
     draw_player(data.player2, "#38bdf8", "p2");
 
-    // Fixed HUD health bars - clear fighting game style.
+    // Helper to draw a glowing retro arcade heart on canvas
+    function draw_heart(ctx, hx, hy, size) {
+        ctx.save();
+        ctx.fillStyle = "#ef4444";
+        ctx.shadowColor = "rgba(239, 68, 68, 0.7)";
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        const topY = hy - size * 0.35;
+        ctx.moveTo(hx, topY + size * 0.3);
+        ctx.bezierCurveTo(hx, topY, hx - size * 0.55, topY, hx - size * 0.55, topY + size * 0.35);
+        ctx.bezierCurveTo(hx - size * 0.55, topY + size * 0.65, hx, topY + size * 0.85, hx, topY + size);
+        ctx.bezierCurveTo(hx, topY + size * 0.85, hx + size * 0.55, topY + size * 0.65, hx + size * 0.55, topY + size * 0.35);
+        ctx.bezierCurveTo(hx + size * 0.55, topY, hx, topY, hx, topY + size * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // Fixed HUD Arcade Hearts & Energy Bar - v2.3 Retro Arcade Style
     function draw_health_bar(player, label, x, align) {
         const maxHealth = player.max_health || 10;
         const health = Math.max(0, Math.min(maxHealth, player.heart || 0));
-        const width = 210;
-        const height = 12;
-        const left = align === "right" ? x - width : x;
-        const ratio = health / maxHealth;
-        const color = ratio > 0.5 ? "#6ec69a" : ratio > 0.25 ? "#d4b84a" : "#e05a5a";
+        const heartSize = 13;
+        const heartGap = 6;
+        const totalHeartsWidth = maxHealth * (heartSize + heartGap) - heartGap;
+        const left = align === "right" ? x - totalHeartsWidth : x;
 
         ctx.save();
         ctx.textAlign = align === "right" ? "right" : "left";
@@ -556,56 +573,60 @@ function draw_on_camvas(data) {
         const tagColor = label === "P1" ? "#ff5c5c" : "#38bdf8";
 
         if (align === "right") {
-            const healthStr = `${health}/${maxHealth}`;
-            ctx.font = "600 14px 'Segoe UI', Arial, sans-serif";
-            ctx.fillStyle = "#94a3b8";
-            ctx.fillText(healthStr, x, 24);
+            const healthStr = `${health} ❤️`;
+            ctx.font = "700 13px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
+            ctx.fillStyle = "#f87171";
+            ctx.fillText(healthStr, x, 22);
             const healthWidth = ctx.measureText(healthStr).width;
 
-            ctx.font = "800 18px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
+            ctx.font = "800 17px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
             ctx.fillStyle = tagColor;
-            ctx.fillText(label, x - healthWidth - 10, 24);
+            ctx.fillText(label, x - healthWidth - 10, 22);
         } else {
-            ctx.font = "800 18px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
+            ctx.font = "800 17px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
             ctx.fillStyle = tagColor;
-            ctx.fillText(label, x, 24);
+            ctx.fillText(label, x, 22);
             const labelWidth = ctx.measureText(label).width;
 
-            ctx.font = "600 14px 'Segoe UI', Arial, sans-serif";
-            ctx.fillStyle = "#94a3b8";
-            ctx.fillText(` ${health}/${maxHealth}`, x + labelWidth + 6, 24);
+            ctx.font = "700 13px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
+            ctx.fillStyle = "#f87171";
+            ctx.fillText(` ${health} ❤️`, x + labelWidth + 6, 22);
         }
 
-        // Health bar background & fill (210x12px, radius 4)
-        ctx.fillStyle = "#1e1f26";
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 29, width, height, 4); ctx.fill(); }
-        else { ctx.fillRect(left, 29, width, height); }
-        if (ratio > 0) {
-            ctx.fillStyle = color;
-            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 29, width * ratio, height, 4); ctx.fill(); }
-            else { ctx.fillRect(left, 29, width * ratio, height); }
+        // Draw Retro Arcade Hearts: lost hearts completely vanish / disappear!
+        for (let i = 0; i < maxHealth; i++) {
+            const heartX = align === "right"
+                ? (x - (maxHealth - 1 - i) * (heartSize + heartGap) - heartSize / 2)
+                : (left + i * (heartSize + heartGap) + heartSize / 2);
+            const heartY = 32;
+
+            if (i < health) {
+                // Active Heart (Vibrant Red & Glowing)
+                draw_heart(ctx, heartX, heartY, heartSize);
+            }
+            // Lost hearts completely vanish (puro puri udhao) with no leftover trace
         }
 
-        // Fixed HUD Energy / Stamina Bar (y = 45, height = 6, cyan glow)
+        // Fixed HUD Energy / Stamina Bar (y = 48, height = 5, cyan glow)
         const maxEnergy = player.max_energy || 100;
         const energy = Math.max(0, Math.min(maxEnergy, player.energy !== undefined ? player.energy : 100));
         const energyRatio = energy / maxEnergy;
         
         ctx.fillStyle = "#16171d";
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 45, width, 6, 3); ctx.fill(); }
-        else { ctx.fillRect(left, 45, width, 6); }
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 47, totalHeartsWidth, 5, 2.5); ctx.fill(); }
+        else { ctx.fillRect(left, 47, totalHeartsWidth, 5); }
         
         if (energyRatio > 0) {
             ctx.fillStyle = energyRatio > 0.35 ? "#38bdf8" : "#f59e0b";
-            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 45, width * energyRatio, 6, 3); ctx.fill(); }
-            else { ctx.fillRect(left, 45, width * energyRatio, 6); }
+            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 47, totalHeartsWidth * energyRatio, 5, 2.5); ctx.fill(); }
+            else { ctx.fillRect(left, 47, totalHeartsWidth * energyRatio, 5); }
         }
 
         // Energy text badge
-        ctx.font = "600 11px 'Segoe UI', Arial, sans-serif";
+        ctx.font = "600 10px 'Segoe UI', Arial, sans-serif";
         ctx.fillStyle = "#7dd3fc";
         const energyStr = `${Math.round(energy)}⚡`;
-        ctx.fillText(energyStr, x, 61);
+        ctx.fillText(energyStr, x, 62);
         ctx.restore();
     }
     const p2Label = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM)

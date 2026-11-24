@@ -64,15 +64,16 @@
 
     <div class="header-right">
 
-        <div class="user-profile-pill" onclick="editProfileName(event)" title="Fighter Identity (Click to customize name)">
-            <span class="profile-avatar-icon">🥋</span>
-            <span class="profile-display-name">Fighter</span>
-            <button type="button" class="profile-edit-btn" onclick="editProfileName(event)" aria-label="Edit Fighter Name" title="Edit Fighter Name">✏️</button>
-        </div>
-
         <a href="/" class="action-chip-btn leave-match-btn" title="Leave match and return to Lobby">🚪 Leave Match</a>
 
         <a href="/info" target="_blank" rel="noopener" class="header-info-link">About &amp; Feedback</a>
+
+        <!-- Profile & Combos Hub Pill on edge (dharer dike) -->
+        <div class="user-profile-pill" onclick="openProfileModal(event)" title="Fighter Profile & Combos (Click to open Pop-up)">
+            <span class="profile-avatar-icon">🥋</span>
+            <span class="profile-display-name">Fighter</span>
+            <span class="profile-rank-badge">LVL 1</span>
+        </div>
 
         <span class="header-note">ARROWS DEVELOPMENT HUB</span>
 
