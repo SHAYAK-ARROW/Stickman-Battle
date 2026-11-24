@@ -1,6 +1,6 @@
 /**
  * Stickman Battle — Fighter Profile, Identity & Modal System
- * v2.3 Lightweight LocalStorage Identity & Tactical Hub
+ * v2.3.2 Lightweight LocalStorage Identity & Tactical Hub
  * Made by Arrows Development Hub
  */
 (function() {
@@ -82,15 +82,30 @@
         } catch (e) {
             console.warn('LocalStorage unavailable for profile avatar:', e);
         }
+
+        // Live visual highlight on clicked avatar in modal
+        document.querySelectorAll('.profile-avatar-choice').forEach(btn => {
+            btn.classList.toggle('is-active', btn.textContent.trim() === av);
+        });
+
         updateProfileUI();
     }
 
     function getArcadeProgress() {
+        let serverUnlocked = 1;
+        if (typeof window !== 'undefined' && typeof window.SERVER_ARCADE_UNLOCKED === 'number') {
+            serverUnlocked = window.SERVER_ARCADE_UNLOCKED;
+        }
         try {
-            const raw = parseInt(localStorage.getItem('sb_arcade_unlocked'), 10);
-            return (isNaN(raw) || raw < 1) ? 1 : Math.min(raw, 6);
+            // Read from both key namespaces to guarantee 100% sync
+            const val1 = localStorage.getItem('stickman_arcade_unlocked');
+            const localVal1 = val1 ? parseInt(val1, 10) : 1;
+            const val2 = localStorage.getItem('sb_arcade_unlocked');
+            const localVal2 = val2 ? parseInt(val2, 10) : 1;
+            const maxVal = Math.max(serverUnlocked, localVal1, localVal2);
+            return (isNaN(maxVal) || maxVal < 1) ? 1 : Math.min(maxVal, 6);
         } catch (e) {
-            return 1;
+            return serverUnlocked;
         }
     }
 
@@ -112,6 +127,11 @@
         // Update all avatars
         document.querySelectorAll('.profile-avatar-icon').forEach(el => {
             el.textContent = avatar;
+        });
+
+        // Update all avatar choice button highlights
+        document.querySelectorAll('.profile-avatar-choice').forEach(btn => {
+            btn.classList.toggle('is-active', btn.textContent.trim() === avatar);
         });
 
         // Update all rank badges & rank dots
@@ -176,7 +196,6 @@
                             <span class="profile-input-icon">👤</span>
                             <input type="text" id="profile_name_field" class="profile-text-input" maxlength="20" placeholder="Enter your fighter handle..." value="${getPlayerName()}">
                             <button type="button" class="button button-primary profile-save-btn" onclick="window.PlayerProfile.saveNameFromModal()">Save</button>
-                            <button type="button" class="button button-secondary profile-random-btn" onclick="window.PlayerProfile.rollRandomName()" title="Roll random martial-arts handle">🎲 Roll</button>
                         </div>
                         <div id="profile_save_feedback" class="profile-feedback-msg" style="display: none;"></div>
                     </div>
@@ -227,6 +246,17 @@
         };
 
         document.body.appendChild(modal);
+
+        // Bind Enter key on name field
+        const inputField = modal.querySelector('#profile_name_field');
+        if (inputField) {
+            inputField.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    saveNameFromModal();
+                }
+            });
+        }
+
         return modal;
     }
 
@@ -319,22 +349,6 @@
         }
     }
 
-    function rollRandomName() {
-        const newName = generateRandomName();
-        const input = document.getElementById('profile_name_field');
-        if (input) {
-            input.value = newName;
-        }
-        setPlayerName(newName);
-        const feedback = document.getElementById('profile_save_feedback');
-        if (feedback) {
-            feedback.textContent = `🎲 Rolled: ${newName}`;
-            feedback.className = 'profile-feedback-msg is-success';
-            feedback.style.display = 'block';
-            setTimeout(() => { feedback.style.display = 'none'; }, 2000);
-        }
-    }
-
     // Global keyboard listener for Esc key to close modal
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
@@ -358,7 +372,6 @@
         getProgress: getArcadeProgress,
         getRank: getRankInfo,
         saveNameFromModal: saveNameFromModal,
-        rollRandomName: rollRandomName,
         updateUI: updateProfileUI,
         openModal: openProfileModal,
         closeModal: closeProfileModal
