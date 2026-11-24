@@ -94,6 +94,48 @@ button { color: inherit; }
     border-radius: 0 0 10px 10px;
 }
 
+/* ── Sleek Circular User Profile Avatar Button on Far Right (v2.3) ── */
+.user-profile-avatar-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(168, 85, 247, 0.45);
+    border-radius: 50%;
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.18);
+    user-select: none;
+    padding: 0;
+    flex-shrink: 0;
+}
+.user-profile-avatar-btn:hover {
+    background: rgba(168, 85, 247, 0.18);
+    border-color: rgba(168, 85, 247, 0.8);
+    box-shadow: 0 0 18px rgba(168, 85, 247, 0.45);
+    transform: scale(1.08);
+}
+.user-profile-avatar-btn .profile-avatar-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+.user-profile-avatar-btn .profile-avatar-rank-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #10b981;
+    border: 2px solid #0e0f12;
+    box-shadow: 0 0 6px #10b981;
+    transition: all 0.2s;
+}
+
 /* ── User Profile Badge (v2.3) ─────────────────────────────── */
 .user-profile-pill {
     display: inline-flex;

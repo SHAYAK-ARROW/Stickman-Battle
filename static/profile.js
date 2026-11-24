@@ -114,12 +114,17 @@
             el.textContent = avatar;
         });
 
-        // Update all rank badges
+        // Update all rank badges & rank dots
         document.querySelectorAll('.profile-rank-badge').forEach(el => {
             el.textContent = rankInfo.badge;
             el.title = `${rankInfo.rank} (${rankInfo.stageName})`;
             el.style.borderColor = rankInfo.color;
             el.style.color = rankInfo.color;
+        });
+        document.querySelectorAll('.profile-avatar-rank-dot').forEach(el => {
+            el.style.backgroundColor = rankInfo.color;
+            el.style.boxShadow = `0 0 6px ${rankInfo.color}`;
+            el.title = `${rankInfo.rank} (${rankInfo.badge})`;
         });
 
         // Update inputs if any
