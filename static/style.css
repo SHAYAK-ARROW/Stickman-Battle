@@ -2127,6 +2127,87 @@ button { color: inherit; }
     background: rgba(255, 255, 255, 0.06);
 }
 
+/* ── Sleek Circular Info Icon Button (v2.3) ─────────────────── */
+.header-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 50%;
+    color: #94a3b8;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 15px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+    padding: 0;
+    flex-shrink: 0;
+    outline: none;
+}
+.header-info-btn:hover {
+    background: rgba(56, 189, 248, 0.14);
+    border-color: rgba(56, 189, 248, 0.55);
+    color: #38bdf8;
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+    transform: scale(1.08);
+}
+.header-info-btn:active {
+    transform: scale(0.95);
+}
+
+/* ── Network Offline / Online Floating Toast (v2.3) ────────── */
+.network-status-toast {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: #0f1015;
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    color: #f87171;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(239, 68, 68, 0.25);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.network-status-toast.is-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+.network-status-toast.is-online {
+    border-color: rgba(52, 211, 153, 0.5);
+    color: #34d399;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(52, 211, 153, 0.25);
+}
+
+/* ── Cold Boot Pending Indicator ────────────────────────────── */
+.coldboot-notice {
+    font-size: 11px;
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px dashed rgba(245, 158, 11, 0.35);
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-top: 8px;
+    display: none;
+    animation: pulseNotice 2s infinite ease-in-out;
+}
+@keyframes pulseNotice {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; }
+}
+
 @media (max-width: 820px) {
     .info-grid {
         grid-template-columns: 1fr;

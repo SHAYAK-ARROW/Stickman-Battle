@@ -33,10 +33,10 @@
 
     <link rel="stylesheet" href="/static/lib/codemirror/dracula.min.css">
 
-    <link rel="stylesheet" href="/static/style.css?v=2.3.2">
+    <link rel="stylesheet" href="/static/style.css?v=2.3.3">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="/static/profile.js?v=2.3.2"></script>
+    <script src="/static/profile.js?v=2.3.3"></script>
 
 </head>
 
@@ -66,7 +66,10 @@
 
         <a href="/" class="action-chip-btn leave-match-btn" title="Leave match and return to Lobby">🚪 Leave Match</a>
 
-        <a href="/info" target="_blank" rel="noopener" class="header-info-link">About &amp; Feedback</a>
+        <!-- Sleek Circular Info Icon Button (v2.3) -->
+        <a href="/info" target="_blank" rel="noopener" class="header-info-btn" aria-label="About &amp; Feedback" title="About &amp; Feedback">
+            <span>ℹ️</span>
+        </a>
 
         <!-- Sleek Circular Fighter Profile Avatar on Far Right (Dan Dhare) -->
         <button type="button" class="user-profile-avatar-btn" onclick="openProfileModal(event)" aria-label="Fighter Profile &amp; Combos" title="Fighter Profile &amp; Combos (Click to view handle, rank &amp; combos)">
@@ -1546,7 +1549,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/audio.js?v=2.2.0"></script>
 
-<script src="/static/game.js?v=2.3.2"></script>
+<script src="/static/game.js?v=2.3.3"></script>
 
 <script src="/static/lib/codemirror/codemirror.min.js"></script>
 

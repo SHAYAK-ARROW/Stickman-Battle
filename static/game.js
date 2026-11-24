@@ -11,20 +11,48 @@ window.socket = socket;
 const statusDot = document.getElementById('status_dot');
 const statusText = document.getElementById('status_text');
 
+function showNetworkToast(isOnline, customMsg) {
+    let toast = document.getElementById('network_status_toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'network_status_toast';
+        toast.className = 'network-status-toast';
+        document.body.appendChild(toast);
+    }
+
+    if (!isOnline) {
+        toast.className = 'network-status-toast is-visible';
+        toast.innerHTML = `<span>📶</span> <span>${customMsg || "Connection lost. Reconnecting to arena server — code is safely cached..."}</span>`;
+    } else {
+        toast.className = 'network-status-toast is-visible is-online';
+        toast.innerHTML = `<span>⚡</span> <span>${customMsg || "Back Online! Reconnected to arena server."}</span>`;
+        setTimeout(() => {
+            toast.classList.remove('is-visible');
+        }, 3200);
+    }
+}
+
+window.addEventListener('offline', () => showNetworkToast(false, "You are currently offline. Check your internet connection."));
+window.addEventListener('online', () => showNetworkToast(true, "Back Online! Reconnecting to battle..."));
+
 function updateConnectionStatus(status) {
-    if (!statusDot || !statusText) return;
     if (status === 'connected') {
-        statusDot.style.background = '#4ade80';
-        statusText.style.color = '#4ade80';
-        statusText.innerText = 'Online';
+        if (window._hadDisconnect) {
+            showNetworkToast(true, "Reconnected to battle server!");
+            window._hadDisconnect = false;
+        }
+        if (statusDot) statusDot.style.background = '#4ade80';
+        if (statusText) { statusText.style.color = '#4ade80'; statusText.innerText = 'Online'; }
     } else if (status === 'reconnecting') {
-        statusDot.style.background = '#facc15';
-        statusText.style.color = '#facc15';
-        statusText.innerText = 'Reconnecting...';
+        window._hadDisconnect = true;
+        showNetworkToast(false, "Connection interrupted. Reconnecting to arena...");
+        if (statusDot) statusDot.style.background = '#facc15';
+        if (statusText) { statusText.style.color = '#facc15'; statusText.innerText = 'Reconnecting...'; }
     } else if (status === 'offline') {
-        statusDot.style.background = '#ef4444';
-        statusText.style.color = '#ef4444';
-        statusText.innerText = 'Offline';
+        window._hadDisconnect = true;
+        showNetworkToast(false, "Server offline or match connection closed.");
+        if (statusDot) statusDot.style.background = '#ef4444';
+        if (statusText) { statusText.style.color = '#ef4444'; statusText.innerText = 'Offline'; }
     }
 }
 

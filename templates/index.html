@@ -109,9 +109,9 @@
     </script>
 
     <link rel="icon" type="image/png" href="/static/favicon.png">
-    <link rel="stylesheet" href="/static/style.css?v=2.3.2">
+    <link rel="stylesheet" href="/static/style.css?v=2.3.3">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="/static/profile.js?v=2.3.2"></script>
+    <script src="/static/profile.js?v=2.3.3"></script>
 </head>
 <body class="home-page">
     <main class="home-shell">
@@ -132,7 +132,10 @@
                 </div>
                 <a href="/wardrobe" class="button button-secondary" style="padding: 6px 12px; font-size: 12px; border-color: rgba(168, 85, 247, 0.4); color: #d8b4fe;">🥋 Wardrobe</a>
                 <button type="button" class="button button-secondary" onclick="openHandbook()" style="padding: 6px 12px; font-size: 12px; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">📖 Handbook</button>
-                <button type="button" class="header-info-link" onclick="openInfoModal()" style="background: none; border: none; font: inherit; color: var(--text-secondary); cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 4px;" title="About, Release Specs & Feedback">About &amp; Info</button>
+                <!-- Sleek Circular Info Icon Button (v2.3) -->
+                <button type="button" class="header-info-btn" onclick="openInfoModal()" aria-label="About &amp; Game Specs" title="About &amp; Game Specs">
+                    <span>ℹ️</span>
+                </button>
                 <span class="status-pill"><span class="status-pulse"></span>Online PvP</span>
 
                 <!-- Sleek Circular Fighter Profile Avatar on Far Right (Dan Dhare) -->
@@ -363,6 +366,7 @@
                             <span class="btn-arrow" aria-hidden="true">→</span>
                         </button>
                     </div>
+                    <div id="coldboot_bot_notice" class="coldboot-notice"></div>
                 </div>
 
                 <!-- RIGHT COLUMN: MULTIPLAYER 1V1 DUELING ARENA (Host / Join) -->
@@ -382,6 +386,7 @@
                                 <span>Create battle room</span>
                                 <span class="btn-arrow" aria-hidden="true">→</span>
                             </button>
+                            <div id="coldboot_host_notice" class="coldboot-notice"></div>
                         </div>
 
                         <div class="action-divider-horizontal">
@@ -410,8 +415,8 @@
 
             </div>
 
-            <!-- 3 Highlights to fill the screen purposefully -->
-            <div class="features-grid">
+            <!-- Dynamic 20-Card Tactical Deck (3 Picked at Random per reload) -->
+            <div class="features-grid" id="features_cards_grid">
                 <div class="feature-item">
                     <div class="feature-icon">⚡</div>
                     <h4>Python Battle Logic</h4>
@@ -465,7 +470,7 @@
         </section>
     </main>
     <script src="/static/audio.js?v=2.2.0"></script>
-    <script src="/static/main.js"></script>
+    <script src="/static/main.js?v=2.3.3"></script>
     <!-- ========================================== -->
     <!-- 📖 FIGHTER'S HANDBOOK CURRICULUM MODAL     -->
     <!-- ========================================== -->
