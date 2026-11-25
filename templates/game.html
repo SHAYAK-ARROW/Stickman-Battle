@@ -33,7 +33,7 @@
 
     <link rel="stylesheet" href="/static/lib/codemirror/dracula.min.css">
 
-    <link rel="stylesheet" href="/static/style.css?v=2.3.6">
+    <link rel="stylesheet" href="/static/style.css?v=2.3.21">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="/static/profile.js?v=2.3.3"></script>
@@ -609,15 +609,15 @@ else:
     </div>
 </dialog>
 
-<!-- 🏆 Server-Verified Victory & WhatsApp Challenge Dialog (Anti-Cheat) -->
+<!-- 🏆 Server-Verified Victory & WhatsApp Challenge Dialog (Anti-Cheat & Defeat Challenge) -->
 <dialog id="victory_challenge_dialog" class="victory-challenge-dialog">
     <div class="vic-dialog-shell">
         <div class="vic-header">
-            <div class="vic-trophy-glow">🏆</div>
-            <h2 class="vic-title">VICTORY ACHIEVED!</h2>
+            <div id="vic_trophy_glow" class="vic-trophy-glow">🏆</div>
+            <h2 id="vic_title" class="vic-title">VICTORY ACHIEVED!</h2>
             <div id="vic_opponent_title" class="vic-opp-title">Opponent Defeated</div>
-            <div class="vic-security-seal">
-                <span class="seal-icon">🛡️</span>
+            <div id="vic_security_seal" class="vic-security-seal">
+                <span id="vic_seal_icon" class="seal-icon">🛡️</span>
                 <span id="vic_receipt_label">Anti-Cheat Verified · #SB2-RECEIPT</span>
             </div>
         </div>
@@ -630,7 +630,7 @@ else:
             </div>
             <div class="vic-stat-card">
                 <span class="stat-icon">❤️</span>
-                <span class="stat-label">HP Remaining</span>
+                <span id="vic_stat_label_2" class="stat-label">HP Remaining</span>
                 <span id="vic_hp_remaining" class="stat-value">0 / 10</span>
             </div>
             <div class="vic-stat-card">
@@ -650,9 +650,9 @@ else:
         <div class="vic-actions-row">
             <a id="btn_whatsapp_share" href="#" target="_blank" rel="noopener" class="vic-btn btn-whatsapp">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.972.531 1.776.812 2.801.812 3.179 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.773-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.19-.558-1.914-.79-3.14-2.739-3.237-2.87-.093-.13-1.042-1.39-1.042-2.651 0-1.261.66-1.883.896-2.143.235-.26.513-.326.685-.326.172 0 .343.003.493.01.159.008.373-.06.583.447.218.528.742 1.812.809 1.944.066.133.11.288.022.463-.088.175-.133.284-.265.438-.133.155-.279.346-.398.464-.133.13-.271.272-.117.537.154.265.688 1.135 1.477 1.838 1.014.903 1.868 1.183 2.133 1.315.266.133.421.111.577-.067.155-.177.665-.774.842-1.039.177-.266.354-.222.597-.133.244.088 1.547.729 1.813.862.266.133.443.199.509.31.066.11.066.643-.078 1.048zM12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.983-1.307A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
-                <span>Challenge on WhatsApp</span>
+                <span id="btn_whatsapp_share_text">Challenge on WhatsApp</span>
             </a>
-            <button id="btn_copy_challenge" type="button" class="vic-btn btn-copy" onclick="copyVictoryChallenge()">
+            <button id="btn_copy_challenge" type="button" class="vic-btn btn-copy" onclick="copyMatchChallenge()">
                 <span>📋 Copy Challenge Card</span>
             </button>
         </div>
@@ -1515,7 +1515,19 @@ function showBattleGate(customTitle, customLabel, customDesc, customIntel) {
 }
 
 function showBattleGateOnMatchStart() {
-    if (gateDismissed) {
+    const roomKey = typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default';
+    const isReload = (window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType('navigation')[0] && window.performance.getEntriesByType('navigation')[0].type === 'reload');
+    const wasEntered = sessionStorage.getItem('sb_gate_entered_' + roomKey) === 'true';
+
+    if (gateDismissed || wasEntered || isReload) {
+        gateDismissed = true;
+        const gate = document.getElementById('battle_start_gate');
+        if (gate) gate.style.display = 'none';
+        const overlay = document.getElementById('battle_countdown_overlay');
+        if (overlay) overlay.style.display = 'none';
+        if (typeof socket !== 'undefined' && socket && socket.connected) {
+            socket.emit('start_match');
+        }
         if (window.AudioEngine && window.AudioEngine.playMatchStart) {
             window.AudioEngine.playMatchStart();
         }
@@ -1532,20 +1544,17 @@ function showBattleGateOnMatchStart() {
     }
 }
 
-
-
 function enterBattleGate(e) {
-
     if (gateDismissed) return;
-
     gateDismissed = true;
+    try {
+        const roomKey = typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default';
+        sessionStorage.setItem('sb_gate_entered_' + roomKey, 'true');
+    } catch(err) {}
 
     if (e && e.stopPropagation) e.stopPropagation();
 
-
-
     const gate = document.getElementById('battle_start_gate');
-
     if (gate) {
         gate.classList.add('gate-exit');
         setTimeout(() => { gate.style.display = 'none'; }, 240);
@@ -1685,19 +1694,17 @@ window.addEventListener('keydown', function gateKeyHandler(e) {
 
 
 
-// Automatically show gate on load if in a bot room
-
-if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
-
-    showBattleGateOnMatchStart();
-
+// Auto-start match immediately with zero blocking gate or countdown delay
+gateDismissed = true;
+if (typeof socket !== 'undefined' && socket && socket.connected) {
+    socket.emit('start_match');
 }
 
 </script>
 
 <script src="/static/audio.js?v=2.3.8"></script>
 
-<script src="/static/game.js?v=2.3.6"></script>
+<script src="/static/game.js?v=2.3.21"></script>
 
 <script src="/static/lib/codemirror/codemirror.min.js"></script>
 
@@ -1705,7 +1712,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/lib/codemirror/python.min.js"></script>
 
-<script src="/static/editor.js?v=2.3.4"></script>
+<script src="/static/editor.js?v=2.3.21"></script>
 
 
 

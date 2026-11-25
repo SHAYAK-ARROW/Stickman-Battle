@@ -3281,17 +3281,17 @@ button { color: inherit; }
     color: var(--muted) !important;
     font-family: var(--mono) !important;
     font-size: 12px !important;
-    min-width: 28px !important;
-    padding: 0 10px 0 6px !important;
+    min-width: 22px !important;
+    padding: 0 6px 0 4px !important;
     text-align: right !important;
     box-sizing: content-box !important;
 }
 .CodeMirror-lines {
-    padding: 8px 0 !important;
+    padding: 6px 0 !important;
 }
 .CodeMirror pre.CodeMirror-line,
 .CodeMirror pre.CodeMirror-line-like {
-    padding: 0 10px !important;
+    padding: 0 6px !important;
     line-height: 1.6 !important;
 }
 .CodeMirror-cursor {
@@ -4397,6 +4397,39 @@ li.CodeMirror-hint-active .hint-desc {
     color: #f1f5f9;
     box-shadow: 0 0 50px rgba(245, 158, 11, 0.22), 0 20px 40px rgba(0, 0, 0, 0.7);
     overflow: hidden;
+}
+
+.victory-challenge-dialog.is-defeat {
+    border-color: rgba(239, 68, 68, 0.55);
+    background: linear-gradient(145deg, #130a0e 0%, #1a1017 60%, #180911 100%);
+    box-shadow: 0 0 55px rgba(239, 68, 68, 0.28), 0 20px 40px rgba(0, 0, 0, 0.75);
+}
+
+.victory-challenge-dialog.is-defeat .vic-title {
+    background: linear-gradient(135deg, #f87171 0%, #ef4444 50%, #f43f5e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.victory-challenge-dialog.is-defeat .vic-trophy-glow {
+    animation: vicDefeatPulse 2.8s ease-in-out infinite alternate;
+}
+
+@keyframes vicDefeatPulse {
+    0% {
+        transform: translateY(0);
+        filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.5));
+    }
+    100% {
+        transform: translateY(-3px);
+        filter: drop-shadow(0 0 24px rgba(239, 68, 68, 0.95)) drop-shadow(0 0 35px rgba(244, 63, 94, 0.6));
+    }
+}
+
+.victory-challenge-dialog.is-defeat .vic-security-seal {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #f87171;
 }
 
 .victory-challenge-dialog::backdrop {

@@ -342,6 +342,7 @@ function initCodeMirror() {
         });
 
         window.codeMirrorInstance = codeMirrorInstance;
+        window.editor = codeMirrorInstance;
 
         // Auto-unlock AudioContext if user clicks or focuses in editor
         codeMirrorInstance.on("focus", function() {
@@ -412,12 +413,23 @@ function initCodeMirror() {
         // Initialize 10-slot Strategy Vault with active slot
         initStrategyVault();
 
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(function() {
+                if (codeMirrorInstance) codeMirrorInstance.refresh();
+            });
+        }
+        window.addEventListener("resize", function() {
+            if (codeMirrorInstance) codeMirrorInstance.refresh();
+        });
         setTimeout(function() {
             if (codeMirrorInstance) codeMirrorInstance.refresh();
         }, 50);
         setTimeout(function() {
             if (codeMirrorInstance) codeMirrorInstance.refresh();
-        }, 200);
+        }, 150);
+        setTimeout(function() {
+            if (codeMirrorInstance) codeMirrorInstance.refresh();
+        }, 350);
     } else if (ide) {
         // Fallback for standalone/legacy mode without CodeMirror
         ide.addEventListener("input", updateEditorUI);
@@ -1040,8 +1052,9 @@ function applyCockpitLayout(term, arena, editor, label) {
     try {
         localStorage.setItem('sb_layout_ratio', JSON.stringify({ term, arena, editor, label }));
     } catch(e) {}
-    if (window.editor && typeof window.editor.refresh === 'function') {
-        setTimeout(() => window.editor.refresh(), 40);
+    const cm = window.codeMirrorInstance || window.editor;
+    if (cm && typeof cm.refresh === 'function') {
+        setTimeout(() => cm.refresh(), 40);
     }
 }
 
@@ -1125,8 +1138,9 @@ window.toggleEditorLayoutPreset = function() {
             splitter.classList.remove('is-dragging');
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
-            if (window.editor && typeof window.editor.refresh === 'function') {
-                window.editor.refresh();
+            const cm = window.codeMirrorInstance || window.editor;
+            if (cm && typeof cm.refresh === 'function') {
+                cm.refresh();
             }
         });
 

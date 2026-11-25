@@ -322,6 +322,10 @@ socket.on('connect', () => {
         sace_grant: saceGrant
     });
 
+    if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
+        socket.emit('start_match');
+    }
+
     if (document.hidden) {
         sendPlayerTabState(true);
     }
@@ -339,6 +343,164 @@ socket.on('sace_brain_updated', function(data) {
 });
 
 let latestVictoryReceipt = null;
+let currentMatchChallengeMsg = "";
+let matchStartTime = Date.now();
+
+socket.on('start_match', () => { matchStartTime = Date.now(); });
+
+function showDefeatDialog(oppTitle, combatDuration, opponentHp, codeLines) {
+    const dialog = document.getElementById('victory_challenge_dialog');
+    if (!dialog) return;
+
+    dialog.classList.add('is-defeat');
+
+    const trophyEl = document.getElementById('vic_trophy_glow');
+    if (trophyEl) trophyEl.innerText = '💀';
+
+    const titleEl = document.getElementById('vic_title');
+    if (titleEl) titleEl.innerText = 'DEFEATED IN COMBAT!';
+
+    const oppEl = document.getElementById('vic_opponent_title');
+    if (oppEl) oppEl.innerText = `Defeated by ${oppTitle}`;
+
+    const sealIcon = document.getElementById('vic_seal_icon');
+    if (sealIcon) sealIcon.innerText = '⚔️';
+
+    const sealEl = document.getElementById('vic_receipt_label');
+    if (sealEl) sealEl.innerText = 'Combat Concluded · Challenge a Friend';
+
+    const timeEl = document.getElementById('vic_combat_time');
+    if (timeEl) timeEl.innerText = `${combatDuration}s`;
+
+    const statLabel2 = document.getElementById('vic_stat_label_2');
+    if (statLabel2) statLabel2.innerText = 'Opponent HP';
+
+    const hpEl = document.getElementById('vic_hp_remaining');
+    if (hpEl) hpEl.innerText = `${opponentHp} / 10`;
+
+    const linesEl = document.getElementById('vic_code_lines');
+    if (linesEl) linesEl.innerText = `${codeLines} lines`;
+
+    const cleanOpp = oppTitle.replace(/[👑🥋🌱🛡️📐🗡️🔥🐣]/g, '').trim();
+    const shareUrl = window.location.origin ? window.location.origin : 'https://arrows-dev.itch.io/stickman-battle';
+
+    // Exact challenge text requested by user:
+    // "আমি তো হারাতে পারলাম না, তুমি কি পারবে?"
+    const challengeMsg = `⚔️ আমি তো হারাতে পারলাম না, তুমি কি পারবে? ${cleanOpp} আমাকে Stickman Battle-এ হারিয়ে দিয়েছে! তোমার পাইথন কোড কি একে হারাতে পারবে? 🔥\n🎮 এখানে খেলে দেখাও 👉 ${shareUrl}`;
+    currentMatchChallengeMsg = challengeMsg;
+
+    const quoteEl = document.getElementById('vic_challenge_text');
+    if (quoteEl) quoteEl.innerText = `"আমি তো হারাতে পারলাম না, তুমি কি পারবে? ⚔️ Stickman Battle-এ ${cleanOpp}-কে হারিয়ে দেখাও!"`;
+
+    const waBtn = document.getElementById('btn_whatsapp_share');
+    if (waBtn) {
+        waBtn.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(challengeMsg)}`;
+    }
+
+    const waText = document.getElementById('btn_whatsapp_share_text');
+    if (waText) waText.innerText = 'Challenge on WhatsApp';
+
+    const nextBtn = document.getElementById('vic_next_btn');
+    if (nextBtn) nextBtn.style.display = 'none';
+
+    setTimeout(() => {
+        try {
+            if (typeof dialog.showModal === 'function') {
+                dialog.showModal();
+            } else {
+                dialog.setAttribute('open', '');
+            }
+        } catch(e) {}
+    }, 600);
+}
+
+function showVictoryDialog(data) {
+    const dialog = document.getElementById('victory_challenge_dialog');
+    if (!dialog) return;
+
+    dialog.classList.remove('is-defeat');
+
+    const trophyEl = document.getElementById('vic_trophy_glow');
+    if (trophyEl) trophyEl.innerText = '🏆';
+
+    const titleEl = document.getElementById('vic_title');
+    if (titleEl) titleEl.innerText = 'VICTORY ACHIEVED!';
+
+    const oppEl = document.getElementById('vic_opponent_title');
+    if (oppEl) oppEl.innerText = data.opponent_title || 'Opponent Defeated';
+
+    const sealIcon = document.getElementById('vic_seal_icon');
+    if (sealIcon) sealIcon.innerText = '🛡️';
+
+    const sealEl = document.getElementById('vic_receipt_label');
+    if (sealEl) sealEl.innerText = `Anti-Cheat Verified · #${data.receipt_token || 'SB2-VICTORY'}`;
+
+    const timeEl = document.getElementById('vic_combat_time');
+    if (timeEl) timeEl.innerText = `${data.combat_duration}s`;
+
+    const statLabel2 = document.getElementById('vic_stat_label_2');
+    if (statLabel2) statLabel2.innerText = 'HP Remaining';
+
+    const hpEl = document.getElementById('vic_hp_remaining');
+    if (hpEl) hpEl.innerText = `${data.hp_remaining} / 10`;
+
+    let codeLines = 1;
+    const cm = window.codeMirrorInstance || window.editor;
+    if (cm) {
+        const val = cm.getValue().trim();
+        codeLines = val ? val.split('\n').filter(l => l.trim().length > 0).length : 1;
+    }
+    const linesEl = document.getElementById('vic_code_lines');
+    if (linesEl) linesEl.innerText = `${codeLines} lines`;
+
+    const oppName = (data.opponent_title || 'SACE Bot').replace(/[👑🥋🌱🛡️📐🗡️🔥🐣]/g, '').trim();
+    const shareUrl = window.location.origin ? window.location.origin : 'https://arrows-dev.itch.io/stickman-battle';
+    const challengeMsg = `⚔️ I just defeated ${oppName} in Stickman Battle in ${data.combat_duration}s with ${data.hp_remaining}/10 HP (${codeLines} lines of Python)!\nCan your code beat mine? 🔥\n🎮 Play free in browser 👉 ${shareUrl}`;
+    currentMatchChallengeMsg = challengeMsg;
+
+    const quoteEl = document.getElementById('vic_challenge_text');
+    if (quoteEl) quoteEl.innerText = `"${challengeMsg.split('\n')[0]} Can your code beat mine? 🔥"`;
+
+    const waBtn = document.getElementById('btn_whatsapp_share');
+    if (waBtn) {
+        waBtn.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(challengeMsg)}`;
+    }
+
+    const waText = document.getElementById('btn_whatsapp_share_text');
+    if (waText) waText.innerText = 'Challenge on WhatsApp';
+
+    // Next stage button in dialog
+    const nextBtn = document.getElementById('vic_next_btn');
+    if (nextBtn) {
+        const stageMap = {
+            'easy': { key: 'turtle', label: 'Stage 2: Iron Turtle' },
+            'rusher': { key: 'turtle', label: 'Stage 2: Iron Turtle' },
+            'turtle': { key: 'weaver', label: 'Stage 3: Wave Weaver' },
+            'weaver': { key: 'duelist', label: 'Stage 4: Shadow Duelist' },
+            'duelist': { key: 'berserker', label: 'Stage 5: Berserker Ronin' },
+            'hard': { key: 'apex', label: 'Stage 6: Apex Sovereign' },
+            'berserker': { key: 'apex', label: 'Stage 6: Apex Sovereign' }
+        };
+        const nextInfo = stageMap[data.bot_difficulty];
+        if (nextInfo) {
+            nextBtn.style.display = 'inline-flex';
+            nextBtn.href = '/bot/' + nextInfo.key;
+            nextBtn.innerText = `⚔️ Next: ${nextInfo.label} ➔`;
+        } else {
+            nextBtn.style.display = 'none';
+        }
+    }
+
+    setTimeout(() => {
+        try {
+            if (typeof dialog.showModal === 'function') {
+                dialog.showModal();
+            } else {
+                dialog.setAttribute('open', '');
+            }
+        } catch(e) {}
+    }, 700);
+}
 
 socket.on('match_victory_receipt', function(data) {
     if (!data || data.winner !== MY_PLAYER_ID) return;
@@ -365,93 +527,18 @@ socket.on('match_victory_receipt', function(data) {
         }
     }).catch(err => console.warn("Failed to claim victory token:", err));
 
-    // 2. Count lines of code in editor
-    let codeLines = 1;
-    if (window.editor) {
-        const val = window.editor.getValue().trim();
-        codeLines = val ? val.split('\n').filter(l => l.trim().length > 0).length : 1;
-    }
-
-    // 3. Populate Victory & WhatsApp Challenge Dialog
-    const dialog = document.getElementById('victory_challenge_dialog');
-    if (!dialog) return;
-
-    const oppEl = document.getElementById('vic_opponent_title');
-    if (oppEl) oppEl.innerText = data.opponent_title || 'Opponent';
-
-    const sealEl = document.getElementById('vic_receipt_label');
-    if (sealEl) sealEl.innerText = `Anti-Cheat Verified · #${data.receipt_token}`;
-
-    const timeEl = document.getElementById('vic_combat_time');
-    if (timeEl) timeEl.innerText = `${data.combat_duration}s`;
-
-    const hpEl = document.getElementById('vic_hp_remaining');
-    if (hpEl) hpEl.innerText = `${data.hp_remaining} / 10`;
-
-    const linesEl = document.getElementById('vic_code_lines');
-    if (linesEl) linesEl.innerText = `${codeLines} lines`;
-
-    // 4. Build viral challenge message for WhatsApp & clipboard
-    const oppName = (data.opponent_title || 'SACE Bot').replace(/[👑🥋🌱🛡️📐🗡️🔥🐣]/g, '').trim();
-    const challengeMsg = `⚔️ I just defeated ${oppName} in Stickman Battle in ${data.combat_duration}s with ${data.hp_remaining}/10 HP (${codeLines} lines of Python)!\nCan your code beat mine? 🔥\n🎮 Play free in browser 👉 https://arrows-dev.itch.io/stickman-battle`;
-
-    const quoteEl = document.getElementById('vic_challenge_text');
-    if (quoteEl) quoteEl.innerText = `"${challengeMsg.split('\n')[0]} Can your code beat mine? 🔥"`;
-
-    const waBtn = document.getElementById('btn_whatsapp_share');
-    if (waBtn) {
-        waBtn.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(challengeMsg)}`;
-    }
-
-    // Next stage button in dialog
-    const nextBtn = document.getElementById('vic_next_btn');
-    if (nextBtn) {
-        const stageMap = {
-            'easy': { key: 'turtle', label: 'Stage 2: Iron Turtle' },
-            'rusher': { key: 'turtle', label: 'Stage 2: Iron Turtle' },
-            'turtle': { key: 'weaver', label: 'Stage 3: Wave Weaver' },
-            'weaver': { key: 'duelist', label: 'Stage 4: Shadow Duelist' },
-            'duelist': { key: 'berserker', label: 'Stage 5: Berserker Ronin' },
-            'hard': { key: 'apex', label: 'Stage 6: Apex Sovereign' },
-            'berserker': { key: 'apex', label: 'Stage 6: Apex Sovereign' }
-        };
-        const nextInfo = stageMap[data.bot_difficulty];
-        if (nextInfo) {
-            nextBtn.style.display = 'inline-flex';
-            nextBtn.href = '/bot/' + nextInfo.key;
-            nextBtn.innerText = `⚔️ Next: ${nextInfo.label} ➔`;
-        } else {
-            nextBtn.style.display = 'none';
-        }
-    }
-
-    // Auto-open modal after a short celebration delay
-    setTimeout(() => {
-        try {
-            if (typeof dialog.showModal === 'function') {
-                dialog.showModal();
-            } else {
-                dialog.setAttribute('open', '');
-            }
-        } catch(e) {}
-    }, 700);
+    showVictoryDialog(data);
 });
 
-function copyVictoryChallenge() {
-    if (!latestVictoryReceipt) return;
-    let codeLines = 1;
-    if (window.editor) {
-        const val = window.editor.getValue().trim();
-        codeLines = val ? val.split('\n').filter(l => l.trim().length > 0).length : 1;
-    }
-    const oppName = (latestVictoryReceipt.opponent_title || 'SACE Bot').replace(/[👑🥋🌱🛡️📐🗡️🔥🐣]/g, '').trim();
-    const challengeMsg = `⚔️ I just defeated ${oppName} in Stickman Battle in ${latestVictoryReceipt.combat_duration}s with ${latestVictoryReceipt.hp_remaining}/10 HP (${codeLines} lines of Python)!\nCan your code beat mine? 🔥\n🎮 Play free in browser 👉 https://arrows-dev.itch.io/stickman-battle`;
+function copyMatchChallenge() {
+    const msg = currentMatchChallengeMsg;
+    if (!msg) return;
 
     const notify = () => {
         if (typeof showToast === 'function') {
             showToast({
                 title: "Challenge Copied! 📋",
-                message: "Brag card copied to clipboard! Paste it in Discord, WhatsApp, or Facebook.",
+                message: "Challenge card copied to clipboard! Share it in WhatsApp or Discord.",
                 type: "success",
                 duration: 4000
             });
@@ -459,9 +546,9 @@ function copyVictoryChallenge() {
     };
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(challengeMsg).then(notify).catch(() => {
+        navigator.clipboard.writeText(msg).then(notify).catch(() => {
             const ta = document.createElement("textarea");
-            ta.value = challengeMsg;
+            ta.value = msg;
             document.body.appendChild(ta);
             ta.select();
             document.execCommand("copy");
@@ -470,7 +557,7 @@ function copyVictoryChallenge() {
         });
     } else {
         const ta = document.createElement("textarea");
-        ta.value = challengeMsg;
+        ta.value = msg;
         document.body.appendChild(ta);
         ta.select();
         document.execCommand("copy");
@@ -478,6 +565,8 @@ function copyVictoryChallenge() {
         notify();
     }
 }
+window.copyMatchChallenge = copyMatchChallenge;
+window.copyVictoryChallenge = copyMatchChallenge; // backward compatibility
 
 function closeVictoryDialog() {
     const dialog = document.getElementById('victory_challenge_dialog');
@@ -487,6 +576,7 @@ function closeVictoryDialog() {
         } else {
             dialog.removeAttribute('open');
         }
+        dialog.classList.remove('is-defeat');
     }
 }
 
@@ -1852,6 +1942,39 @@ function draw_on_camvas(data) {
                     }
                 }
             }
+
+            // Fallback victory dialog trigger if server receipt lags
+            setTimeout(() => {
+                const dialog = document.getElementById('victory_challenge_dialog');
+                if (dialog && !dialog.open && !latestVictoryReceipt) {
+                    const oppName = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM && typeof BOT_DIFFICULTY !== 'undefined')
+                        ? ((typeof STAGE_TITLES !== 'undefined' && STAGE_TITLES[BOT_DIFFICULTY]) || 'Opponent')
+                        : 'Player 2';
+                    const hpLeft = (MY_PLAYER_ID === 1 && data.player1) ? data.player1.heart : ((MY_PLAYER_ID === 2 && data.player2) ? data.player2.heart : 10);
+                    const combatDur = Math.max(1, Math.round((Date.now() - matchStartTime) / 1000));
+                    showVictoryDialog({
+                        opponent_title: oppName,
+                        bot_difficulty: typeof BOT_DIFFICULTY !== 'undefined' ? BOT_DIFFICULTY : 'easy',
+                        combat_duration: combatDur,
+                        hp_remaining: hpLeft,
+                        receipt_token: 'LOCAL-WIN'
+                    });
+                }
+            }, 1200);
+        } else if (!iWon) {
+            // 💀 Defeat Dialog & WhatsApp Challenge on Match End (Guaranteed to open)
+            const oppName = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM && typeof BOT_DIFFICULTY !== 'undefined')
+                ? ((typeof STAGE_TITLES !== 'undefined' && STAGE_TITLES[BOT_DIFFICULTY]) || (BOT_DIFFICULTY.toUpperCase() + ' Bot'))
+                : 'Player 2';
+            const botHp = (MY_PLAYER_ID === 1 && data.player2) ? data.player2.heart : ((MY_PLAYER_ID === 2 && data.player1) ? data.player1.heart : 5);
+            let codeLines = 1;
+            const cm = window.codeMirrorInstance || window.editor;
+            if (cm) {
+                const val = cm.getValue().trim();
+                codeLines = val ? val.split('\n').filter(l => l.trim().length > 0).length : 1;
+            }
+            const combatDur = Math.max(1, Math.round((Date.now() - matchStartTime) / 1000));
+            showDefeatDialog(oppName, combatDur, botHp, codeLines);
         }
     }
     prevGameOver = is_game_over;
@@ -2047,15 +2170,26 @@ window.executeSnippetDirect = function(snippet) {
 };
 
 function request_restart() {
+    closeVictoryDialog();
+    prevGameOver = false;
+    matchStartTime = Date.now();
     socket.emit('restart_game', {
         "room_id": typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default'
     });
+    if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
+        socket.emit('start_match');
+    }
 }
 
 socket.on('game_restarted', () => {
     console.log("Game restarted!");
     closeVictoryDialog();
     prevGameOver = false;
+    matchStartTime = Date.now();
+    try {
+        const roomKey = typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default';
+        sessionStorage.setItem('sb_gate_entered_' + roomKey, 'true');
+    } catch(e) {}
     window._snippetQueue = [];
     const restartBtn = document.getElementById('restart_btn');
     if (restartBtn) {
