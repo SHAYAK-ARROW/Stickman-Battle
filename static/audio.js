@@ -82,9 +82,9 @@
                 if (!AudioContextClass) return null;
                 audioCtx = new AudioContextClass();
 
-                // Master BGM Gain (volume controlled)
+                // Master BGM Gain (volume controlled with energetic punch)
                 masterBgmGain = audioCtx.createGain();
-                const initBgmGain = bgmEnabled ? 0.35 * bgmVolume : 0;
+                const initBgmGain = bgmEnabled ? 0.50 * bgmVolume : 0;
                 masterBgmGain.gain.setValueAtTime(initBgmGain, audioCtx.currentTime);
                 masterBgmGain.connect(audioCtx.destination);
 
@@ -276,17 +276,17 @@
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
-            // Heavy 808-style downward pitch punch
-            osc.frequency.setValueAtTime(145, now);
-            osc.frequency.exponentialRampToValueAtTime(36, now + 0.09);
+            // Heavy punchy downward pitch sweep with acoustic presence
+            osc.frequency.setValueAtTime(175, now);
+            osc.frequency.exponentialRampToValueAtTime(42, now + 0.10);
 
-            gain.gain.setValueAtTime(0.72, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            gain.gain.setValueAtTime(0.88, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
 
             osc.connect(gain);
             gain.connect(masterBgmGain);
             osc.start(now);
-            osc.stop(now + 0.20);
+            osc.stop(now + 0.22);
         } catch (e) {}
     }
 
@@ -327,11 +327,11 @@
             osc.frequency.setValueAtTime(freq, now);
 
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(450, now);
-            filter.frequency.exponentialRampToValueAtTime(180, now + 0.11);
-            filter.Q.setValueAtTime(2.2, now);
+            filter.frequency.setValueAtTime(520, now);
+            filter.frequency.exponentialRampToValueAtTime(210, now + 0.11);
+            filter.Q.setValueAtTime(2.6, now);
 
-            gain.gain.setValueAtTime(0.42, now);
+            gain.gain.setValueAtTime(0.50, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
 
             osc.connect(filter);
@@ -411,7 +411,7 @@
         }
         if (masterBgmGain) {
             masterBgmGain.gain.cancelScheduledValues(ctx.currentTime);
-            masterBgmGain.gain.setValueAtTime(0.40 * bgmVolume, ctx.currentTime);
+            masterBgmGain.gain.setValueAtTime(0.50 * bgmVolume, ctx.currentTime);
         }
         if (bgmMode === 'battle') {
             if (!battleBeatTimer) battleBeatStep();
@@ -1164,7 +1164,7 @@
             stopBGM(true);
         } else if (bgmEnabled && masterBgmGain && audioCtx) {
             masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
-            masterBgmGain.gain.setValueAtTime(0.35 * bgmVolume, audioCtx.currentTime);
+            masterBgmGain.gain.setValueAtTime(0.50 * bgmVolume, audioCtx.currentTime);
             if (!isBgmPlaying) startBGM();
         } else if (!bgmEnabled && masterBgmGain && audioCtx) {
             masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
@@ -1282,7 +1282,7 @@
                     }
                     if (masterBgmGain) {
                         masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
-                        masterBgmGain.gain.setValueAtTime(bgmEnabled ? 0.35 * bgmVolume : 0, audioCtx.currentTime);
+                        masterBgmGain.gain.setValueAtTime(bgmEnabled ? 0.50 * bgmVolume : 0, audioCtx.currentTime);
                     }
                     if (bgmEnabled && (wasBgmPlayingBeforeHide || !isBgmPlaying)) {
                         startBGM();
@@ -1291,7 +1291,7 @@
             } else if (bgmEnabled && !isBgmPlaying) {
                 if (masterBgmGain && audioCtx) {
                     masterBgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
-                    masterBgmGain.gain.setValueAtTime(0.35 * bgmVolume, audioCtx.currentTime);
+                    masterBgmGain.gain.setValueAtTime(0.50 * bgmVolume, audioCtx.currentTime);
                 }
                 startBGM();
             }
