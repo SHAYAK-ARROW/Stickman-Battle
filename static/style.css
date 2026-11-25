@@ -3220,10 +3220,30 @@ button { color: inherit; }
     display: block;
 }
 
+.quick-play-hero-btn {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease !important;
+}
+.quick-play-hero-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(56, 189, 248, 0.3) !important;
+    border-color: #38bdf8 !important;
+}
+
 .arcade-ladder-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 8px;
+}
+
+.arcade-ladder-grid .button-bot {
+    padding: 8px 12px !important;
+    min-height: 48px !important;
+    border-radius: 10px !important;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.arcade-ladder-grid .button-bot:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
 @media (max-width: 600px) {

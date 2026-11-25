@@ -170,8 +170,39 @@ function play_bot(difficulty) {
     window.location.href = "/bot/" + diff;
 }
 
+function play_quick_play() {
+    const unlocked = getUnlockedStage();
+    const stageMapping = {
+        1: 'rusher',
+        2: 'turtle',
+        3: 'weaver',
+        4: 'duelist',
+        5: 'berserker',
+        6: 'apex'
+    };
+    const target = stageMapping[Math.min(unlocked, 6)] || 'rusher';
+    play_bot(target);
+}
+window.play_quick_play = play_quick_play;
+
 function updateArcadeLadderUI() {
     const unlocked = getUnlockedStage();
+
+    // Dynamically update Quick Play subtitle with highest unlocked stage
+    const qpSub = document.getElementById('quick_play_subtitle');
+    if (qpSub) {
+        const stageNames = {
+            1: 'Stage 1 · Byte Rusher',
+            2: 'Stage 2 · Iron Turtle',
+            3: 'Stage 3 · Wave Weaver',
+            4: 'Stage 4 · Shadow Duelist',
+            5: 'Stage 5 · Berserker Ronin',
+            6: 'Stage 6 · Apex Sovereign'
+        };
+        const currentName = stageNames[Math.min(unlocked, 6)] || `Stage ${unlocked}`;
+        qpSub.innerText = `Continue Campaign: ${currentName}`;
+    }
+
     const ladderGrid = document.querySelector('.arcade-ladder-grid');
     if (!ladderGrid) return;
     const buttons = ladderGrid.querySelectorAll('button');
