@@ -963,6 +963,87 @@
         setBgmMode('battle');
     }
 
+    // 8.1. Arcade Countdown Beep (3... 2... 1...)
+    function playCountdownTick(step) {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        const now = ctx.currentTime;
+        try {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            const freq = step === 3 ? 440 : (step === 2 ? 554 : 659);
+            osc.frequency.setValueAtTime(freq, now);
+            osc.frequency.exponentialRampToValueAtTime(freq * 1.05, now + 0.12);
+
+            gain.gain.setValueAtTime(0.40, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+            osc.connect(gain);
+            gain.connect(masterSfxGain);
+            osc.start(now);
+            osc.stop(now + 0.24);
+        } catch (e) {}
+    }
+
+    // 8.2. Lightning Strike & Electric Shockwave (FIGHT!)
+    function playLightningStrike() {
+        if (document.hidden) return;
+        const ctx = getAudioContext(true);
+        if (!ctx || !sfxEnabled) return;
+        const now = ctx.currentTime;
+        try {
+            // Layer 1: High-voltage electric crackle / zap
+            const noiseDur = 0.18;
+            const bufferSize = Math.floor(ctx.sampleRate * noiseDur);
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.25));
+            }
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(3200, now);
+            filter.Q.setValueAtTime(3.0, now);
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.65, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+            noise.connect(filter);
+            filter.connect(noiseGain);
+            noiseGain.connect(masterSfxGain);
+            noise.start(now);
+
+            // Layer 2: Electric Laser Surge (1400Hz -> 110Hz fast sweep)
+            const osc = ctx.createOscillator();
+            const oscGain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(1400, now);
+            osc.frequency.exponentialRampToValueAtTime(110, now + 0.25);
+            oscGain.gain.setValueAtTime(0.55, now);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+            osc.connect(oscGain);
+            oscGain.connect(masterSfxGain);
+            osc.start(now);
+            osc.stop(now + 0.30);
+
+            // Layer 3: Sub Thunder Detonation (180Hz -> 28Hz)
+            const sub = ctx.createOscillator();
+            const subGain = ctx.createGain();
+            sub.type = 'sine';
+            sub.frequency.setValueAtTime(180, now);
+            sub.frequency.exponentialRampToValueAtTime(28, now + 0.50);
+            subGain.gain.setValueAtTime(0.85, now);
+            subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+            sub.connect(subGain);
+            subGain.connect(masterSfxGain);
+            sub.start(now);
+            sub.stop(now + 0.58);
+        } catch (e) {}
+    }
+
     // 9. Game Over (Dramatic K.O. Boom + Fanfare or Defeat Tone)
     function playGameOver(isWinner) {
         if (document.hidden) return;
@@ -1344,6 +1425,8 @@
         playDodge: playDodge,
         playClick: playClick,
         playMatchStart: playMatchStart,
+        playCountdownTick: playCountdownTick,
+        playLightningStrike: playLightningStrike,
         playGameOver: playGameOver,
         playHeartbeat: playHeartbeat,
         checkHeartbeat: checkHeartbeat,

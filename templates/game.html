@@ -290,6 +290,19 @@
         </div>
     </div>
 
+    <!-- ⚡ 3-2-1 FIGHT ARCADE COUNTDOWN & LIGHTNING SPARK OVERLAY -->
+    <div id="battle_countdown_overlay" class="battle-countdown-overlay" style="display: none;" aria-hidden="true">
+        <div id="countdown_number_wrap" class="countdown-number-wrap">
+            <span id="countdown_number_text" class="countdown-number-text">3</span>
+        </div>
+        <svg id="countdown_lightning_svg" class="countdown-lightning-svg" viewBox="0 0 800 600" preserveAspectRatio="none" style="display: none;">
+            <path class="lightning-bolt-glow" d="M400,0 L370,140 L440,210 L350,330 L430,410 L380,600" />
+            <path class="lightning-bolt-core" d="M400,0 L370,140 L440,210 L350,330 L430,410 L380,600" />
+            <path class="lightning-bolt-branch" d="M370,140 L290,190 L320,260" />
+            <path class="lightning-bolt-branch" d="M350,330 L460,370 L430,450" />
+        </svg>
+    </div>
+
 
 
     <div id="pause_overlay" class="pause-overlay" style="display: none;">
@@ -1540,47 +1553,127 @@ function enterBattleGate(e) {
     const gate = document.getElementById('battle_start_gate');
 
     if (gate) {
-
         gate.classList.add('gate-exit');
-
         setTimeout(() => { gate.style.display = 'none'; }, 240);
-
     }
 
-    // Inform server that player entered the battle
-    if (typeof socket !== 'undefined' && socket && socket.connected) {
-        socket.emit('start_match');
+    if (window.AudioEngine && window.AudioEngine.handleFirstUserGesture) {
+        window.AudioEngine.handleFirstUserGesture();
     }
 
-    // Unlock AudioContext and play fanfare + sword clash + BGM
+    // Trigger dramatic 3-2-1 FIGHT countdown with lightning spark VFX
+    startBattleCountdown();
+}
 
-    if (window.AudioEngine) {
+function startBattleCountdown() {
+    const overlay = document.getElementById('battle_countdown_overlay');
+    const numWrap = document.getElementById('countdown_number_wrap');
+    const numText = document.getElementById('countdown_number_text');
+    const lightningSvg = document.getElementById('countdown_lightning_svg');
+    const arenaCanvas = document.getElementById('gui_screen');
 
-        if (window.AudioEngine.handleFirstUserGesture) window.AudioEngine.handleFirstUserGesture();
+    if (!overlay || !numWrap || !numText) {
+        if (typeof socket !== 'undefined' && socket && socket.connected) {
+            socket.emit('start_match');
+        }
+        if (window.AudioEngine) {
+            if (window.AudioEngine.playMatchStart) window.AudioEngine.playMatchStart();
+            if (window.AudioEngine.startBGM) window.AudioEngine.startBGM();
+        }
+        return;
+    }
 
-        if (window.AudioEngine.playMatchStart) window.AudioEngine.playMatchStart();
+    overlay.style.display = 'flex';
+    overlay.style.opacity = '1';
 
-        if (window.AudioEngine.playSwordClash) {
+    function setStep(label, color, popClass, soundFn) {
+        numText.innerText = label;
+        numText.style.color = color;
+        numWrap.classList.remove('countdown-pop', 'countdown-fight-blast');
+        void numWrap.offsetWidth;
+        numWrap.classList.add(popClass);
+        if (soundFn) soundFn();
+    }
 
-            setTimeout(() => window.AudioEngine.playSwordClash(0.7), 280);
+    // Step 1: "3" (Amber / Gold)
+    setStep('3', '#fbbf24', 'countdown-pop', () => {
+        if (window.AudioEngine && window.AudioEngine.playCountdownTick) {
+            window.AudioEngine.playCountdownTick(3);
+        }
+    });
 
+    // Step 2: "2" (Cyan) after 650ms
+    setTimeout(() => {
+        setStep('2', '#38bdf8', 'countdown-pop', () => {
+            if (window.AudioEngine && window.AudioEngine.playCountdownTick) {
+                window.AudioEngine.playCountdownTick(2);
+            }
+        });
+    }, 650);
+
+    // Step 3: "1" (Purple) after 1300ms
+    setTimeout(() => {
+        setStep('1', '#c084fc', 'countdown-pop', () => {
+            if (window.AudioEngine && window.AudioEngine.playCountdownTick) {
+                window.AudioEngine.playCountdownTick(1);
+            }
+        });
+    }, 1300);
+
+    // Step 4: "FIGHT!" (Lightning strike & spark explosion) after 1950ms
+    setTimeout(() => {
+        setStep('FIGHT!', '#f43f5e', 'countdown-fight-blast', () => {
+            if (window.AudioEngine) {
+                if (window.AudioEngine.playLightningStrike) window.AudioEngine.playLightningStrike();
+                if (window.AudioEngine.playMatchStart) window.AudioEngine.playMatchStart();
+                if (window.AudioEngine.startBGM) window.AudioEngine.startBGM();
+            }
+        });
+
+        // Flash lightning bolt
+        if (lightningSvg) {
+            lightningSvg.style.display = 'block';
+            setTimeout(() => { lightningSvg.style.display = 'none'; }, 260);
         }
 
-        if (window.AudioEngine.startBGM) window.AudioEngine.startBGM();
+        // Screen shake on arena canvas
+        if (arenaCanvas) {
+            arenaCanvas.classList.remove('arena-lightning-shake');
+            void arenaCanvas.offsetWidth;
+            arenaCanvas.classList.add('arena-lightning-shake');
+            setTimeout(() => { arenaCanvas.classList.remove('arena-lightning-shake'); }, 300);
+        }
 
-    }
+        // Spawn explosive sparks on arena canvas
+        if (typeof spawnCombatSparks === 'function') {
+            spawnCombatSparks(400, 300, '#38bdf8', 25);
+            spawnCombatSparks(400, 300, '#fef08a', 25);
+            spawnCombatSparks(400, 300, '#f43f5e', 15);
+        }
 
+        // Inform server that match started
+        if (typeof socket !== 'undefined' && socket && socket.connected) {
+            socket.emit('start_match');
+        }
+    }, 1950);
 
-
-    // Focus Python code editor
+    // Fade out overlay & focus editor after 2700ms
     setTimeout(() => {
+        overlay.style.transition = 'opacity 0.25s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            overlay.style.opacity = '1';
+        }, 260);
+
         if (window.codeMirrorInstance) {
             window.codeMirrorInstance.focus();
         } else {
             const ed = document.getElementById('ide') || document.getElementById('code_input');
             if (ed) ed.focus();
         }
-    }, 250);
+    }, 2700);
+}
 
 }
 

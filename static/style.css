@@ -4752,3 +4752,130 @@ li.CodeMirror-hint-active .hint-desc {
     background: rgba(255, 255, 255, 0.14);
     color: #ffffff;
 }
+
+/* ⚡ 3-2-1 FIGHT Arcade Countdown & Lightning Overlay */
+.battle-countdown-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 99;
+    overflow: hidden;
+}
+
+.countdown-number-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: scale(1);
+    transition: transform 0.08s ease-out;
+}
+
+.countdown-number-text {
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    font-size: clamp(80px, 16vw, 150px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -2px;
+    text-transform: uppercase;
+    filter: drop-shadow(0 0 30px currentColor) drop-shadow(0 0 60px currentColor);
+    user-select: none;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+}
+
+.countdown-pop {
+    animation: countdownNumberPop 0.58s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.countdown-fight-blast {
+    animation: countdownFightBlast 0.78s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+@keyframes countdownNumberPop {
+    0% {
+        transform: scale(2.2);
+        opacity: 0;
+    }
+    30% {
+        transform: scale(0.92);
+        opacity: 1;
+    }
+    60% {
+        transform: scale(1.06);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.95;
+    }
+}
+
+@keyframes countdownFightBlast {
+    0% {
+        transform: scale(2.6);
+        opacity: 0;
+    }
+    20% {
+        transform: scale(1.15);
+        opacity: 1;
+    }
+    70% {
+        transform: scale(1.0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1.35);
+        opacity: 0;
+    }
+}
+
+/* Lightning Bolt SVG */
+.countdown-lightning-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.lightning-bolt-glow {
+    fill: none;
+    stroke: #38bdf8;
+    stroke-width: 14;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 20px #38bdf8) drop-shadow(0 0 40px #f43f5e);
+    opacity: 0.88;
+}
+
+.lightning-bolt-core {
+    fill: none;
+    stroke: #ffffff;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.lightning-bolt-branch {
+    fill: none;
+    stroke: #c084fc;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 10px #c084fc);
+}
+
+.arena-lightning-shake {
+    animation: lightningScreenShake 0.28s ease-in-out;
+}
+
+@keyframes lightningScreenShake {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(-5px, 4px); }
+    40% { transform: translate(5px, -4px); }
+    60% { transform: translate(-4px, 3px); }
+    80% { transform: translate(4px, -2px); }
+}
