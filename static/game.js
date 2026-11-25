@@ -603,6 +603,8 @@ let prevP1Attacking = false;
 let prevP2Attacking = false;
 let activeSpellKeys = new Set();
 let prevGameOver = false;
+let p1HitFlashUntil = 0;
+let p2HitFlashUntil = 0;
 let prevClash = false;
 
 // --- DYNAMIC COMBAT SPARK SYSTEM ---
@@ -785,6 +787,8 @@ function draw_on_camvas(data) {
 
                     case 'damage_hit':
                         const isHeavy = !!evt.is_heavy;
+                        if (evt.target === 1) p1HitFlashUntil = Date.now() + 350;
+                        else p2HitFlashUntil = Date.now() + 350;
                         if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit(isHeavy);
                         const tgtX = (evt.target === 1 ? data.player1.x : data.player2.x);
                         spawnCombatSparks(tgtX, 470, isHeavy ? '#f43f5e' : '#fbbf24', isHeavy ? 15 : 8);
@@ -875,11 +879,13 @@ function draw_on_camvas(data) {
         // 1. Damage Hit Fallback
         if (!eventsHandled.has('hit')) {
             if (prevP1Heart !== null && data.player1.heart < prevP1Heart) {
+                p1HitFlashUntil = Date.now() + 350;
                 if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit(false);
                 const dmg = prevP1Heart - data.player1.heart;
                 logCombatTelemetry('hit', '[DAMAGE HIT]', `💥 P1 took ${dmg} DMG! (Hearts: ${data.player1.heart}/10)`);
             }
             if (prevP2Heart !== null && data.player2.heart < prevP2Heart) {
+                p2HitFlashUntil = Date.now() + 350;
                 if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit(false);
                 const dmg = prevP2Heart - data.player2.heart;
                 const target = targetIsBot ? 'Bot' : 'P2';
@@ -1369,82 +1375,159 @@ function draw_on_camvas(data) {
         ctx.restore();
     }
 
-    // Fixed HUD Arcade Hearts & Energy Bar - v2.3 Retro Arcade Style
-    function draw_health_bar(player, label, x, align) {
+    // Helper to get Bot Profile Theme from lobby config
+    function getBotProfileTheme() {
+        const diff = (typeof BOT_DIFFICULTY !== 'undefined' && BOT_DIFFICULTY ? BOT_DIFFICULTY.toLowerCase() : 'easy');
+        const themes = {
+            'rusher': { icon: '⚡', color: '#10b981', name: 'Byte Rusher' },
+            'easy': { icon: '⚡', color: '#10b981', name: 'Byte Rusher' },
+            'turtle': { icon: '🛡️', color: '#0ea5e9', name: 'Iron Turtle' },
+            'weaver': { icon: '🌊', color: '#a855f7', name: 'Wave Weaver' },
+            'duelist': { icon: '🗡️', color: '#f43f5e', name: 'Shadow Duelist' },
+            'berserker': { icon: '🔥', color: '#f97316', name: 'Berserker Ronin' },
+            'apex': { icon: '👑', color: '#f59e0b', name: 'Apex Sovereign' },
+            'hard': { icon: '👑', color: '#f59e0b', name: 'Apex Sovereign' },
+            'master': { icon: '👑', color: '#eab308', name: 'SACE Master' },
+            'sace': { icon: '👑', color: '#eab308', name: 'SACE Master' },
+            'dummy': { icon: '🥋', color: '#14b8a6', name: 'Practice Dojo' }
+        };
+        return themes[diff] || { icon: '🤖', color: '#38bdf8', name: 'Arena Bot' };
+    }
+
+    // Helper to get Player Profile Theme (from wardrobe or default)
+    function getPlayerProfileTheme() {
+        let bodyColor = "#38bdf8";
+        try {
+            const saved = localStorage.getItem("stickman_custom_colors");
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.body) bodyColor = parsed.body;
+            }
+        } catch(e) {}
+        return { icon: '🥋', color: bodyColor, name: 'YOU' };
+    }
+
+    // Fixed HUD Arcade Hearts & Energy Bar with Fighter Profile Avatar Badges
+    function draw_health_bar(player, label, align) {
         const maxHealth = player.max_health || 10;
         const health = Math.max(0, Math.min(maxHealth, player.heart || 0));
         const heartSize = 13;
         const heartGap = 6;
         const totalHeartsWidth = maxHealth * (heartSize + heartGap) - heartGap;
-        const left = align === "right" ? x - totalHeartsWidth : x;
+        
+        const isLeft = (align === "left");
+        const isBot = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM);
+        const theme = isLeft ? getPlayerProfileTheme() : (isBot ? getBotProfileTheme() : { icon: '👤', color: '#ec4899', name: 'Player 2' });
+        
+        // Check damage hit flash
+        const isFlashing = isLeft ? (Date.now() < p1HitFlashUntil) : (Date.now() < p2HitFlashUntil);
+        const borderColor = isFlashing ? "#ef4444" : theme.color;
+        
+        // Badge dimensions
+        const badgeSize = 36;
+        const badgeY = 14;
+        const badgeX = isLeft ? 14 : (canvas.width - 14 - badgeSize);
+
+        // Draw Fighter Profile Avatar Badge (Just like in the Lobby!)
+        ctx.save();
+        ctx.fillStyle = isFlashing ? "rgba(239, 68, 68, 0.28)" : "rgba(15, 23, 42, 0.92)";
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = isFlashing ? 2.5 : 1.8;
+        ctx.shadowColor = borderColor;
+        ctx.shadowBlur = isFlashing ? 16 : 8;
+        
+        if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(badgeX, badgeY, badgeSize, badgeSize, 8);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            ctx.fillRect(badgeX, badgeY, badgeSize, badgeSize);
+            ctx.strokeRect(badgeX, badgeY, badgeSize, badgeSize);
+        }
+        
+        ctx.shadowBlur = 0;
+        ctx.font = "18px 'Segoe UI Emoji', -apple-system, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(theme.icon, badgeX + badgeSize / 2, badgeY + badgeSize / 2 + 1);
+        ctx.restore();
+
+        // HUD Bounds adjacent to Avatar Badge
+        const hudLeft = isLeft ? (badgeX + badgeSize + 8) : (badgeX - 8 - totalHeartsWidth);
+        const hudRight = hudLeft + totalHeartsWidth;
 
         ctx.save();
-        ctx.textAlign = align === "right" ? "right" : "left";
         ctx.textBaseline = "alphabetic";
-        const tagColor = label === "P1" ? "#ff5c5c" : "#38bdf8";
 
-        if (align === "right") {
+        if (!isLeft) {
+            // Player 2 / Bot Text (Right Aligned)
+            ctx.textAlign = "right";
             const healthStr = `${health} ❤️`;
             ctx.font = "700 13px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
             ctx.fillStyle = "#f87171";
-            ctx.fillText(healthStr, x, 22);
+            ctx.fillText(healthStr, hudRight, 22);
             const healthWidth = ctx.measureText(healthStr).width;
 
-            ctx.font = "800 17px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
-            ctx.fillStyle = tagColor;
-            ctx.fillText(label, x - healthWidth - 10, 22);
+            ctx.font = "800 15px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
+            ctx.fillStyle = theme.color;
+            ctx.fillText(theme.name, hudRight - healthWidth - 8, 22);
         } else {
-            ctx.font = "800 17px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
-            ctx.fillStyle = tagColor;
-            ctx.fillText(label, x, 22);
-            const labelWidth = ctx.measureText(label).width;
+            // Player 1 Text (Left Aligned)
+            ctx.textAlign = "left";
+            ctx.font = "800 15px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
+            ctx.fillStyle = theme.color;
+            ctx.fillText(theme.name, hudLeft, 22);
+            const labelWidth = ctx.measureText(theme.name).width;
 
             ctx.font = "700 13px 'Space Grotesk', 'Segoe UI', Arial, sans-serif";
             ctx.fillStyle = "#f87171";
-            ctx.fillText(` ${health} ❤️`, x + labelWidth + 6, 22);
+            ctx.fillText(` ${health} ❤️`, hudLeft + labelWidth + 4, 22);
         }
 
-        // Draw Retro Arcade Hearts: lost hearts completely vanish / disappear!
+        // Draw Retro Arcade Hearts
         for (let i = 0; i < maxHealth; i++) {
-            const heartX = align === "right"
-                ? (x - (maxHealth - 1 - i) * (heartSize + heartGap) - heartSize / 2)
-                : (left + i * (heartSize + heartGap) + heartSize / 2);
+            const heartX = hudLeft + i * (heartSize + heartGap) + heartSize / 2;
             const heartY = 32;
 
             if (i < health) {
-                // Active Heart (Vibrant Red & Glowing)
                 draw_heart(ctx, heartX, heartY, heartSize);
             }
-            // Lost hearts completely vanish (puro puri udhao) with no leftover trace
         }
 
-        // Fixed HUD Energy / Stamina Bar (y = 48, height = 5, cyan glow)
+        // Fixed HUD Energy / Stamina Bar (y = 47, height = 5, cyan glow)
         const maxEnergy = player.max_energy || 100;
         const energy = Math.max(0, Math.min(maxEnergy, player.energy !== undefined ? player.energy : 100));
         const energyRatio = energy / maxEnergy;
         
         ctx.fillStyle = "#16171d";
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 47, totalHeartsWidth, 5, 2.5); ctx.fill(); }
-        else { ctx.fillRect(left, 47, totalHeartsWidth, 5); }
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(hudLeft, 47, totalHeartsWidth, 5, 2.5); ctx.fill(); }
+        else { ctx.fillRect(hudLeft, 47, totalHeartsWidth, 5); }
         
         if (energyRatio > 0) {
             ctx.fillStyle = energyRatio > 0.35 ? "#38bdf8" : "#f59e0b";
-            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(left, 47, totalHeartsWidth * energyRatio, 5, 2.5); ctx.fill(); }
-            else { ctx.fillRect(left, 47, totalHeartsWidth * energyRatio, 5); }
+            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(hudLeft, 47, totalHeartsWidth * energyRatio, 5, 2.5); ctx.fill(); }
+            else { ctx.fillRect(hudLeft, 47, totalHeartsWidth * energyRatio, 5); }
         }
 
         // Energy text badge
         ctx.font = "600 10px 'Segoe UI', Arial, sans-serif";
         ctx.fillStyle = "#7dd3fc";
         const energyStr = `${Math.round(energy)}⚡`;
-        ctx.fillText(energyStr, x, 62);
+        if (isLeft) {
+            ctx.textAlign = "left";
+            ctx.fillText(energyStr, hudLeft + totalHeartsWidth + 6, 52);
+        } else {
+            ctx.textAlign = "right";
+            ctx.fillText(energyStr, hudLeft - 6, 52);
+        }
         ctx.restore();
     }
     const p2Label = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM)
         ? ("BOT" + (typeof BOT_DIFFICULTY !== 'undefined' && BOT_DIFFICULTY ? " (" + BOT_DIFFICULTY.toUpperCase() + ")" : ""))
         : "P2";
-    draw_health_bar(data.player1, "P1", 20, "left");
-    draw_health_bar(data.player2, p2Label, canvas.width - 20, "right");
+    draw_health_bar(data.player1, "P1", "left");
+    draw_health_bar(data.player2, p2Label, "right");
 
     // --- SPELLS & RANGED PROJECTILES RENDER ---
     if (data.spells && Array.isArray(data.spells)) {
