@@ -197,6 +197,74 @@
             font-weight: 600;
             animation: diagSlideIn 0.25s ease;
         }
+
+        /* 🥋 20-Avatar Fighter Profile Studio Styles */
+        .avatar-studio-section {
+            margin-top: 28px;
+            padding: 24px;
+            background: rgba(18, 19, 26, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+        }
+        .avatar-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px;
+        }
+        .avatar-card-btn {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 12px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            color: #e2e8f0;
+            position: relative;
+        }
+        .avatar-card-btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.5);
+            background: rgba(30, 41, 59, 0.85);
+            box-shadow: 0 4px 14px rgba(56, 189, 248, 0.15);
+        }
+        .avatar-card-btn.is-active {
+            border-color: #38bdf8 !important;
+            background: rgba(56, 189, 248, 0.15) !important;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.35) !important;
+        }
+        .avatar-card-icon {
+            font-size: 26px;
+            line-height: 1;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+        }
+        .avatar-card-name {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #f8fafc;
+            line-height: 1.2;
+        }
+        .avatar-card-desc {
+            font-size: 10px;
+            color: #94a3b8;
+            line-height: 1.1;
+        }
+        .avatar-card-check {
+            position: absolute;
+            top: 5px;
+            right: 6px;
+            font-size: 10px;
+            color: #38bdf8;
+            font-weight: 900;
+            display: none;
+        }
+        .avatar-card-btn.is-active .avatar-card-check {
+            display: block;
+        }
     </style>
 </head>
 <body class="home-page">
@@ -312,6 +380,28 @@ sword.change_color("crimson")</textarea>
                 </div>
             </section>
         </main>
+
+        <!-- 🥋 Fighter Profile Avatar Studio (20 Distinct Styles) -->
+        <section class="avatar-studio-section">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #f1f0f5; letter-spacing: 0.5px;">
+                        🥋 Fighter Profile Avatar Roster (20 Distinct Styles)
+                    </h3>
+                    <p style="margin: 4px 0 0; font-size: 12px; color: #94a3b8;">
+                        Choose your combat persona to equip your official Battle Arena HUD badge &amp; fighter title!
+                    </p>
+                </div>
+                <div id="equipped_avatar_badge" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 20px; transition: all 0.2s ease;">
+                    <span id="equipped_avatar_icon" style="font-size: 18px;">🥋</span>
+                    <span id="equipped_avatar_name" style="font-size: 12.5px; font-weight: 700; color: #34d399;">Equipped: Martial Monk</span>
+                </div>
+            </div>
+
+            <div id="avatar_gallery_grid" class="avatar-gallery-grid">
+                <!-- Rendered dynamically by JavaScript -->
+            </div>
+        </section>
     </div>
 
     <script src="/static/audio.js"></script>
@@ -508,6 +598,102 @@ sword.change_color("crimson")</textarea>
                 }
             }
         }
+        // --- 🥋 20-AVATAR FIGHTER PROFILE ROSTER SYSTEM ---
+        const FIGHTER_AVATARS = [
+            { id: 'monk', icon: '🥋', name: 'Martial Monk', theme: '#10b981', desc: 'Inner Discipline' },
+            { id: 'striker', icon: '⚡', name: 'Cyber Striker', theme: '#38bdf8', desc: 'Lightning Reflex' },
+            { id: 'aegis', icon: '🛡️', name: 'Iron Aegis', theme: '#0ea5e9', desc: 'Heavy Defense' },
+            { id: 'mystic', icon: '🌊', name: 'Wave Mystic', theme: '#a855f7', desc: 'Trig Fluidity' },
+            { id: 'blade', icon: '🗡️', name: 'Shadow Blade', theme: '#f43f5e', desc: 'Silent Katana' },
+            { id: 'berserker', icon: '🔥', name: 'Flame Ronin', theme: '#f97316', desc: 'Blazing Fury' },
+            { id: 'sovereign', icon: '👑', name: 'Apex Monarch', theme: '#f59e0b', desc: 'Grandmaster Crown' },
+            { id: 'dragon', icon: '🐉', name: 'Dragon Knight', theme: '#14b8a6', desc: 'Mythic Scales' },
+            { id: 'mecha', icon: '🤖', name: 'Cyber Mecha', theme: '#6366f1', desc: 'Silicon Automaton' },
+            { id: 'hacker', icon: '🧠', name: 'Neural Hacker', theme: '#ec4899', desc: 'Deep Heuristic' },
+            { id: 'ranger', icon: '🏹', name: 'Phantom Ranger', theme: '#84cc16', desc: 'Piercing Bow' },
+            { id: 'mage', icon: '🔮', name: 'Cosmic Archmage', theme: '#d946ef', desc: 'Arcane Void' },
+            { id: 'wolf', icon: '🐺', name: 'Dire Wolf', theme: '#94a3b8', desc: 'Pack Hunter' },
+            { id: 'skull', icon: '💀', name: 'Skull Phantom', theme: '#e2e8f0', desc: 'Grim Reaver' },
+            { id: 'kitsune', icon: '🦊', name: 'Cyber Kitsune', theme: '#fb923c', desc: 'Spirit Trickster' },
+            { id: 'tiger', icon: '🐯', name: 'Tiger Claw', theme: '#facc15', desc: 'Ferocious Leap' },
+            { id: 'viper', icon: '🐍', name: 'Viper Fang', theme: '#22c55e', desc: 'Venom Strike' },
+            { id: 'eagle', icon: '🦅', name: 'Storm Eagle', theme: '#38bdf8', desc: 'Aerial Dominance' },
+            { id: 'coder', icon: '💻', name: 'Python Scribe', theme: '#38bdf8', desc: 'Algorithmic Mastery' },
+            { id: 'champion', icon: '⭐', name: 'Galactic Champion', theme: '#fbbf24', desc: 'Cosmic Ascendant' }
+        ];
+
+        function getEquippedAvatar() {
+            try {
+                const saved = localStorage.getItem('stickman_custom_avatar');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.id) return parsed;
+                }
+            } catch(e) {}
+            return FIGHTER_AVATARS[0];
+        }
+
+        function equipAvatar(avatar) {
+            try {
+                localStorage.setItem('stickman_custom_avatar', JSON.stringify({
+                    id: avatar.id,
+                    icon: avatar.icon,
+                    name: avatar.name,
+                    color: avatar.theme
+                }));
+            } catch(e) {}
+
+            renderAvatarGallery();
+            updateEquippedBadge(avatar);
+
+            if (window.AudioEngine && window.AudioEngine.playButtonClick) {
+                window.AudioEngine.playButtonClick();
+            }
+        }
+
+        function updateEquippedBadge(avatar) {
+            const iconEl = document.getElementById('equipped_avatar_icon');
+            const nameEl = document.getElementById('equipped_avatar_name');
+            const badgeEl = document.getElementById('equipped_avatar_badge');
+            if (iconEl) iconEl.innerText = avatar.icon;
+            if (nameEl) {
+                nameEl.innerText = `Equipped: ${avatar.name}`;
+                nameEl.style.color = avatar.theme;
+            }
+            if (badgeEl) {
+                badgeEl.style.borderColor = avatar.theme;
+                badgeEl.style.boxShadow = `0 0 12px ${avatar.theme}35`;
+                badgeEl.style.background = `${avatar.theme}18`;
+            }
+        }
+
+        function renderAvatarGallery() {
+            const grid = document.getElementById('avatar_gallery_grid');
+            if (!grid) return;
+            const current = getEquippedAvatar();
+            updateEquippedBadge(current);
+
+            grid.innerHTML = FIGHTER_AVATARS.map(av => {
+                const isActive = (av.id === current.id);
+                const activeClass = isActive ? 'is-active' : '';
+                const borderColor = isActive ? av.theme : 'rgba(255,255,255,0.1)';
+                const escaped = JSON.stringify(av).replace(/"/g, '&quot;');
+                return `
+                    <button type="button" class="avatar-card-btn ${activeClass}" onclick="equipAvatar(${escaped})" style="border-color: ${borderColor};">
+                        <span class="avatar-card-check">✓</span>
+                        <span class="avatar-card-icon">${av.icon}</span>
+                        <span class="avatar-card-name">${av.name}</span>
+                        <span class="avatar-card-desc">${av.desc}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        // Initialize avatar gallery on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAvatarGallery();
+        });
+        renderAvatarGallery();
     </script>
 </body>
 </html>
