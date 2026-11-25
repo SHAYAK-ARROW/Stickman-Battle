@@ -186,22 +186,14 @@
 
             </div>
 
-            <a href="/wardrobe" class="action-chip-btn" title="Open Python Wardrobe Studio (custom colors)" target="_blank" style="text-decoration: none; border-color: rgba(168, 85, 247, 0.4); color: #d8b4fe;">
-
-                <span>🥋 Wardrobe</span>
-
-            </a>
-
+            {% if not is_bot_room %}
             <button id="invite_friend_btn" type="button" class="action-chip-btn" onclick="copy_link()" title="Copy Player 2 invite link to duel a friend">
-
                 <span>🔗 Invite Friend</span>
-
             </button>
+            {% endif %}
 
-            <button id="guide_toggle_btn" type="button" class="action-chip-btn guide-toggle-btn" onclick="toggleQuickGuide()" title="Toggle 30-Second Quick Start Guide">
-
-                <span>💡 30s Guide</span>
-
+            <button id="guide_toggle_btn" type="button" class="action-chip-btn guide-toggle-btn" onclick="toggleQuickGuide()" title="Toggle Quick Controls Guide">
+                <span>🎮 Controls</span>
             </button>
 
             <div id="connection_status" class="connection-status" role="status" aria-live="polite">
