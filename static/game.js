@@ -721,6 +721,55 @@ function draw_sword_trails() {
     });
 }
 
+// --- 🥋 FIGHTER PROFILE AVATAR & BOT THEME ENGINE ---
+function getBotProfileTheme() {
+    const diff = (typeof BOT_DIFFICULTY !== 'undefined' && BOT_DIFFICULTY ? BOT_DIFFICULTY.toLowerCase() : 'easy');
+    const themes = {
+        'rusher': { icon: '⚡', color: '#10b981', name: 'Byte Rusher' },
+        'easy': { icon: '⚡', color: '#10b981', name: 'Byte Rusher' },
+        'turtle': { icon: '🛡️', color: '#0ea5e9', name: 'Iron Turtle' },
+        'weaver': { icon: '🌊', color: '#a855f7', name: 'Wave Weaver' },
+        'duelist': { icon: '🗡️', color: '#f43f5e', name: 'Shadow Duelist' },
+        'berserker': { icon: '🔥', color: '#f97316', name: 'Berserker Ronin' },
+        'apex': { icon: '👑', color: '#f59e0b', name: 'Apex Sovereign' },
+        'hard': { icon: '👑', color: '#f59e0b', name: 'Apex Sovereign' },
+        'master': { icon: '👑', color: '#eab308', name: 'SACE Master' },
+        'sace': { icon: '👑', color: '#eab308', name: 'SACE Master' },
+        'dummy': { icon: '🥋', color: '#14b8a6', name: 'Practice Dojo' }
+    };
+    return themes[diff] || { icon: '🤖', color: '#38bdf8', name: 'Arena Bot' };
+}
+
+function getPlayerProfileTheme() {
+    let avatarIcon = '🥋';
+    let avatarName = 'YOU';
+    let themeColor = '#10b981';
+
+    // 1. Check equipped 20-Avatar choice from Wardrobe Studio
+    try {
+        const savedAvatar = localStorage.getItem('stickman_custom_avatar');
+        if (savedAvatar) {
+            const parsedAv = JSON.parse(savedAvatar);
+            if (parsedAv.icon) avatarIcon = parsedAv.icon;
+            if (parsedAv.name) avatarName = parsedAv.name;
+            if (parsedAv.color) themeColor = parsedAv.color;
+        }
+    } catch(e) {}
+
+    // 2. Also check custom wardrobe body color override if set
+    try {
+        const savedColors = localStorage.getItem("stickman_custom_colors");
+        if (savedColors) {
+            const parsedColors = JSON.parse(savedColors);
+            if (parsedColors.body && !localStorage.getItem('stickman_custom_avatar')) {
+                themeColor = parsedColors.body;
+            }
+        }
+    } catch(e) {}
+
+    return { icon: avatarIcon, color: themeColor, name: avatarName };
+}
+
 function draw_on_camvas(data) {
     if (!data || !data.player1 || !data.player2) return;
 
@@ -1026,21 +1075,22 @@ function draw_on_camvas(data) {
         // 🎯 Floating "▼ YOU" Marker above Player 1 (Never lose track of your fighter!)
         if (playerKey === 'p1') {
             ctx.save();
+            const p1Theme = getPlayerProfileTheme();
             const floatBob = Math.sin(Date.now() / 200) * 2.5;
             const markerY = y + crouchY - 32 + floatBob;
-            const tagText = "YOU";
+            const tagText = `${p1Theme.icon} YOU`;
             ctx.font = "800 10px 'Space Grotesk', -apple-system, sans-serif";
             const textWidth = ctx.measureText(tagText).width;
             const pillW = textWidth + 12;
-            const pillH = 15;
+            const pillH = 16;
             const pillX = x - (pillW / 2);
             const pillY = markerY - pillH - 4;
 
-            // Pill container with cyan glow
+            // Pill container with custom avatar theme glow
             ctx.fillStyle = "rgba(15, 23, 42, 0.90)";
-            ctx.strokeStyle = "#38bdf8";
+            ctx.strokeStyle = p1Theme.color;
             ctx.lineWidth = 1.4;
-            ctx.shadowColor = "rgba(56, 189, 248, 0.8)";
+            ctx.shadowColor = p1Theme.color;
             ctx.shadowBlur = 8;
             
             if (ctx.roundRect) {
@@ -1053,14 +1103,14 @@ function draw_on_camvas(data) {
                 ctx.strokeRect(pillX, pillY, pillW, pillH);
             }
 
-            // Text "YOU" in electric cyan
-            ctx.fillStyle = "#38bdf8";
+            // Text with icon in theme color
+            ctx.fillStyle = p1Theme.color;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText(tagText, x, pillY + (pillH / 2) + 0.5);
 
             // Downward pointing arrow ▼
-            ctx.fillStyle = "#38bdf8";
+            ctx.fillStyle = p1Theme.color;
             ctx.beginPath();
             ctx.moveTo(x - 4, markerY - 3);
             ctx.lineTo(x + 4, markerY - 3);
@@ -1394,19 +1444,6 @@ function draw_on_camvas(data) {
         return themes[diff] || { icon: '🤖', color: '#38bdf8', name: 'Arena Bot' };
     }
 
-    // Helper to get Player Profile Theme (from wardrobe or default)
-    function getPlayerProfileTheme() {
-        let bodyColor = "#38bdf8";
-        try {
-            const saved = localStorage.getItem("stickman_custom_colors");
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed.body) bodyColor = parsed.body;
-            }
-        } catch(e) {}
-        return { icon: '🥋', color: bodyColor, name: 'YOU' };
-    }
-
     // Fixed HUD Arcade Hearts & Energy Bar with Fighter Profile Avatar Badges
     function draw_health_bar(player, label, align) {
         const maxHealth = player.max_health || 10;
@@ -1419,9 +1456,30 @@ function draw_on_camvas(data) {
         const isBot = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM);
         const theme = isLeft ? getPlayerProfileTheme() : (isBot ? getBotProfileTheme() : { icon: '👤', color: '#ec4899', name: 'Player 2' });
         
-        // Check damage hit flash
+        // Check damage hit flash & Low-HP Danger Alarm (HP <= 3)
         const isFlashing = isLeft ? (Date.now() < p1HitFlashUntil) : (Date.now() < p2HitFlashUntil);
-        const borderColor = isFlashing ? "#ef4444" : theme.color;
+        const isLowHp = (health > 0 && health <= 3);
+        const lowHpPulse = isLowHp ? (Math.sin(Date.now() / 150) * 0.5 + 0.5) : 0;
+        
+        let borderColor = theme.color;
+        let shadowColor = theme.color;
+        let shadowBlur = 8;
+        let lineWidth = 1.8;
+        let badgeBg = "rgba(15, 23, 42, 0.92)";
+
+        if (isFlashing) {
+            borderColor = "#ef4444";
+            shadowColor = "#ef4444";
+            shadowBlur = 18;
+            lineWidth = 2.5;
+            badgeBg = "rgba(239, 68, 68, 0.32)";
+        } else if (isLowHp) {
+            borderColor = `rgba(239, 68, 68, ${0.6 + 0.4 * lowHpPulse})`;
+            shadowColor = "#ef4444";
+            shadowBlur = 12 + 8 * lowHpPulse;
+            lineWidth = 2 + 1 * lowHpPulse;
+            badgeBg = `rgba(239, 68, 68, ${0.14 + 0.18 * lowHpPulse})`;
+        }
         
         // Badge dimensions
         const badgeSize = 36;
@@ -1430,11 +1488,11 @@ function draw_on_camvas(data) {
 
         // Draw Fighter Profile Avatar Badge (Just like in the Lobby!)
         ctx.save();
-        ctx.fillStyle = isFlashing ? "rgba(239, 68, 68, 0.28)" : "rgba(15, 23, 42, 0.92)";
+        ctx.fillStyle = badgeBg;
         ctx.strokeStyle = borderColor;
-        ctx.lineWidth = isFlashing ? 2.5 : 1.8;
-        ctx.shadowColor = borderColor;
-        ctx.shadowBlur = isFlashing ? 16 : 8;
+        ctx.lineWidth = lineWidth;
+        ctx.shadowColor = shadowColor;
+        ctx.shadowBlur = shadowBlur;
         
         if (ctx.roundRect) {
             ctx.beginPath();
