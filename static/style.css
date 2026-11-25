@@ -1976,9 +1976,17 @@ button { color: inherit; }
 .heading-controls-row {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-wrap: nowrap;
+    gap: 6px;
     padding: 2px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.heading-controls-row::-webkit-scrollbar {
+    display: none;
+}
+.heading-controls-row > * {
+    flex-shrink: 0;
 }
 .action-chip-btn {
     display: inline-flex;
@@ -2079,18 +2087,18 @@ button { color: inherit; }
 .volume-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 48px;
+    width: 46px;
     height: 4px;
     background: rgba(255, 255, 255, 0.16);
     border-radius: 999px;
     outline: none;
     cursor: pointer;
     accent-color: var(--accent);
-    transition: width 0.2s ease, background 0.2s ease;
+    transition: background 0.2s ease, opacity 0.2s ease;
 }
 .volume-slider:hover, .volume-slider:focus {
-    width: 60px;
-    background: rgba(255, 255, 255, 0.3);
+    width: 46px; /* Zero layout shift: keep width fixed */
+    background: rgba(255, 255, 255, 0.35);
 }
 .volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
