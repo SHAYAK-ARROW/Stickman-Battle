@@ -33,7 +33,7 @@
 
     <link rel="stylesheet" href="/static/lib/codemirror/dracula.min.css">
 
-    <link rel="stylesheet" href="/static/style.css?v=2.3.3">
+    <link rel="stylesheet" href="/static/style.css?v=2.3.4">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="/static/profile.js?v=2.3.3"></script>
@@ -493,15 +493,58 @@ else:
 
     </div>
 
-        <!-- ⚡ Quick Action Chips (1-Click Zero-Friction Duel) -->
-    <div id="quick_code_chips_row" class="quick-code-chips-row">
-        <span class="chips-label">⚡ 1-Click Duel:</span>
-        <button type="button" class="code-chip-btn" onclick="runSnippet('dash(3)')" title="1-Click: Dash forward and attack!">⚡ Dash</button>
-        <button type="button" class="code-chip-btn" onclick="runSnippet('attack()')" title="1-Click: Swift sword strike!">🗡️ Attack</button>
-        <button type="button" class="code-chip-btn" onclick="runSnippet('heavy_attack()')" title="1-Click: Heavy attack (breaks shields)!">💥 Heavy</button>
-        <button type="button" class="code-chip-btn" onclick="runSnippet('block()')" title="1-Click: Raise shield barrier!">🛡️ Block</button>
-        <button type="button" class="code-chip-btn" onclick="runSnippet('sin_wave()')" title="1-Click: Cast sine wave energy pulse!">📐 Sin Wave</button>
-        <button type="button" class="code-chip-btn" onclick="runSnippet('run(3)')" title="1-Click: Run forward!">🏃 Run</button>
+        <!-- ⚡ Tactical Action Dock (Sleek Rounded Capsules with Hotkeys & Cooldowns) -->
+    <div id="quick_code_chips_row" class="quick-code-chips-row tactical-action-dock" role="toolbar" aria-label="Quick Tactical Action Dock">
+        <div class="dock-header">
+            <span class="dock-title-badge">⚡ DOCK</span>
+            <span class="dock-hotkey-hint">Keys 1–5</span>
+        </div>
+
+        <!-- ⚔️ Strike Cluster -->
+        <div class="dock-cluster cluster-melee" title="Melee Strike Commands">
+            <button id="dock_btn_1" type="button" class="dock-action-pill pill-melee" onclick="triggerTacticalAction('dock_btn_1', 'attack()', 400)" title="[1] Swift sword attack">
+                <span class="pill-key">1</span>
+                <span class="pill-icon">🗡️</span>
+                <span class="pill-text">Attack</span>
+                <span class="pill-cooldown-sweep"></span>
+            </button>
+            <button id="dock_btn_2" type="button" class="dock-action-pill pill-heavy" onclick="triggerTacticalAction('dock_btn_2', 'heavy_attack()', 800)" title="[2] Heavy attack (Breaks shield!)">
+                <span class="pill-key">2</span>
+                <span class="pill-icon">💥</span>
+                <span class="pill-text">Heavy</span>
+                <span class="pill-cooldown-sweep"></span>
+            </button>
+        </div>
+
+        <div class="dock-separator" aria-hidden="true"></div>
+
+        <!-- 🛡️ Defense & Maneuver Cluster -->
+        <div class="dock-cluster cluster-defense" title="Defense & Movement">
+            <button id="dock_btn_3" type="button" class="dock-action-pill pill-dash" onclick="triggerTacticalAction('dock_btn_3', 'dash(3)', 600)" title="[3] Dash forward quickly">
+                <span class="pill-key">3</span>
+                <span class="pill-icon">⚡</span>
+                <span class="pill-text">Dash</span>
+                <span class="pill-cooldown-sweep"></span>
+            </button>
+            <button id="dock_btn_4" type="button" class="dock-action-pill pill-block" onclick="triggerTacticalAction('dock_btn_4', 'block()', 700)" title="[4] Raise shield barrier">
+                <span class="pill-key">4</span>
+                <span class="pill-icon">🛡️</span>
+                <span class="pill-text">Block</span>
+                <span class="pill-cooldown-sweep"></span>
+            </button>
+        </div>
+
+        <div class="dock-separator" aria-hidden="true"></div>
+
+        <!-- 🔮 Spell Cluster -->
+        <div class="dock-cluster cluster-spell" title="Trigonometric Spells">
+            <button id="dock_btn_5" type="button" class="dock-action-pill pill-spell" onclick="triggerTacticalAction('dock_btn_5', 'sin_wave()', 1800)" title="[5] Cast Sine Wave energy projectile">
+                <span class="pill-key">5</span>
+                <span class="pill-icon">📐</span>
+                <span class="pill-text">Sin Wave</span>
+                <span class="pill-cooldown-sweep"></span>
+            </button>
+        </div>
     </div>
     <div class="editor-toolbar">
 
@@ -1549,7 +1592,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/audio.js?v=2.2.0"></script>
 
-<script src="/static/game.js?v=2.3.3"></script>
+<script src="/static/game.js?v=2.3.4"></script>
 
 <script src="/static/lib/codemirror/codemirror.min.js"></script>
 
@@ -1557,7 +1600,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/lib/codemirror/python.min.js"></script>
 
-<script src="/static/editor.js?v=2.2.0"></script>
+<script src="/static/editor.js?v=2.3.4"></script>
 
 
 

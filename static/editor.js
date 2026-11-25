@@ -924,6 +924,53 @@ function runSnippet(snippet) {
 
 window.runSnippet = runSnippet;
 
+// --- ⚡ Tactical Action Dock Runner & Cooldown Manager ---
+window.triggerTacticalAction = function(btnId, snippet, cooldownMs) {
+    const btn = document.getElementById(btnId);
+    if (!btn) {
+        if (typeof runSnippet === 'function') runSnippet(snippet);
+        return;
+    }
+
+    if (btn.classList.contains('is-on-cooldown')) {
+        // Visual buzz feedback if player attempts action while on cooldown
+        btn.classList.remove('pill-buzz-denied');
+        void btn.offsetWidth;
+        btn.classList.add('pill-buzz-denied');
+        setTimeout(() => btn.classList.remove('pill-buzz-denied'), 280);
+        return;
+    }
+
+    // Execute snippet in editor and arena
+    if (typeof runSnippet === 'function') {
+        runSnippet(snippet);
+    }
+
+    // Start 360° circular cooldown radial sweep
+    btn.classList.add('is-on-cooldown');
+    const duration = cooldownMs || 500;
+    const startTime = performance.now();
+
+    function updateCooldown(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const remainingPct = Math.max(0, (1 - progress) * 100);
+        btn.style.setProperty('--cooldown-pct', `${remainingPct.toFixed(1)}%`);
+
+        if (elapsed < duration) {
+            requestAnimationFrame(updateCooldown);
+        } else {
+            btn.classList.remove('is-on-cooldown');
+            btn.style.removeProperty('--cooldown-pct');
+            btn.classList.remove('is-ready-flash');
+            void btn.offsetWidth;
+            btn.classList.add('is-ready-flash');
+            setTimeout(() => btn.classList.remove('is-ready-flash'), 450);
+        }
+    }
+    requestAnimationFrame(updateCooldown);
+};
+
 function setupCommandsTableInsertButtons() {
     const table = document.getElementById("commands_table");
     if (!table) return;
