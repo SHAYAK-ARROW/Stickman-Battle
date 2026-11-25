@@ -1016,6 +1016,54 @@ function draw_on_camvas(data) {
         ctx.beginPath();
         ctx.arc(x, y + crouchY, 20, 0, Math.PI * 2);
         ctx.fill();
+
+        // 🎯 Floating "▼ YOU" Marker above Player 1 (Never lose track of your fighter!)
+        if (playerKey === 'p1') {
+            ctx.save();
+            const floatBob = Math.sin(Date.now() / 200) * 2.5;
+            const markerY = y + crouchY - 32 + floatBob;
+            const tagText = "YOU";
+            ctx.font = "800 10px 'Space Grotesk', -apple-system, sans-serif";
+            const textWidth = ctx.measureText(tagText).width;
+            const pillW = textWidth + 12;
+            const pillH = 15;
+            const pillX = x - (pillW / 2);
+            const pillY = markerY - pillH - 4;
+
+            // Pill container with cyan glow
+            ctx.fillStyle = "rgba(15, 23, 42, 0.90)";
+            ctx.strokeStyle = "#38bdf8";
+            ctx.lineWidth = 1.4;
+            ctx.shadowColor = "rgba(56, 189, 248, 0.8)";
+            ctx.shadowBlur = 8;
+            
+            if (ctx.roundRect) {
+                ctx.beginPath();
+                ctx.roundRect(pillX, pillY, pillW, pillH, 4);
+                ctx.fill();
+                ctx.stroke();
+            } else {
+                ctx.fillRect(pillX, pillY, pillW, pillH);
+                ctx.strokeRect(pillX, pillY, pillW, pillH);
+            }
+
+            // Text "YOU" in electric cyan
+            ctx.fillStyle = "#38bdf8";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(tagText, x, pillY + (pillH / 2) + 0.5);
+
+            // Downward pointing arrow ▼
+            ctx.fillStyle = "#38bdf8";
+            ctx.beginPath();
+            ctx.moveTo(x - 4, markerY - 3);
+            ctx.lineTo(x + 4, markerY - 3);
+            ctx.lineTo(x, markerY + 2);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+        }
         
         // Baki shorir (Body)
         ctx.strokeStyle = color;
