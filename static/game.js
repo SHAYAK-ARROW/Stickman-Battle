@@ -103,29 +103,25 @@ window.showToast = showToast;
 // --- ⚡ 30-Second Quick Start Guide Banner Handlers ---
 function dismissQuickGuide() {
     const banner = document.getElementById('quick_start_guide_banner');
+    const btn = document.getElementById('guide_toggle_btn');
     if (banner) {
         banner.style.display = 'none';
-        try {
-            localStorage.setItem('stickman_quick_guide_dismissed', '1');
-        } catch(e) {}
     }
+    if (btn) btn.classList.remove('is-active');
 }
 window.dismissQuickGuide = dismissQuickGuide;
 
 function toggleQuickGuide() {
     const banner = document.getElementById('quick_start_guide_banner');
+    const btn = document.getElementById('guide_toggle_btn');
     if (!banner) return;
     const isHidden = (banner.style.display === 'none' || getComputedStyle(banner).display === 'none');
     if (isHidden) {
         banner.style.display = 'block';
-        try {
-            localStorage.removeItem('stickman_quick_guide_dismissed');
-        } catch(e) {}
+        if (btn) btn.classList.add('is-active');
     } else {
         banner.style.display = 'none';
-        try {
-            localStorage.setItem('stickman_quick_guide_dismissed', '1');
-        } catch(e) {}
+        if (btn) btn.classList.remove('is-active');
     }
 }
 window.toggleQuickGuide = toggleQuickGuide;
