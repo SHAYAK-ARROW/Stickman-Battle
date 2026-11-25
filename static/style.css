@@ -2693,179 +2693,216 @@ button { color: inherit; }
     margin: 0 1px;
 }
 
-.dock-cluster {
-    display: inline-flex;
+/* ─── ⚡ 100% Circular Tactical Action Arcade Deck (Pure Round, No Square) ─── */
+.dock-buttons-container {
+    display: flex;
     align-items: center;
-    gap: 5px;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
 }
 
-/* ─── Rounded Action Pills (Chowko theke Gol) ─── */
-.dock-action-pill {
+.dock-action-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.dock-divider {
+    width: 1px;
+    height: 32px;
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+    margin: 0 1px;
+}
+
+/* 100% Pure Circle Button (No Square / Chouko!) */
+.dock-action-circle {
     position: relative;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    max-width: 42px;
+    max-height: 42px;
+    border-radius: 50% !important; /* Pure 360° Circle */
+    aspect-ratio: 1 / 1;
     overflow: hidden;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 11px 4px 5px;
-    border-radius: 999px; /* Pure round capsule */
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.04);
+    justify-content: center;
+    border: 1.5px solid rgba(255, 255, 255, 0.16);
+    background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.12) 0%, rgba(15, 23, 42, 0.88) 100%);
     color: #f1f5f9;
-    font-size: 12px;
-    font-weight: 600;
-    font-family: inherit;
+    padding: 0;
+    margin: 0;
     cursor: pointer;
     user-select: none;
-    transition: transform 0.12s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
 }
 
-.dock-action-pill:hover {
-    transform: translateY(-1.5px);
+.dock-action-circle:hover {
+    transform: translateY(-2px) scale(1.08);
 }
 
-.dock-action-pill:active {
-    transform: scale(0.95);
+.dock-action-circle:active {
+    transform: scale(0.92);
 }
 
-/* Circular Hotkey Badge Inside Pill */
-.pill-key {
-    width: 17px;
-    height: 17px;
+/* Centered Emoji Icon */
+.circle-icon {
+    font-size: 18px;
+    line-height: 1;
+    z-index: 2;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+}
+
+/* Top-Right Circular Hotkey Number Badge */
+.circle-key {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.28);
     color: #38bdf8;
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 8.5px;
+    font-weight: 800;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
     font-family: 'SF Mono', Consolas, monospace;
+    z-index: 4;
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
-.pill-icon {
-    font-size: 13px;
-    line-height: 1;
+/* Micro Action Text Under Circle */
+.circle-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    text-align: center;
+    user-select: none;
+    transition: color 0.15s ease;
 }
 
-.pill-text {
-    font-size: 11.5px;
-    letter-spacing: 0.2px;
+.dock-action-wrapper:hover .circle-label {
+    color: #f1f5f9;
 }
 
-/* Cluster-specific colors & glows */
-.pill-melee {
-    border-color: rgba(239, 68, 68, 0.35);
-    background: rgba(239, 68, 68, 0.08);
+/* Combat Role Themes */
+.circle-run {
+    border-color: rgba(16, 185, 129, 0.45);
+    background: radial-gradient(circle at 35% 35%, rgba(16, 185, 129, 0.2) 0%, rgba(6, 78, 59, 0.4) 100%);
 }
-.pill-melee:hover {
-    border-color: #ef4444;
-    background: rgba(239, 68, 68, 0.2);
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
-}
-.pill-melee .pill-key {
-    color: #fca5a5;
-    border-color: rgba(239, 68, 68, 0.4);
-}
-
-.pill-heavy {
-    border-color: rgba(249, 115, 22, 0.35);
-    background: rgba(249, 115, 22, 0.08);
-}
-.pill-heavy:hover {
-    border-color: #f97316;
-    background: rgba(249, 115, 22, 0.2);
-    box-shadow: 0 0 12px rgba(249, 115, 22, 0.35);
-}
-.pill-heavy .pill-key {
-    color: #fdba74;
-    border-color: rgba(249, 115, 22, 0.4);
-}
-
-.pill-dash {
-    border-color: rgba(16, 185, 129, 0.35);
-    background: rgba(16, 185, 129, 0.08);
-}
-.pill-dash:hover {
+.circle-run:hover {
     border-color: #10b981;
-    background: rgba(16, 185, 129, 0.2);
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
 }
-.pill-dash .pill-key {
-    color: #6ee7b7;
-    border-color: rgba(16, 185, 129, 0.4);
-}
+.circle-run .circle-key { color: #6ee7b7; border-color: rgba(16, 185, 129, 0.5); }
 
-.pill-block {
-    border-color: rgba(6, 182, 212, 0.35);
-    background: rgba(6, 182, 212, 0.08);
+.circle-dash {
+    border-color: rgba(6, 182, 212, 0.45);
+    background: radial-gradient(circle at 35% 35%, rgba(6, 182, 212, 0.2) 0%, rgba(22, 78, 99, 0.4) 100%);
 }
-.pill-block:hover {
+.circle-dash:hover {
     border-color: #06b6d4;
-    background: rgba(6, 182, 212, 0.2);
-    box-shadow: 0 0 12px rgba(6, 182, 212, 0.35);
+    box-shadow: 0 0 14px rgba(6, 182, 212, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
 }
-.pill-block .pill-key {
-    color: #67e8f9;
-    border-color: rgba(6, 182, 212, 0.4);
-}
+.circle-dash .circle-key { color: #67e8f9; border-color: rgba(6, 182, 212, 0.5); }
 
-.pill-spell {
+.circle-attack {
+    border-color: rgba(239, 68, 68, 0.45);
+    background: radial-gradient(circle at 35% 35%, rgba(239, 68, 68, 0.2) 0%, rgba(127, 29, 29, 0.4) 100%);
+}
+.circle-attack:hover {
+    border-color: #ef4444;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+.circle-attack .circle-key { color: #fca5a5; border-color: rgba(239, 68, 68, 0.5); }
+
+.circle-heavy {
+    border-color: rgba(249, 115, 22, 0.45);
+    background: radial-gradient(circle at 35% 35%, rgba(249, 115, 22, 0.2) 0%, rgba(124, 45, 18, 0.4) 100%);
+}
+.circle-heavy:hover {
+    border-color: #f97316;
+    box-shadow: 0 0 14px rgba(249, 115, 22, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+.circle-heavy .circle-key { color: #fdba74; border-color: rgba(249, 115, 22, 0.5); }
+
+.circle-block {
+    border-color: rgba(14, 165, 233, 0.45);
+    background: radial-gradient(circle at 35% 35%, rgba(14, 165, 233, 0.2) 0%, rgba(12, 74, 110, 0.4) 100%);
+}
+.circle-block:hover {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 14px rgba(14, 165, 233, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+.circle-block .circle-key { color: #7dd3fc; border-color: rgba(14, 165, 233, 0.5); }
+
+.circle-spell {
     border-color: rgba(168, 85, 247, 0.45);
-    background: rgba(168, 85, 247, 0.1);
+    background: radial-gradient(circle at 35% 35%, rgba(168, 85, 247, 0.2) 0%, rgba(88, 28, 135, 0.4) 100%);
 }
-.pill-spell:hover {
+.circle-spell:hover {
     border-color: #a855f7;
-    background: rgba(168, 85, 247, 0.24);
-    box-shadow: 0 0 14px rgba(168, 85, 247, 0.45);
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.3);
 }
-.pill-spell .pill-key {
-    color: #d8b4fe;
-    border-color: rgba(168, 85, 247, 0.5);
-}
+.circle-spell .circle-key { color: #d8b4fe; border-color: rgba(168, 85, 247, 0.5); }
 
-/* 🌀 Circular Radial Cooldown Sweep */
-.pill-cooldown-sweep {
+/* 🌀 360° Circular Radial Cooldown Sweep */
+.circle-cooldown-sweep {
     position: absolute;
     inset: 0;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.65);
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.75);
     opacity: 0;
     pointer-events: none;
+    z-index: 3;
     transition: opacity 0.12s ease;
 }
 
-.dock-action-pill.is-on-cooldown {
+.dock-action-circle.is-on-cooldown {
     pointer-events: none;
     cursor: not-allowed;
-    filter: saturate(0.6);
+    filter: saturate(0.5);
 }
 
-.dock-action-pill.is-on-cooldown .pill-cooldown-sweep {
+.dock-action-circle.is-on-cooldown .circle-cooldown-sweep {
     opacity: 1;
-    background: conic-gradient(rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.75) var(--cooldown-pct, 100%), transparent var(--cooldown-pct, 100%));
+    background: conic-gradient(rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.8) var(--cooldown-pct, 100%), transparent var(--cooldown-pct, 100%));
 }
 
-/* Flash of light when cooldown finishes */
-@keyframes pillReadyFlashAnim {
-    0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); filter: brightness(1.4); }
-    100% { box-shadow: 0 0 14px 2px rgba(56, 189, 248, 0); filter: brightness(1); }
+/* Flash of light when cooldown completes */
+@keyframes circleReadyFlashAnim {
+    0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.85); filter: brightness(1.5); }
+    100% { box-shadow: 0 0 18px 4px rgba(56, 189, 248, 0); filter: brightness(1); }
 }
 
-.dock-action-pill.is-ready-flash {
-    animation: pillReadyFlashAnim 0.4s ease-out;
+.dock-action-circle.is-ready-flash {
+    animation: circleReadyFlashAnim 0.45s ease-out;
 }
 
-/* Buzz shake when player tries to use on cooldown */
-@keyframes pillBuzzDeniedAnim {
+/* Buzz shake when on cooldown */
+@keyframes circleBuzzDeniedAnim {
     0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-2px); }
-    75% { transform: translateX(2px); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
 }
 
-.dock-action-pill.pill-buzz-denied {
-    animation: pillBuzzDeniedAnim 0.25s ease-in-out;
+.dock-action-circle.pill-buzz-denied,
+.dock-action-circle.circle-buzz-denied {
+    animation: circleBuzzDeniedAnim 0.25s ease-in-out;
 }
 
 .chips-label {

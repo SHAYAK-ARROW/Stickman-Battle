@@ -2081,23 +2081,27 @@ window.addEventListener('keydown', (e) => {
         return;
     } else if (e.altKey && (e.key === '1' || e.code === 'Digit1')) {
         e.preventDefault();
-        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_1', 'attack()', 400);
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_1', 'run(3)', 500);
         return;
     } else if (e.altKey && (e.key === '2' || e.code === 'Digit2')) {
         e.preventDefault();
-        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_2', 'heavy_attack()', 800);
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_2', 'dash(3)', 600);
         return;
     } else if (e.altKey && (e.key === '3' || e.code === 'Digit3')) {
         e.preventDefault();
-        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_3', 'dash(3)', 600);
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_3', 'attack()', 400);
         return;
     } else if (e.altKey && (e.key === '4' || e.code === 'Digit4')) {
         e.preventDefault();
-        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_4', 'block()', 700);
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_4', 'heavy_attack()', 800);
         return;
     } else if (e.altKey && (e.key === '5' || e.code === 'Digit5')) {
         e.preventDefault();
-        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_5', 'sin_wave()', 1800);
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_5', 'block()', 700);
+        return;
+    } else if (e.altKey && (e.key === '6' || e.code === 'Digit6')) {
+        e.preventDefault();
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_6', 'sin_wave()', 1800);
         return;
     }
 
@@ -2123,26 +2127,30 @@ window.addEventListener('keydown', (e) => {
         return;
     }
 
-    // ⚡ Hotkeys 1-5: Tactical Action Dock Quick Trigger (Outside Editor)
+    // ⚡ Hotkeys 1-6: Tactical Action Dock Quick Trigger (Outside Editor)
     if (e.key === '1' || e.code === 'Digit1') {
         e.preventDefault();
-        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_1', 'attack()', 400);
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_1', 'run(3)', 500);
         return;
     } else if (e.key === '2' || e.code === 'Digit2') {
         e.preventDefault();
-        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_2', 'heavy_attack()', 800);
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_2', 'dash(3)', 600);
         return;
     } else if (e.key === '3' || e.code === 'Digit3') {
         e.preventDefault();
-        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_3', 'dash(3)', 600);
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_3', 'attack()', 400);
         return;
     } else if (e.key === '4' || e.code === 'Digit4') {
         e.preventDefault();
-        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_4', 'block()', 700);
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_4', 'heavy_attack()', 800);
         return;
     } else if (e.key === '5' || e.code === 'Digit5') {
         e.preventDefault();
-        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_5', 'sin_wave()', 1800);
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_5', 'block()', 700);
+        return;
+    } else if (e.key === '6' || e.code === 'Digit6') {
+        e.preventDefault();
+        if (typeof window.triggerTacticalAction === 'function') window.triggerTacticalAction('dock_btn_6', 'sin_wave()', 1800);
         return;
     }
 
