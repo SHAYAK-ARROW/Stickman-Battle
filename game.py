@@ -243,7 +243,16 @@ def get_player_for_token(room, token):
 
 @app.route('/')
 def lobby_menu():
-    unlocked = session.get('arcade_unlocked', 1)
+    cookie_unlocked = 1
+    try:
+        raw_cookie = request.cookies.get('stickman_arcade_unlocked')
+        if raw_cookie:
+            cookie_unlocked = int(raw_cookie)
+    except (ValueError, TypeError):
+        cookie_unlocked = 1
+    unlocked = max(session.get('arcade_unlocked', 1), cookie_unlocked)
+    session['arcade_unlocked'] = unlocked
+
     locked_diff = request.args.get('locked', '')
     req_stage = request.args.get('required_stage', '')
     return render_template('index.html', arcade_unlocked=unlocked, locked_diff=locked_diff, req_stage=req_stage)
@@ -342,6 +351,19 @@ def api_claim_victory():
         logger.error(f"Error in api_claim_victory: {e}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
+@app.route('/api/sync_progression', methods=['POST'])
+def api_sync_progression():
+    try:
+        data = request.get_json() or {}
+        client_unlocked = int(data.get('unlocked', 1))
+        client_unlocked = max(1, min(6, client_unlocked))
+        session['arcade_unlocked'] = max(session.get('arcade_unlocked', 1), client_unlocked)
+        resp = jsonify({'success': True, 'unlocked': session['arcade_unlocked']})
+        resp.set_cookie('stickman_arcade_unlocked', str(session['arcade_unlocked']), max_age=31536000, samesite='Lax')
+        return resp
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
 @app.route('/bot/<difficulty>')
 def play_vs_bot(difficulty):
     req_diff = str(difficulty).lower()
@@ -351,7 +373,16 @@ def play_vs_bot(difficulty):
     # 🔒 Server-Side Anti-Cheat Progression Lock for Arcade Stages
     if diff in ARCADE_STAGE_ORDER:
         req_stage = ARCADE_STAGE_ORDER[diff]
-        unlocked = session.get('arcade_unlocked', 1)
+        cookie_unlocked = 1
+        try:
+            raw_cookie = request.cookies.get('stickman_arcade_unlocked')
+            if raw_cookie:
+                cookie_unlocked = int(raw_cookie)
+        except (ValueError, TypeError):
+            cookie_unlocked = 1
+        unlocked = max(session.get('arcade_unlocked', 1), cookie_unlocked)
+        session['arcade_unlocked'] = unlocked
+
         if req_stage > unlocked:
             logger.warning(f"Player attempted to access locked stage {req_stage} ('{diff}') with current unlocked level {unlocked}.")
             return redirect(url_for('lobby_menu', locked=diff, required_stage=req_stage - 1))

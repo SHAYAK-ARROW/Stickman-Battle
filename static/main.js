@@ -67,11 +67,82 @@ function getUnlockedStage() {
         const val = localStorage.getItem('stickman_arcade_unlocked');
         const localVal = val ? parseInt(val, 10) : 1;
         const effective = Math.max(serverUnlocked, localVal);
+        
+        // 🔒 Keep cookie synchronized with localStorage so server session never desyncs!
+        document.cookie = "stickman_arcade_unlocked=" + effective + "; path=/; max-age=31536000; SameSite=Lax";
+        
+        // Background sync to server session if local is ahead
+        if (effective > (window.SERVER_ARCADE_UNLOCKED || 1) && !window._progressionSynced) {
+            window._progressionSynced = true;
+            fetch('/api/sync_progression', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ unlocked: effective })
+            }).then(r => r.json()).then(d => {
+                if (d.success) window.SERVER_ARCADE_UNLOCKED = d.unlocked;
+            }).catch(() => {});
+        }
         return effective;
     } catch(e) {
         return serverUnlocked;
     }
 }
+
+// 🔒 Big Center-Screen Stage Locked Modal System
+function showStageLockedModal(requiredStageNum, targetDiff) {
+    const modal = document.getElementById('stage_locked_modal');
+    if (!modal) {
+        if (typeof showToast === 'function') {
+            showToast({
+                title: "Stage Locked! 🔒",
+                message: `Defeat Stage ${requiredStageNum} in the Arcade Ladder first!`,
+                type: "warning"
+            });
+        }
+        return;
+    }
+
+    const stageNames = {
+        1: 'Stage 1 (Byte Rusher)',
+        2: 'Stage 2 (Iron Turtle)',
+        3: 'Stage 3 (Wave Weaver)',
+        4: 'Stage 4 (Shadow Duelist)',
+        5: 'Stage 5 (Berserker Ronin)',
+        6: 'Stage 6 (Apex Grandmaster)'
+    };
+    const reqText = stageNames[requiredStageNum] || `Stage ${requiredStageNum}`;
+    const reqTextEl = document.getElementById('locked_modal_req_text');
+    if (reqTextEl) reqTextEl.innerText = `Conquer ${reqText} first!`;
+
+    const descEl = document.getElementById('locked_modal_desc');
+    if (descEl && targetDiff) {
+        const diffDisplay = targetDiff.charAt(0).toUpperCase() + targetDiff.slice(1);
+        descEl.innerText = `The battle arena for [${diffDisplay}] is locked. Defeat the prerequisite arcade challenger to proceed!`;
+    }
+
+    const playBtn = document.getElementById('locked_play_req_btn');
+    if (playBtn) {
+        const stageRoutes = {
+            1: '/bot/rusher',
+            2: '/bot/turtle',
+            3: '/bot/weaver',
+            4: '/bot/duelist',
+            5: '/bot/berserker',
+            6: '/bot/apex'
+        };
+        playBtn.href = stageRoutes[requiredStageNum] || '/bot/rusher';
+        playBtn.innerHTML = `⚔️ Battle ${reqText} ➔`;
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeStageLockedModal() {
+    const modal = document.getElementById('stage_locked_modal');
+    if (modal) modal.style.display = 'none';
+}
+window.showStageLockedModal = showStageLockedModal;
+window.closeStageLockedModal = closeStageLockedModal;
 
 function play_bot(difficulty) {
     if (difficulty === 'dummy') {
@@ -87,11 +158,7 @@ function play_bot(difficulty) {
     if (stage && stage > 1) {
         const unlocked = getUnlockedStage();
         if (stage > unlocked) {
-            showToast({
-                title: "Stage Locked! 🔒",
-                message: `Defeat Stage ${stage - 1} to unlock this challenger!`,
-                type: "warning"
-            });
+            showStageLockedModal(stage - 1, difficulty);
             return;
         }
     }
