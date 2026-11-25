@@ -541,13 +541,13 @@ function initLobbySparringAnimation() {
         } catch (_) {}
     }
 
-    // Fighters state with full kinematic ragdoll physics
+    // Fighters state with dynamic base positioning and kinematic ragdoll physics
     const blueFighter = {
         name: 'Blue',
         dir: 1, // Facing right
         x: 320,
         y: groundY,
-        baseXRatio: 0.38,
+        baseX: 320,
         vx: 0,
         vy: 0,
         color: blueColor,
@@ -569,7 +569,7 @@ function initLobbySparringAnimation() {
         dir: -1, // Facing left
         x: 480,
         y: groundY,
-        baseXRatio: 0.62,
+        baseX: 480,
         vx: 0,
         vy: 0,
         color: redColor,
@@ -585,6 +585,25 @@ function initLobbySparringAnimation() {
         toppleTimer: 0,
         isDragged: false
     };
+
+    function updateFighterOrientations() {
+        if (blueFighter.baseX <= redFighter.baseX) {
+            blueFighter.dir = 1;
+            redFighter.dir = -1;
+        } else {
+            blueFighter.dir = -1;
+            redFighter.dir = 1;
+        }
+    }
+
+    function initFighterPositions() {
+        blueFighter.baseX = Math.round(cssWidth * 0.34);
+        blueFighter.x = blueFighter.baseX;
+        redFighter.baseX = Math.round(cssWidth * 0.66);
+        redFighter.x = redFighter.baseX;
+        updateFighterOrientations();
+    }
+    initFighterPositions();
 
     function knockFighterOver(f, fallDir) {
         f.toppleState = 'falling';
@@ -630,7 +649,7 @@ function initLobbySparringAnimation() {
         });
     }
 
-    // ── Mouse & Touch Ragdoll / Poke Handlers ───────────────────────
+    // ── Mouse & Touch Ragdoll / Stand Placement Handlers ────────────
     let dragTarget = null;
     let dragStartX = 0;
     let dragStartY = 0;
@@ -707,19 +726,43 @@ function initLobbySparringAnimation() {
         }
     }
 
+    function releaseDraggedFighter(f) {
+        if (!f) return;
+        f.isDragged = false;
+        canvas.style.cursor = 'grab';
+
+        if (isActualDrag) {
+            // Check if user forcefully flung the fighter
+            if (Math.abs(f.vx) > 6.5) {
+                // High speed toss -> tumble and roll
+                knockFighterOver(f, f.vx >= 0 ? 1 : -1);
+            } else {
+                // Gentle release -> LAND ON FEET AND STAND AT NEW POSITION!
+                f.toppleState = 'upright';
+                f.toppleAngle = 0;
+                f.toppleAngVel = 0;
+                f.y = groundY;
+                f.crouch = 12; // Athletic crouch landing
+                f.action = 'idle';
+                f.vx = 0;
+                f.vy = 0;
+                f.baseX = Math.max(50, Math.min(cssWidth - 50, f.x));
+                f.x = f.baseX;
+                addSparks(f.x, groundY - 2, 9, f.color, '#ffffff');
+                playAudio('kipup');
+                addFloatingText(f.x, groundY - 45, '🥋 STAND!', f.color);
+                updateFighterOrientations();
+                choreographyTimer = 0;
+                choreographyPhase = 0; // Brief stance pause at new spot
+            }
+        }
+        dragTarget = null;
+        isActualDrag = false;
+    }
+
     function onPointerUp(e) {
         if (dragTarget) {
-            const f = dragTarget;
-            f.isDragged = false;
-            canvas.style.cursor = 'grab';
-
-            if (isActualDrag) {
-                // User dragged and released/flung
-                if (Math.abs(f.vx) > 4.5 || f.y < groundY - 30) {
-                    knockFighterOver(f, f.vx >= 0 ? 1 : -1);
-                }
-            }
-            dragTarget = null;
+            releaseDraggedFighter(dragTarget);
         }
     }
 
@@ -751,8 +794,9 @@ function initLobbySparringAnimation() {
         if (e.touches && e.touches[0]) onPointerDown(e);
     }, { passive: true });
     canvas.addEventListener('touchend', (e) => {
-        onPointerUp(e);
-        if (!isActualDrag && e.changedTouches && e.changedTouches[0]) {
+        if (dragTarget) {
+            releaseDraggedFighter(dragTarget);
+        } else if (!isActualDrag && e.changedTouches && e.changedTouches[0]) {
             const rect = canvas.getBoundingClientRect();
             const tx = e.changedTouches[0].clientX - rect.left;
             const ty = e.changedTouches[0].clientY - rect.top;
@@ -1020,6 +1064,8 @@ function initLobbySparringAnimation() {
                     f.crouch = 12; // Athletic crouch landing
                     f.toppleState = 'upright';
                     f.action = 'idle';
+                    f.baseX = Math.max(50, Math.min(W - 50, f.x));
+                    updateFighterOrientations();
                     addSparks(f.x, groundY - 2, 8, f.color, '#ffffff');
                 }
             } else if (f.toppleState === 'upright') {
@@ -1031,129 +1077,196 @@ function initLobbySparringAnimation() {
             }
         });
 
-        // ── Autonomous Sparring Choreography ────────────────────────
-        // Choreography only progresses if both fighters are upright
+        // ── Autonomous Close-Quarters Blade Combat Choreography ─────
+        // Choreography only progresses if both fighters are upright & not dragged
         const bothUpright = (blueFighter.toppleState === 'upright' && !blueFighter.isDragged &&
                              redFighter.toppleState === 'upright' && !redFighter.isDragged);
 
         if (bothUpright) {
             choreographyTimer++;
 
-            // 5-Phase Choreography Cycle (3 seconds each)
-            if (choreographyTimer > 180) {
+            // Dynamic left/right fighter detection based on current positions
+            const leftF = (blueFighter.baseX <= redFighter.baseX) ? blueFighter : redFighter;
+            const rightF = (blueFighter.baseX <= redFighter.baseX) ? redFighter : blueFighter;
+            leftF.dir = 1;
+            rightF.dir = -1;
+
+            // 4 Distinct High-Impact Combat Sequences with tight punchy timing
+            const phaseDurations = [50, 95, 95, 115];
+            if (choreographyTimer > (phaseDurations[choreographyPhase] || 90)) {
                 choreographyTimer = 0;
-                choreographyPhase = (choreographyPhase + 1) % 5;
+                choreographyPhase = (choreographyPhase + 1) % 4;
             }
 
             if (choreographyPhase === 0) {
-                // Phase 0: Combat Bounce & Stance Shuffle
-                const bounce = Math.sin(choreographyTimer * 0.08) * 3;
-                blueFighter.x += (blueBaseX + Math.sin(choreographyTimer * 0.05) * 8 - blueFighter.x) * 0.1;
-                blueFighter.y = groundY + bounce;
-                blueFighter.swordAngle = 0.35 + Math.sin(choreographyTimer * 0.07) * 0.15;
-                blueFighter.shieldAlpha *= 0.85;
+                // Sequence 0: Tactical Combat Footwork & Feint Bounces
+                const bounce = Math.sin(choreographyTimer * 0.1) * 2.8;
+                leftF.x += (leftF.baseX + Math.sin(choreographyTimer * 0.06) * 6 - leftF.x) * 0.1;
+                leftF.y = groundY + bounce;
+                leftF.swordAngle = 0.35 + Math.sin(choreographyTimer * 0.08) * 0.18;
+                leftF.shieldAlpha *= 0.85;
 
-                redFighter.x += (redBaseX - Math.sin(choreographyTimer * 0.05) * 8 - redFighter.x) * 0.1;
-                redFighter.y = groundY + bounce;
-                redFighter.swordAngle = -0.35 - Math.sin(choreographyTimer * 0.07) * 0.15;
-                redFighter.shieldAlpha *= 0.85;
+                rightF.x += (rightF.baseX - Math.sin(choreographyTimer * 0.06) * 6 - rightF.x) * 0.1;
+                rightF.y = groundY + bounce;
+                rightF.swordAngle = -0.35 - Math.sin(choreographyTimer * 0.08) * 0.18;
+                rightF.shieldAlpha *= 0.85;
 
             } else if (choreographyPhase === 1) {
-                // Phase 1: Blue strikes, Red parries
-                if (choreographyTimer < 40) {
-                    const prog = choreographyTimer / 40;
-                    blueFighter.x = blueBaseX + (midX - 25 - blueBaseX) * prog;
-                    blueFighter.swordAngle = 0.35 - prog * 1.8;
-                    blueFighter.action = 'slash';
-                    redFighter.swordAngle = -0.35;
-                    redFighter.shieldAlpha = prog * 0.95;
-                    redFighter.action = 'parry';
+                // Sequence 1: Left Fighter Overhead Lunge & Physical Cross-Blade Lock
+                const contactDist = 48; // Close-quarters body spacing where 38px blades cross
+                const strikeTargetX = rightF.baseX - contactDist;
+                const clashX = (strikeTargetX + 30 + rightF.baseX - 14) * 0.5;
+                const clashY = groundY - 38;
 
-                    if (choreographyTimer === 38) {
-                        addSparks(midX - 10, groundY - 35, 22, blueColor, '#fef08a');
-                        addShockwave(midX - 10, groundY - 35, blueColor);
+                if (choreographyTimer < 35) {
+                    // Left dashes all the way in to 48px striking contact
+                    const prog = choreographyTimer / 35;
+                    leftF.x = leftF.baseX + (strikeTargetX - leftF.baseX) * prog;
+                    leftF.swordAngle = 0.35 + prog * 1.0; // Raising sword high
+                    leftF.action = 'lunge';
+
+                    rightF.swordAngle = -0.35 - prog * 0.5; // High parry guard
+                    rightF.shieldAlpha = prog * 0.95;
+                    rightF.action = 'parry';
+
+                    if (choreographyTimer === 34) {
+                        // EXACT BLADE COLLISION IMPACT!
+                        addSparks(clashX, clashY, 28, leftF.color, rightF.color);
+                        addShockwave(clashX, clashY, '#ffffff');
                         playAudio('clash');
+                        addFloatingText(clashX, clashY - 20, '⚔️ BLADE LOCK!', '#fbbf24');
                     }
-                } else if (choreographyTimer < 80) {
-                    blueFighter.swordAngle = -0.6;
-                    blueFighter.shieldAlpha *= 0.9;
-                    redFighter.shieldAlpha = 0.85;
-                    redFighter.x = redBaseX + 12;
+                } else if (choreographyTimer < 68) {
+                    // Physical blade lock struggle (blades physically touching and vibrating with sparks)
+                    leftF.x = strikeTargetX;
+                    const lockJitter = Math.sin(choreographyTimer * 1.6) * 0.09;
+                    leftF.swordAngle = 1.35 + lockJitter;
+                    rightF.swordAngle = -0.85 - lockJitter;
+                    leftF.action = 'slash';
+                    rightF.action = 'parry';
+                    rightF.shieldAlpha = 0.85;
+
+                    if (choreographyTimer % 8 === 0) {
+                        addSparks(clashX, clashY, 3, '#fef08a', leftF.color);
+                    }
+                } else if (choreographyTimer === 68) {
+                    // Right fighter pushes back with a shield bash
+                    leftF.vx = -5.2;
+                    leftF.action = 'recoil';
+                    addSparks(clashX, clashY, 12, rightF.color, '#ffffff');
+                    playAudio('shield');
                 } else {
-                    blueFighter.x += (blueBaseX - blueFighter.x) * 0.08;
-                    redFighter.x += (redBaseX - redFighter.x) * 0.08;
-                    blueFighter.swordAngle += (0.35 - blueFighter.swordAngle) * 0.08;
-                    redFighter.shieldAlpha *= 0.88;
+                    // Recoil return to base positions
+                    leftF.x += (leftF.baseX - leftF.x) * 0.08;
+                    rightF.x += (rightF.baseX - rightF.x) * 0.08;
+                    leftF.swordAngle += (0.35 - leftF.swordAngle) * 0.08;
+                    rightF.swordAngle += (-0.35 - rightF.swordAngle) * 0.08;
+                    rightF.shieldAlpha *= 0.88;
                 }
 
             } else if (choreographyPhase === 2) {
-                // Phase 2: Neutral backstep & feint
-                const bounce = Math.sin(choreographyTimer * 0.08) * 2.5;
-                blueFighter.x += (blueBaseX - blueFighter.x) * 0.1;
-                redFighter.x += (redBaseX - redFighter.x) * 0.1;
-                blueFighter.y = groundY + bounce;
-                redFighter.y = groundY + bounce;
-                blueFighter.swordAngle += (0.35 - blueFighter.swordAngle) * 0.1;
-                redFighter.swordAngle += (-0.35 - redFighter.swordAngle) * 0.1;
-                blueFighter.shieldAlpha *= 0.85;
-                redFighter.shieldAlpha *= 0.85;
+                // Sequence 2: Right Fighter Low Sweep & Left Fighter Aerial Leap Deflect
+                const contactDist = 48;
+                const sweepTargetX = leftF.baseX + contactDist;
+                const clashX = (sweepTargetX + leftF.baseX) * 0.5;
+                const clashY = groundY - 36;
 
-            } else if (choreographyPhase === 3) {
-                // Phase 3: Red counter-strikes, Blue parries
-                if (choreographyTimer < 40) {
-                    const prog = choreographyTimer / 40;
-                    redFighter.x = redBaseX - (redBaseX - (midX + 25)) * prog;
-                    redFighter.swordAngle = -0.35 + prog * 1.8;
-                    redFighter.action = 'slash';
-                    blueFighter.swordAngle = 0.35;
-                    blueFighter.shieldAlpha = prog * 0.95;
-                    blueFighter.action = 'parry';
-
-                    if (choreographyTimer === 38) {
-                        addSparks(midX + 10, groundY - 35, 22, redColor, '#fef08a');
-                        addShockwave(midX + 10, groundY - 35, redColor);
-                        playAudio('clash');
-                    }
-                } else if (choreographyTimer < 80) {
-                    redFighter.swordAngle = 0.6;
-                    redFighter.shieldAlpha *= 0.9;
-                    blueFighter.shieldAlpha = 0.85;
-                    blueFighter.x = blueBaseX - 12;
-                } else {
-                    redFighter.x += (redBaseX - redFighter.x) * 0.08;
-                    blueFighter.x += (blueBaseX - blueFighter.x) * 0.08;
-                    redFighter.swordAngle += (-0.35 - redFighter.swordAngle) * 0.08;
-                    blueFighter.shieldAlpha *= 0.88;
-                }
-
-            } else if (choreographyPhase === 4) {
-                // Phase 4: Simultaneous Center Clash!
                 if (choreographyTimer < 35) {
                     const prog = choreographyTimer / 35;
-                    blueFighter.x = blueBaseX + (midX - 16 - blueBaseX) * prog;
-                    redFighter.x = redBaseX - (redBaseX - (midX + 16)) * prog;
-                    blueFighter.swordAngle = 0.35 - prog * 1.5;
-                    redFighter.swordAngle = -0.35 + prog * 1.5;
+                    // Right dashes low into close range
+                    rightF.x = rightF.baseX - (rightF.baseX - sweepTargetX) * prog;
+                    rightF.crouch = prog * 14;
+                    rightF.swordAngle = -0.35 - prog * 1.1; // Low sweep
+                    rightF.action = 'lunge';
 
-                    if (choreographyTimer === 33) {
-                        addSparks(midX, groundY - 36, 36, blueColor, redColor);
-                        addShockwave(midX, groundY - 36, '#ffffff');
+                    // Left leap-dodges into the air
+                    leftF.y = groundY - Math.sin(prog * Math.PI) * 30;
+                    leftF.swordAngle = 0.35 + prog * 1.1; // Slashes downward from air
+                    leftF.action = 'slash';
+
+                    if (choreographyTimer === 34) {
+                        // Mid-air blade collision
+                        addSparks(clashX, clashY, 28, rightF.color, leftF.color);
+                        addShockwave(clashX, clashY, leftF.color);
                         playAudio('clash');
-                        addFloatingText(midX, groundY - 55, '⚡ DUAL CLASH!', '#fbbf24');
+                        addFloatingText(clashX, clashY - 20, '⚡ AIR DEFLECT!', '#38bdf8');
                     }
-                } else if (choreographyTimer < 75) {
-                    // Recoil bounce
-                    blueFighter.x = blueBaseX - 18;
-                    redFighter.x = redBaseX + 18;
-                    blueFighter.shieldAlpha = 0.8;
-                    redFighter.shieldAlpha = 0.8;
+                } else if (choreographyTimer < 70) {
+                    leftF.y += (groundY - leftF.y) * 0.12;
+                    leftF.crouch = 8;
+                    rightF.crouch *= 0.9;
+                    rightF.x = sweepTargetX;
+                    rightF.shieldAlpha = 0.85;
                 } else {
-                    blueFighter.x += (blueBaseX - blueFighter.x) * 0.08;
-                    redFighter.x += (redBaseX - redFighter.x) * 0.08;
-                    blueFighter.swordAngle += (0.35 - blueFighter.swordAngle) * 0.08;
-                    redFighter.swordAngle += (-0.35 - redFighter.swordAngle) * 0.08;
-                    blueFighter.shieldAlpha *= 0.88;
-                    redFighter.shieldAlpha *= 0.88;
+                    leftF.y = groundY;
+                    leftF.x += (leftF.baseX - leftF.x) * 0.08;
+                    rightF.x += (rightF.baseX - rightF.x) * 0.08;
+                    leftF.swordAngle += (0.35 - leftF.swordAngle) * 0.08;
+                    rightF.swordAngle += (-0.35 - rightF.swordAngle) * 0.08;
+                    rightF.shieldAlpha *= 0.88;
+                }
+
+            } else if (choreographyPhase === 3) {
+                // Sequence 3: High-Speed 3-Hit Flurry & Mutual Heavy Recoil
+                const meetMidX = (leftF.baseX + rightF.baseX) * 0.5;
+                const leftClashX = meetMidX - 24;
+                const rightClashX = meetMidX + 24;
+                const clashX = meetMidX;
+
+                if (choreographyTimer < 25) {
+                    // Both rush directly into 48px body-to-body clash
+                    const prog = choreographyTimer / 25;
+                    leftF.x = leftF.baseX + (leftClashX - leftF.baseX) * prog;
+                    rightF.x = rightF.baseX - (rightF.baseX - rightClashX) * prog;
+                    leftF.swordAngle = 0.35 + prog * 0.9;
+                    rightF.swordAngle = -0.35 - prog * 0.9;
+
+                } else if (choreographyTimer < 45) {
+                    // Hit 1: High Clash
+                    leftF.x = leftClashX;
+                    rightF.x = rightClashX;
+                    leftF.swordAngle = 1.25;
+                    rightF.swordAngle = -1.25;
+                    if (choreographyTimer === 26) {
+                        addSparks(clashX, groundY - 44, 20, leftF.color, rightF.color);
+                        playAudio('clash');
+                        addFloatingText(clashX, groundY - 60, '⚔️ CLASH!', '#fbbf24');
+                    }
+                } else if (choreographyTimer < 65) {
+                    // Hit 2: Low Counter Parry
+                    leftF.crouch = 8;
+                    rightF.crouch = 8;
+                    leftF.swordAngle = 0.8;
+                    rightF.swordAngle = -0.8;
+                    if (choreographyTimer === 46) {
+                        addSparks(clashX, groundY - 26, 20, rightF.color, leftF.color);
+                        playAudio('clash');
+                        addFloatingText(clashX, groundY - 60, '🛡️ PARRY!', '#f43f5e');
+                    }
+                } else if (choreographyTimer < 90) {
+                    // Hit 3: Heavy Mutual Thrust Shockwave
+                    if (choreographyTimer === 66) {
+                        addSparks(clashX, groundY - 36, 36, '#ffffff', '#fbbf24');
+                        addShockwave(clashX, groundY - 36, '#ffffff');
+                        playAudio('wave');
+                        addFloatingText(clashX, groundY - 60, '💥 CROSS-COUNTER!', '#fbbf24');
+
+                        // Recoil blast blows both fighters backward
+                        leftF.vx = -5.8;
+                        rightF.vx = 5.8;
+                        leftF.shieldAlpha = 0.85;
+                        rightF.shieldAlpha = 0.85;
+                    }
+                } else {
+                    // Return to dynamic base stances
+                    leftF.crouch *= 0.88;
+                    rightF.crouch *= 0.88;
+                    leftF.x += (leftF.baseX - leftF.x) * 0.08;
+                    rightF.x += (rightF.baseX - rightF.x) * 0.08;
+                    leftF.swordAngle += (0.35 - leftF.swordAngle) * 0.08;
+                    rightF.swordAngle += (-0.35 - rightF.swordAngle) * 0.08;
+                    leftF.shieldAlpha *= 0.88;
+                    rightF.shieldAlpha *= 0.88;
                 }
             }
         }
