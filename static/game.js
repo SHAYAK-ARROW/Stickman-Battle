@@ -384,13 +384,12 @@ function showDefeatDialog(oppTitle, combatDuration, opponentHp, codeLines) {
     const cleanOpp = oppTitle.replace(/[👑🥋🌱🛡️📐🗡️🔥🐣]/g, '').trim();
     const shareUrl = window.location.origin ? window.location.origin : 'https://arrows-dev.itch.io/stickman-battle';
 
-    // Exact challenge text requested by user:
-    // "আমি তো হারাতে পারলাম না, তুমি কি পারবে?"
-    const challengeMsg = `⚔️ আমি তো হারাতে পারলাম না, তুমি কি পারবে? ${cleanOpp} আমাকে Stickman Battle-এ হারিয়ে দিয়েছে! তোমার পাইথন কোড কি একে হারাতে পারবে? 🔥\n🎮 এখানে খেলে দেখাও 👉 ${shareUrl}`;
+    // Pure English challenge text:
+    const challengeMsg = `⚔️ I couldn't defeat ${cleanOpp}, can you? It just crushed my Python strategy in Stickman Battle! Can your code beat it? 🔥\n🎮 Play free in browser 👉 ${shareUrl}`;
     currentMatchChallengeMsg = challengeMsg;
 
     const quoteEl = document.getElementById('vic_challenge_text');
-    if (quoteEl) quoteEl.innerText = `"আমি তো হারাতে পারলাম না, তুমি কি পারবে? ⚔️ Stickman Battle-এ ${cleanOpp}-কে হারিয়ে দেখাও!"`;
+    if (quoteEl) quoteEl.innerText = `"I couldn't defeat ${cleanOpp}, can you? ⚔️ Can your Python code beat this bot?"`;
 
     const waBtn = document.getElementById('btn_whatsapp_share');
     if (waBtn) {
