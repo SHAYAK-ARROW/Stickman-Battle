@@ -556,7 +556,12 @@ else:
             <div class="dock-action-wrapper" title="[6] Cast Sine Wave projectile">
                 <button id="dock_btn_6" type="button" class="dock-action-circle circle-spell" onclick="triggerTacticalAction('dock_btn_6', 'sin_wave()', 1800)" aria-label="Cast Sine Wave Spell">
                     <span class="circle-key">6</span>
-                    <span class="circle-icon">📐</span>
+                    <span class="circle-icon circle-svg-icon" title="Sine Wave">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M2 12c2.4-6.5 5.2-6.5 7.6 0s5.2 6.5 7.6 0c1.8-4.8 3.6-4.8 4.8-1.5" stroke="#e879f9"/>
+                            <circle cx="21" cy="10.5" r="2.2" fill="#38bdf8"/>
+                        </svg>
+                    </span>
                     <span class="circle-cooldown-sweep"></span>
                 </button>
                 <span class="circle-label">Sin Wave</span>

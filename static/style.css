@@ -2760,6 +2760,22 @@ button { color: inherit; }
     filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
 }
 
+.circle-svg-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.circle-svg-icon svg {
+    filter: drop-shadow(0 0 6px rgba(232, 121, 249, 0.75));
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.dock-action-circle:hover .circle-svg-icon svg {
+    filter: drop-shadow(0 0 10px #e879f9) drop-shadow(0 0 3px #ffffff);
+    transform: scale(1.1);
+}
+
 /* Top-Right Circular Hotkey Number Badge */
 .circle-key {
     position: absolute;
