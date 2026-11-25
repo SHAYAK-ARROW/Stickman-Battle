@@ -474,7 +474,7 @@ function initLobbySparringAnimation() {
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         canvas.width = Math.round(cssWidth * dpr);
         canvas.height = Math.round(cssHeight * dpr);
-        ctx.resetTransform && ctx.resetTransform();
+        if (ctx.resetTransform) ctx.resetTransform();
         ctx.scale(dpr, dpr);
     }
     resizeCanvas();
@@ -513,7 +513,7 @@ function initLobbySparringAnimation() {
             x,
             y,
             radius: 4,
-            maxRadius: 40,
+            maxRadius: 48,
             color: color || '#fef08a',
             alpha: 0.95
         });
@@ -524,24 +524,44 @@ function initLobbySparringAnimation() {
             text,
             x,
             y,
-            vy: -1.3,
+            vy: -1.4,
             alpha: 1,
             color: color || '#fbbf24'
         });
     }
 
-    // Fighters state
+    function playAudio(action) {
+        try {
+            if (!window.AudioEngine) return;
+            if (action === 'clash' && window.AudioEngine.playSwordClash) window.AudioEngine.playSwordClash();
+            else if (action === 'shield' && window.AudioEngine.playShieldBlock) window.AudioEngine.playShieldBlock();
+            else if (action === 'hit' && window.AudioEngine.playDamageHit) window.AudioEngine.playDamageHit();
+            else if (action === 'wave' && window.AudioEngine.playWaveClash) window.AudioEngine.playWaveClash();
+            else if (action === 'kipup' && window.AudioEngine.playDodge) window.AudioEngine.playDodge();
+        } catch (_) {}
+    }
+
+    // Fighters state with full kinematic ragdoll physics
     const blueFighter = {
         name: 'Blue',
         dir: 1, // Facing right
         x: 320,
         y: groundY,
+        baseXRatio: 0.38,
+        vx: 0,
+        vy: 0,
         color: blueColor,
         bladeColor: blueBlade,
         swordAngle: 0.35,
         shieldAlpha: 0,
         crouch: 0,
-        action: 'idle'
+        action: 'idle',
+        toppleAngle: 0,
+        toppleAngVel: 0,
+        toppleState: 'upright', // 'upright' | 'falling' | 'dazed' | 'recovering'
+        toppleDir: 1,
+        toppleTimer: 0,
+        isDragged: false
     };
 
     const redFighter = {
@@ -549,44 +569,208 @@ function initLobbySparringAnimation() {
         dir: -1, // Facing left
         x: 480,
         y: groundY,
+        baseXRatio: 0.62,
+        vx: 0,
+        vy: 0,
         color: redColor,
         bladeColor: redBlade,
         swordAngle: -0.35,
         shieldAlpha: 0,
         crouch: 0,
-        action: 'idle'
+        action: 'idle',
+        toppleAngle: 0,
+        toppleAngVel: 0,
+        toppleState: 'upright',
+        toppleDir: -1,
+        toppleTimer: 0,
+        isDragged: false
     };
 
-    function triggerManualClash(clientX, clientY) {
-        const rect = canvas.getBoundingClientRect();
-        const clickX = clientX ? (clientX - rect.left) : (cssWidth * 0.5);
-        const clickY = clientY ? (clientY - rect.top) : (groundY - 30);
+    function knockFighterOver(f, fallDir) {
+        f.toppleState = 'falling';
+        f.toppleDir = fallDir || (f.dir * -1);
+        f.toppleAngVel = f.toppleDir * 0.16;
+        f.vx = f.toppleDir * 3.8;
+        f.action = 'toppled';
+        f.shieldAlpha = 0;
+        playAudio('hit');
 
+        const pokeLabels = ['💫 OOF!', '😵 WHOA!', '🤸 TIMBER!', '💥 POKED!'];
+        const chosen = pokeLabels[Math.floor(Math.random() * pokeLabels.length)];
+        addFloatingText(f.x, groundY - 45, chosen, f.color);
+
+        // Opponent reacts to the knockdown
+        const opponent = f === blueFighter ? redFighter : blueFighter;
+        if (opponent.toppleState === 'upright') {
+            const taunts = ['😏 HAH!', '⚔️ TOO EASY!', '⚡ DOWN!', '🎯 GOT \'EM!'];
+            addFloatingText(opponent.x, groundY - 45, taunts[Math.floor(Math.random() * taunts.length)], opponent.color);
+            opponent.swordAngle = opponent.dir * -0.6; // Brandish blade in triumph
+        }
+    }
+
+    function triggerManualClash(clickX, clickY) {
         addSparks(clickX, clickY, 32, blueColor, redColor);
         addShockwave(clickX, clickY, '#fef08a');
+        playAudio('wave');
 
-        const labels = ['⚔️ CLASH!', '🛡️ PARRY!', '⚡ COUNTER!', '💥 DEFLECT!'];
+        const labels = ['⚔️ CLASH!', '🛡️ PARRY!', '⚡ COUNTER!', '💥 SHOCKWAVE!'];
         const chosen = labels[Math.floor(Math.random() * labels.length)];
         addFloatingText(clickX, clickY - 18, chosen, '#fbbf24');
 
-        // Fighters sudden recoil reaction
-        blueFighter.action = 'recoil';
-        blueFighter.x = Math.max(80, blueFighter.x - 22);
-        redFighter.action = 'recoil';
-        redFighter.x = Math.min(cssWidth - 80, redFighter.x + 22);
+        // Radial knockback on fighters
+        [blueFighter, redFighter].forEach(f => {
+            if (f.toppleState !== 'upright') return;
+            const dx = f.x - clickX;
+            const dist = Math.abs(dx);
+            const force = Math.max(12, 34 - dist * 0.12);
+            const pushDir = dx >= 0 ? 1 : -1;
+            f.vx += pushDir * force;
+            f.action = 'recoil';
+            f.shieldAlpha = 0.9;
+        });
     }
 
-    canvas.addEventListener('click', (e) => {
-        triggerManualClash(e.clientX, e.clientY);
-    });
+    // ── Mouse & Touch Ragdoll / Poke Handlers ───────────────────────
+    let dragTarget = null;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
+    let isActualDrag = false;
+
+    function getCanvasCoords(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    }
+
+    function hitTestFighter(f, px, py) {
+        if (f.toppleState === 'upright') {
+            const dx = px - f.x;
+            const dy = py - (groundY - 30);
+            return Math.abs(dx) <= 42 && dy >= -48 && dy <= 45;
+        } else {
+            const lyingX = f.x + f.toppleDir * 28;
+            return Math.abs(px - lyingX) <= 50 && Math.abs(py - groundY) <= 38;
+        }
+    }
+
+    function onPointerDown(e) {
+        const { x, y } = getCanvasCoords(e);
+        dragStartX = x;
+        dragStartY = y;
+        lastPointerX = x;
+        lastPointerY = y;
+        isActualDrag = false;
+
+        if (hitTestFighter(blueFighter, x, y)) {
+            dragTarget = blueFighter;
+        } else if (hitTestFighter(redFighter, x, y)) {
+            dragTarget = redFighter;
+        } else {
+            dragTarget = null;
+        }
+
+        if (dragTarget) {
+            dragTarget.isDragged = true;
+            canvas.style.cursor = 'grabbing';
+        }
+    }
+
+    function onPointerMove(e) {
+        const { x, y } = getCanvasCoords(e);
+
+        if (dragTarget) {
+            const dist = Math.hypot(x - dragStartX, y - dragStartY);
+            if (dist > 6) isActualDrag = true;
+
+            const deltaX = x - lastPointerX;
+            dragTarget.vx = deltaX;
+            dragTarget.x = Math.max(40, Math.min(cssWidth - 40, x));
+            dragTarget.y = Math.min(groundY, Math.max(30, y));
+
+            // Ragdoll dangle tilt while dragged
+            if (dragTarget.y < groundY - 10) {
+                dragTarget.toppleAngle = (deltaX * 0.08) - (dragTarget.dir * 0.2);
+            }
+
+            lastPointerX = x;
+            lastPointerY = y;
+        } else {
+            const hoverBlue = hitTestFighter(blueFighter, x, y);
+            const hoverRed = hitTestFighter(redFighter, x, y);
+            canvas.style.cursor = (hoverBlue || hoverRed) ? 'grab' : 'crosshair';
+        }
+    }
+
+    function onPointerUp(e) {
+        if (dragTarget) {
+            const f = dragTarget;
+            f.isDragged = false;
+            canvas.style.cursor = 'grab';
+
+            if (isActualDrag) {
+                // User dragged and released/flung
+                if (Math.abs(f.vx) > 4.5 || f.y < groundY - 30) {
+                    knockFighterOver(f, f.vx >= 0 ? 1 : -1);
+                }
+            }
+            dragTarget = null;
+        }
+    }
+
+    function onCanvasClick(e) {
+        if (isActualDrag) {
+            isActualDrag = false;
+            return;
+        }
+        const { x, y } = getCanvasCoords(e);
+        if (hitTestFighter(blueFighter, x, y)) {
+            const fallDir = (x < blueFighter.x) ? 1 : -1;
+            knockFighterOver(blueFighter, fallDir);
+        } else if (hitTestFighter(redFighter, x, y)) {
+            const fallDir = (x < redFighter.x) ? 1 : -1;
+            knockFighterOver(redFighter, fallDir);
+        } else {
+            triggerManualClash(x, y);
+        }
+        isActualDrag = false;
+    }
+
+    canvas.addEventListener('mousedown', onPointerDown);
+    canvas.addEventListener('mouseup', onPointerUp);
+    canvas.addEventListener('click', onCanvasClick);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
 
     canvas.addEventListener('touchstart', (e) => {
-        if (e.touches && e.touches[0]) {
-            triggerManualClash(e.touches[0].clientX, e.touches[0].clientY);
+        if (e.touches && e.touches[0]) onPointerDown(e);
+    }, { passive: true });
+    canvas.addEventListener('touchend', (e) => {
+        onPointerUp(e);
+        if (!isActualDrag && e.changedTouches && e.changedTouches[0]) {
+            const rect = canvas.getBoundingClientRect();
+            const tx = e.changedTouches[0].clientX - rect.left;
+            const ty = e.changedTouches[0].clientY - rect.top;
+            if (hitTestFighter(blueFighter, tx, ty)) {
+                knockFighterOver(blueFighter, tx < blueFighter.x ? 1 : -1);
+            } else if (hitTestFighter(redFighter, tx, ty)) {
+                knockFighterOver(redFighter, tx < redFighter.x ? 1 : -1);
+            } else {
+                triggerManualClash(tx, ty);
+            }
         }
+        isActualDrag = false;
+    });
+    window.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches[0]) onPointerMove(e);
     }, { passive: true });
 
-    // Draw single stylized arcade stickman
+    // ── Draw stylized kinematic stickman with ragdoll support ───────
     function drawStickman(f) {
         const x = f.x;
         const y = f.y;
@@ -594,6 +778,14 @@ function initLobbySparringAnimation() {
         const crouchY = f.crouch;
 
         ctx.save();
+
+        // Ragdoll rotation transformation around feet pivot
+        if (f.toppleAngle !== 0) {
+            ctx.translate(x, groundY);
+            ctx.rotate(f.toppleAngle);
+            ctx.translate(-x, -groundY);
+        }
+
         ctx.strokeStyle = f.color;
         ctx.fillStyle = f.color;
         ctx.lineWidth = 3.5;
@@ -609,6 +801,24 @@ function initLobbySparringAnimation() {
         ctx.arc(x, y - 56 + crouchY, 11, 0, Math.PI * 2);
         ctx.fill();
 
+        // Dazed spinning stars when knocked flat
+        if (f.toppleState === 'dazed') {
+            ctx.save();
+            ctx.fillStyle = '#fef08a';
+            ctx.shadowColor = '#fef08a';
+            ctx.shadowBlur = 8;
+            const starOrbit = performance.now() * 0.006;
+            for (let s = 0; s < 3; s++) {
+                const sAngle = starOrbit + (s * Math.PI * 2 / 3);
+                const starX = x + Math.cos(sAngle) * 16;
+                const starY = (y - 56 + crouchY) + Math.sin(sAngle) * 7 - 8;
+                ctx.beginPath();
+                ctx.arc(starX, starY, 2.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
         // Spine / Torso
         ctx.beginPath();
         ctx.moveTo(x, y - 45 + crouchY);
@@ -617,7 +827,16 @@ function initLobbySparringAnimation() {
 
         // Legs
         ctx.beginPath();
-        if (f.crouch > 5) {
+        if (f.toppleState === 'falling' || f.toppleState === 'dazed') {
+            // Limp tuck
+            ctx.moveTo(x, y - 18 + crouchY);
+            ctx.lineTo(x - 8 * dir, y - 10);
+            ctx.lineTo(x - 14 * dir, y - 2);
+            ctx.moveTo(x, y - 18 + crouchY);
+            ctx.lineTo(x + 6 * dir, y - 12);
+            ctx.lineTo(x + 10 * dir, y - 4);
+        } else if (f.crouch > 5) {
+            // Low crouch guard
             ctx.moveTo(x, y - 18 + crouchY);
             ctx.lineTo(x - 14 * dir, y - 8);
             ctx.lineTo(x - 18 * dir, y);
@@ -625,6 +844,7 @@ function initLobbySparringAnimation() {
             ctx.lineTo(x + 12 * dir, y - 8);
             ctx.lineTo(x + 16 * dir, y);
         } else {
+            // Athletic combat stance
             ctx.moveTo(x, y - 18 + crouchY);
             ctx.lineTo(x - 12 * dir, y);
             ctx.moveTo(x, y - 18 + crouchY);
@@ -648,6 +868,9 @@ function initLobbySparringAnimation() {
         } else if (f.action === 'recoil') {
             handX = x - (10 * dir);
             handY = y - 26 + crouchY;
+        } else if (f.toppleState === 'dazed' || f.toppleState === 'falling') {
+            handX = x + (12 * dir);
+            handY = y - 18 + crouchY;
         }
 
         ctx.beginPath();
@@ -749,97 +972,189 @@ function initLobbySparringAnimation() {
         ctx.stroke();
         ctx.restore();
 
-        const blueBaseX = Math.round(W * 0.38);
-        const redBaseX = Math.round(W * 0.62);
+        const blueBaseX = Math.round(W * blueFighter.baseXRatio);
+        const redBaseX = Math.round(W * redFighter.baseXRatio);
         const midX = Math.round(W * 0.5);
 
-        choreographyTimer++;
+        // ── Ragdoll Physics & Ninja Kip-Up State Machine ────────────
+        [blueFighter, redFighter].forEach(f => {
+            if (f.isDragged) return; // Handled in pointermove
 
-        // 4-Phase Choreography Cycle (3 seconds each)
-        if (choreographyTimer > 180) {
-            choreographyTimer = 0;
-            choreographyPhase = (choreographyPhase + 1) % 4;
-        }
+            if (f.toppleState === 'falling') {
+                f.toppleAngle += f.toppleAngVel;
+                f.toppleAngVel += f.toppleDir * 0.018; // Angular gravity
+                f.x += f.vx;
+                f.vx *= 0.88;
+                f.x = Math.max(50, Math.min(W - 50, f.x));
 
-        if (choreographyPhase === 0) {
-            // Idle bounce & approach
-            const bounce = Math.sin(choreographyTimer * 0.08) * 3;
-            blueFighter.x = blueBaseX + Math.sin(choreographyTimer * 0.05) * 8;
-            blueFighter.y = groundY + bounce;
-            blueFighter.crouch = 0;
-            blueFighter.swordAngle = 0.35 + Math.sin(choreographyTimer * 0.07) * 0.15;
-            blueFighter.shieldAlpha *= 0.85;
+                const targetFlat = f.toppleDir * (Math.PI * 0.47);
+                if (Math.abs(f.toppleAngle) >= Math.abs(targetFlat)) {
+                    f.toppleAngle = targetFlat;
+                    f.toppleAngVel = -f.toppleAngVel * 0.32; // Floor bounce
+                    addSparks(f.x + f.toppleDir * 24, groundY - 2, 7, '#94a3b8', f.color);
 
-            redFighter.x = redBaseX - Math.sin(choreographyTimer * 0.05) * 8;
-            redFighter.y = groundY + bounce;
-            redFighter.crouch = 0;
-            redFighter.swordAngle = -0.35 - Math.sin(choreographyTimer * 0.07) * 0.15;
-            redFighter.shieldAlpha *= 0.85;
-
-        } else if (choreographyPhase === 1) {
-            // Blue strikes, Red parries
-            if (choreographyTimer < 40) {
-                const prog = choreographyTimer / 40;
-                blueFighter.x = blueBaseX + (midX - 25 - blueBaseX) * prog;
-                blueFighter.swordAngle = 0.35 - prog * 1.8;
-                blueFighter.action = 'slash';
-                redFighter.swordAngle = -0.35;
-                redFighter.shieldAlpha = prog * 0.95;
-                redFighter.action = 'parry';
-
-                if (choreographyTimer === 38) {
-                    addSparks(midX - 10, groundY - 35, 20, blueColor, '#fef08a');
-                    addShockwave(midX - 10, groundY - 35, blueColor);
+                    if (Math.abs(f.toppleAngVel) < 0.03) {
+                        f.toppleState = 'dazed';
+                        f.toppleTimer = 50; // ~0.8s on floor
+                    }
                 }
-            } else if (choreographyTimer < 80) {
-                blueFighter.swordAngle = -0.6;
-                blueFighter.shieldAlpha *= 0.9;
-                redFighter.shieldAlpha = 0.85;
-                redFighter.x = redBaseX + 12;
-            } else {
-                blueFighter.x += (blueBaseX - blueFighter.x) * 0.08;
-                redFighter.x += (redBaseX - redFighter.x) * 0.08;
-                blueFighter.swordAngle += (0.35 - blueFighter.swordAngle) * 0.08;
-                redFighter.shieldAlpha *= 0.88;
+            } else if (f.toppleState === 'dazed') {
+                f.toppleTimer--;
+                f.toppleAngle = f.toppleDir * (Math.PI * 0.47) + Math.sin(f.toppleTimer * 0.3) * 0.03;
+                if (f.toppleTimer <= 0) {
+                    f.toppleState = 'recovering';
+                    f.toppleTimer = 22; // 22 frames ninja kip-up
+                    f.action = 'spring_recovery';
+                    playAudio('kipup');
+                    const recoveryCheers = ['🥷 KIP-UP!', '⚡ UP!', '⚔️ READY!'];
+                    addFloatingText(f.x, groundY - 45, recoveryCheers[Math.floor(Math.random() * recoveryCheers.length)], f.color);
+                }
+            } else if (f.toppleState === 'recovering') {
+                f.toppleTimer--;
+                const prog = 1 - (f.toppleTimer / 22);
+                f.y = groundY - Math.sin(prog * Math.PI) * 26; // High ninja spring hop
+                f.toppleAngle = (1 - prog) * f.toppleDir * (Math.PI * 0.47);
+                if (f.toppleTimer <= 0) {
+                    f.toppleAngle = 0;
+                    f.y = groundY;
+                    f.crouch = 12; // Athletic crouch landing
+                    f.toppleState = 'upright';
+                    f.action = 'idle';
+                    addSparks(f.x, groundY - 2, 8, f.color, '#ffffff');
+                }
+            } else if (f.toppleState === 'upright') {
+                // Return to upright stance
+                f.crouch *= 0.88;
+                f.x += f.vx;
+                f.vx *= 0.84;
+                f.x = Math.max(50, Math.min(W - 50, f.x));
+            }
+        });
+
+        // ── Autonomous Sparring Choreography ────────────────────────
+        // Choreography only progresses if both fighters are upright
+        const bothUpright = (blueFighter.toppleState === 'upright' && !blueFighter.isDragged &&
+                             redFighter.toppleState === 'upright' && !redFighter.isDragged);
+
+        if (bothUpright) {
+            choreographyTimer++;
+
+            // 5-Phase Choreography Cycle (3 seconds each)
+            if (choreographyTimer > 180) {
+                choreographyTimer = 0;
+                choreographyPhase = (choreographyPhase + 1) % 5;
             }
 
-        } else if (choreographyPhase === 2) {
-            // Neutral stance reset
-            const bounce = Math.sin(choreographyTimer * 0.08) * 2.5;
-            blueFighter.x += (blueBaseX - blueFighter.x) * 0.1;
-            redFighter.x += (redBaseX - redFighter.x) * 0.1;
-            blueFighter.y = groundY + bounce;
-            redFighter.y = groundY + bounce;
-            blueFighter.swordAngle += (0.35 - blueFighter.swordAngle) * 0.1;
-            redFighter.swordAngle += (-0.35 - redFighter.swordAngle) * 0.1;
-            blueFighter.shieldAlpha *= 0.85;
-            redFighter.shieldAlpha *= 0.85;
+            if (choreographyPhase === 0) {
+                // Phase 0: Combat Bounce & Stance Shuffle
+                const bounce = Math.sin(choreographyTimer * 0.08) * 3;
+                blueFighter.x += (blueBaseX + Math.sin(choreographyTimer * 0.05) * 8 - blueFighter.x) * 0.1;
+                blueFighter.y = groundY + bounce;
+                blueFighter.swordAngle = 0.35 + Math.sin(choreographyTimer * 0.07) * 0.15;
+                blueFighter.shieldAlpha *= 0.85;
 
-        } else if (choreographyPhase === 3) {
-            // Red counter-strikes, Blue parries
-            if (choreographyTimer < 40) {
-                const prog = choreographyTimer / 40;
-                redFighter.x = redBaseX - (redBaseX - (midX + 25)) * prog;
-                redFighter.swordAngle = -0.35 + prog * 1.8;
-                redFighter.action = 'slash';
-                blueFighter.swordAngle = 0.35;
-                blueFighter.shieldAlpha = prog * 0.95;
-                blueFighter.action = 'parry';
+                redFighter.x += (redBaseX - Math.sin(choreographyTimer * 0.05) * 8 - redFighter.x) * 0.1;
+                redFighter.y = groundY + bounce;
+                redFighter.swordAngle = -0.35 - Math.sin(choreographyTimer * 0.07) * 0.15;
+                redFighter.shieldAlpha *= 0.85;
 
-                if (choreographyTimer === 38) {
-                    addSparks(midX + 10, groundY - 35, 20, redColor, '#fef08a');
-                    addShockwave(midX + 10, groundY - 35, redColor);
+            } else if (choreographyPhase === 1) {
+                // Phase 1: Blue strikes, Red parries
+                if (choreographyTimer < 40) {
+                    const prog = choreographyTimer / 40;
+                    blueFighter.x = blueBaseX + (midX - 25 - blueBaseX) * prog;
+                    blueFighter.swordAngle = 0.35 - prog * 1.8;
+                    blueFighter.action = 'slash';
+                    redFighter.swordAngle = -0.35;
+                    redFighter.shieldAlpha = prog * 0.95;
+                    redFighter.action = 'parry';
+
+                    if (choreographyTimer === 38) {
+                        addSparks(midX - 10, groundY - 35, 22, blueColor, '#fef08a');
+                        addShockwave(midX - 10, groundY - 35, blueColor);
+                        playAudio('clash');
+                    }
+                } else if (choreographyTimer < 80) {
+                    blueFighter.swordAngle = -0.6;
+                    blueFighter.shieldAlpha *= 0.9;
+                    redFighter.shieldAlpha = 0.85;
+                    redFighter.x = redBaseX + 12;
+                } else {
+                    blueFighter.x += (blueBaseX - blueFighter.x) * 0.08;
+                    redFighter.x += (redBaseX - redFighter.x) * 0.08;
+                    blueFighter.swordAngle += (0.35 - blueFighter.swordAngle) * 0.08;
+                    redFighter.shieldAlpha *= 0.88;
                 }
-            } else if (choreographyTimer < 80) {
-                redFighter.swordAngle = 0.6;
-                redFighter.shieldAlpha *= 0.9;
-                blueFighter.shieldAlpha = 0.85;
-                blueFighter.x = blueBaseX - 12;
-            } else {
-                redFighter.x += (redBaseX - redFighter.x) * 0.08;
-                blueFighter.x += (blueBaseX - blueFighter.x) * 0.08;
-                redFighter.swordAngle += (-0.35 - redFighter.swordAngle) * 0.08;
-                blueFighter.shieldAlpha *= 0.88;
+
+            } else if (choreographyPhase === 2) {
+                // Phase 2: Neutral backstep & feint
+                const bounce = Math.sin(choreographyTimer * 0.08) * 2.5;
+                blueFighter.x += (blueBaseX - blueFighter.x) * 0.1;
+                redFighter.x += (redBaseX - redFighter.x) * 0.1;
+                blueFighter.y = groundY + bounce;
+                redFighter.y = groundY + bounce;
+                blueFighter.swordAngle += (0.35 - blueFighter.swordAngle) * 0.1;
+                redFighter.swordAngle += (-0.35 - redFighter.swordAngle) * 0.1;
+                blueFighter.shieldAlpha *= 0.85;
+                redFighter.shieldAlpha *= 0.85;
+
+            } else if (choreographyPhase === 3) {
+                // Phase 3: Red counter-strikes, Blue parries
+                if (choreographyTimer < 40) {
+                    const prog = choreographyTimer / 40;
+                    redFighter.x = redBaseX - (redBaseX - (midX + 25)) * prog;
+                    redFighter.swordAngle = -0.35 + prog * 1.8;
+                    redFighter.action = 'slash';
+                    blueFighter.swordAngle = 0.35;
+                    blueFighter.shieldAlpha = prog * 0.95;
+                    blueFighter.action = 'parry';
+
+                    if (choreographyTimer === 38) {
+                        addSparks(midX + 10, groundY - 35, 22, redColor, '#fef08a');
+                        addShockwave(midX + 10, groundY - 35, redColor);
+                        playAudio('clash');
+                    }
+                } else if (choreographyTimer < 80) {
+                    redFighter.swordAngle = 0.6;
+                    redFighter.shieldAlpha *= 0.9;
+                    blueFighter.shieldAlpha = 0.85;
+                    blueFighter.x = blueBaseX - 12;
+                } else {
+                    redFighter.x += (redBaseX - redFighter.x) * 0.08;
+                    blueFighter.x += (blueBaseX - blueFighter.x) * 0.08;
+                    redFighter.swordAngle += (-0.35 - redFighter.swordAngle) * 0.08;
+                    blueFighter.shieldAlpha *= 0.88;
+                }
+
+            } else if (choreographyPhase === 4) {
+                // Phase 4: Simultaneous Center Clash!
+                if (choreographyTimer < 35) {
+                    const prog = choreographyTimer / 35;
+                    blueFighter.x = blueBaseX + (midX - 16 - blueBaseX) * prog;
+                    redFighter.x = redBaseX - (redBaseX - (midX + 16)) * prog;
+                    blueFighter.swordAngle = 0.35 - prog * 1.5;
+                    redFighter.swordAngle = -0.35 + prog * 1.5;
+
+                    if (choreographyTimer === 33) {
+                        addSparks(midX, groundY - 36, 36, blueColor, redColor);
+                        addShockwave(midX, groundY - 36, '#ffffff');
+                        playAudio('clash');
+                        addFloatingText(midX, groundY - 55, '⚡ DUAL CLASH!', '#fbbf24');
+                    }
+                } else if (choreographyTimer < 75) {
+                    // Recoil bounce
+                    blueFighter.x = blueBaseX - 18;
+                    redFighter.x = redBaseX + 18;
+                    blueFighter.shieldAlpha = 0.8;
+                    redFighter.shieldAlpha = 0.8;
+                } else {
+                    blueFighter.x += (blueBaseX - blueFighter.x) * 0.08;
+                    redFighter.x += (redBaseX - redFighter.x) * 0.08;
+                    blueFighter.swordAngle += (0.35 - blueFighter.swordAngle) * 0.08;
+                    redFighter.swordAngle += (-0.35 - redFighter.swordAngle) * 0.08;
+                    blueFighter.shieldAlpha *= 0.88;
+                    redFighter.shieldAlpha *= 0.88;
+                }
             }
         }
 
@@ -861,7 +1176,7 @@ function initLobbySparringAnimation() {
         // Update & Render Shockwaves
         for (let i = shockwaves.length - 1; i >= 0; i--) {
             const sw = shockwaves[i];
-            sw.radius += 2.2;
+            sw.radius += 2.4;
             sw.alpha *= 0.91;
             if (sw.alpha < 0.02 || sw.radius >= sw.maxRadius) {
                 shockwaves.splice(i, 1);
