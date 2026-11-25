@@ -4420,15 +4420,22 @@ li.CodeMirror-hint-active .hint-desc {
 }
 
 .vic-trophy-glow {
-    font-size: 44px;
+    font-size: 46px;
     line-height: 1;
-    filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.7));
-    animation: vicBounce 1.6s ease-in-out infinite alternate;
+    display: inline-block;
+    will-change: filter, transform;
+    animation: vicGoldenPulse 2.8s ease-in-out infinite alternate;
 }
 
-@keyframes vicBounce {
-    0% { transform: translateY(0) scale(1); }
-    100% { transform: translateY(-4px) scale(1.08); }
+@keyframes vicGoldenPulse {
+    0% {
+        transform: translateY(0);
+        filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.5));
+    }
+    100% {
+        transform: translateY(-3px);
+        filter: drop-shadow(0 0 24px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 35px rgba(251, 191, 36, 0.6));
+    }
 }
 
 .vic-title {
@@ -4596,6 +4603,32 @@ li.CodeMirror-hint-active .hint-desc {
 
 .vic-sub-btn.btn-next:hover {
     filter: brightness(1.1);
+}
+
+.vic-sub-btn.btn-play-again {
+    background: rgba(56, 189, 248, 0.16);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    color: #38bdf8;
+}
+
+.vic-sub-btn.btn-play-again:hover {
+    background: rgba(56, 189, 248, 0.28);
+    color: #ffffff;
+    border-color: #38bdf8;
+    transform: translateY(-1px);
+}
+
+.vic-sub-btn.btn-lobby {
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #cbd5e1;
+}
+
+.vic-sub-btn.btn-lobby:hover {
+    background: rgba(148, 163, 184, 0.22);
+    color: #ffffff;
+    border-color: rgba(148, 163, 184, 0.5);
+    transform: translateY(-1px);
 }
 
 .vic-sub-btn.btn-close {

@@ -667,7 +667,9 @@ else:
 
         <div class="vic-footer-row">
             <a id="vic_next_btn" href="#" class="vic-sub-btn btn-next" style="display: none;">⚔️ Next Stage ➔</a>
-            <button type="button" class="vic-sub-btn btn-close" onclick="closeVictoryDialog()">Continue in Arena</button>
+            <button id="vic_play_again_btn" type="button" class="vic-sub-btn btn-play-again" onclick="request_restart()">🔄 Play Again</button>
+            <a href="/" class="vic-sub-btn btn-lobby">🏠 Main Lobby</a>
+            <button type="button" class="vic-sub-btn btn-close" onclick="closeVictoryDialog()" title="Inspect arena & telemetry">Inspect Arena</button>
         </div>
     </div>
 </dialog>
