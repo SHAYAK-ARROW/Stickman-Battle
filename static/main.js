@@ -44,7 +44,7 @@ function showToast({ title, message, type = 'info', duration = 3500 }) {
 function start_game() {
     // Server creates the private room and issues the Player 1 invite token.
     setTimeout(() => {
-        triggerColdBootNotice('coldboot_host_notice', '⚡ Waking up neural arena servers... (Spins up in ~20s if waking from sleep). Please wait!');
+        triggerColdBootNotice('coldboot_host_notice', '⚡ Waking up arena servers... (Ready in ~20s if waking from sleep). Please wait!');
     }, 1200);
     window.location.href = "/player1";
 }
@@ -273,18 +273,18 @@ function setSaceAvatarLevel(level) {
     if (lvl === 1) {
         if (titleEl) titleEl.innerText = "👑 SACE Master Bot (Avatar 1)";
         if (badgeEl) badgeEl.innerText = "Apprentice";
-        if (descEl) descEl.innerText = "2-Gram Memory · Very slow reactions · Easiest SACE level · Easier than Bot Ladder";
-        if (subHeaderEl) subHeaderEl.innerText = "2-Gram Memory · Apprentice Level · Easiest";
+        if (descEl) descEl.innerText = "Slow reaction speed · Forgives mistakes · Perfect starting dojo";
+        if (subHeaderEl) subHeaderEl.innerText = "Apprentice Dojo · Forgives Mistakes";
     } else if (lvl === 2) {
         if (titleEl) titleEl.innerText = "👑 SACE Master Bot (Avatar 2)";
         if (badgeEl) badgeEl.innerText = "Tactical";
-        if (descEl) descEl.innerText = "4-Gram Memory · Tactical pattern reads & sharper counters";
-        if (subHeaderEl) subHeaderEl.innerText = "4-Gram Memory · Tactical Level";
+        if (descEl) descEl.innerText = "Reads repetitive loops · Punishes predictable attack chains";
+        if (subHeaderEl) subHeaderEl.innerText = "Tactical Duelist · Punishes Whiffs";
     } else {
         if (titleEl) titleEl.innerText = "👑 SACE Master Bot (Avatar 3)";
         if (badgeEl) badgeEl.innerText = "Grandmaster";
-        if (descEl) descEl.innerText = "Full 5-Gram Neural SACE AI · Learns habits & counters loops";
-        if (subHeaderEl) subHeaderEl.innerText = "5-Gram Memory · Learns Your Code";
+        if (descEl) descEl.innerText = "Learns your combat habits live · Parries attack loops · Phase 2 Enrage!";
+        if (subHeaderEl) subHeaderEl.innerText = "Adaptive Brain · Studies Your Code";
     }
 }
 window.setSaceAvatarLevel = setSaceAvatarLevel;
@@ -312,8 +312,8 @@ const TACTICAL_FEATURE_DECK = [
     },
     {
         icon: "🤖",
-        title: "Autonomous AI Practice",
-        desc: "Duel humanized AI bots calibrated with realistic decision delays so every victory feels earned."
+        title: "Adaptive Boss Combat",
+        desc: "Battle 6 unique AI bosses that react, parry, and counter-attack like real martial artists."
     },
     {
         icon: "🛡️",
@@ -352,8 +352,8 @@ const TACTICAL_FEATURE_DECK = [
     },
     {
         icon: "🧠",
-        title: "SACE Neural Master",
-        desc: "The Apex Bot tracks your last 5 actions with an n-gram memory model. Switch between jump slashes and dashes to break its reads!"
+        title: "SACE Adaptive Master",
+        desc: "The Apex Bot studies your last attack chains in real time. Switch between jump slashes and dash counters to break its rhythm!"
     },
     {
         icon: "⚡",
@@ -397,8 +397,8 @@ const TACTICAL_FEATURE_DECK = [
     },
     {
         icon: "🏆",
-        title: "Cryptographic Anti-Cheat",
-        desc: "Every solo arcade victory is validated by an HMAC-SHA256 server token, ensuring all 6 rank milestones are 100% earned."
+        title: "Verified Gauntlet Victories",
+        desc: "Every solo arcade triumph is verified by server-side combat seals, guaranteeing every rank milestone is 100% earned."
     }
 ];
 
