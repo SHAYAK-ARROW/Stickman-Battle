@@ -424,6 +424,482 @@ function initNetworkStatusListeners() {
     }
 }
 
+// ── Live Autonomous Stickman Sparring Hero Canvas ────────────────
+function initLobbySparringAnimation() {
+    const canvas = document.getElementById('lobby_sparring_canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animFrameId = null;
+    let cssWidth = 800;
+    let cssHeight = 160;
+
+    // Handle High-DPI screens
+    function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        cssWidth = rect.width || 800;
+        cssHeight = rect.height || 160;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(cssWidth * dpr);
+        canvas.height = Math.round(cssHeight * dpr);
+        ctx.resetTransform && ctx.resetTransform();
+        ctx.scale(dpr, dpr);
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const groundY = 125;
+    const blueColor = '#38bdf8';
+    const blueBlade = '#0ea5e9';
+    const redColor = '#f43f5e';
+    const redBlade = '#e11d48';
+
+    // Particle system
+    const sparks = [];
+    const floatingTexts = [];
+    const shockwaves = [];
+
+    function addSparks(x, y, count, primaryColor, altColor) {
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.9;
+            const speed = 2.0 + Math.random() * 5.5;
+            sparks.push({
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 1.2,
+                color: Math.random() > 0.4 ? primaryColor : (Math.random() > 0.5 ? altColor : '#fef08a'),
+                size: 1.5 + Math.random() * 2.2,
+                alpha: 1,
+                decay: 0.02 + Math.random() * 0.03
+            });
+        }
+    }
+
+    function addShockwave(x, y, color) {
+        shockwaves.push({
+            x,
+            y,
+            radius: 4,
+            maxRadius: 40,
+            color: color || '#fef08a',
+            alpha: 0.95
+        });
+    }
+
+    function addFloatingText(x, y, text, color) {
+        floatingTexts.push({
+            text,
+            x,
+            y,
+            vy: -1.3,
+            alpha: 1,
+            color: color || '#fbbf24'
+        });
+    }
+
+    // Fighters state
+    const blueFighter = {
+        name: 'Blue',
+        dir: 1, // Facing right
+        x: 320,
+        y: groundY,
+        color: blueColor,
+        bladeColor: blueBlade,
+        swordAngle: 0.35,
+        shieldAlpha: 0,
+        crouch: 0,
+        action: 'idle'
+    };
+
+    const redFighter = {
+        name: 'Red',
+        dir: -1, // Facing left
+        x: 480,
+        y: groundY,
+        color: redColor,
+        bladeColor: redBlade,
+        swordAngle: -0.35,
+        shieldAlpha: 0,
+        crouch: 0,
+        action: 'idle'
+    };
+
+    function triggerManualClash(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const clickX = clientX ? (clientX - rect.left) : (cssWidth * 0.5);
+        const clickY = clientY ? (clientY - rect.top) : (groundY - 30);
+
+        addSparks(clickX, clickY, 32, blueColor, redColor);
+        addShockwave(clickX, clickY, '#fef08a');
+
+        const labels = ['⚔️ CLASH!', '🛡️ PARRY!', '⚡ COUNTER!', '💥 DEFLECT!'];
+        const chosen = labels[Math.floor(Math.random() * labels.length)];
+        addFloatingText(clickX, clickY - 18, chosen, '#fbbf24');
+
+        // Fighters sudden recoil reaction
+        blueFighter.action = 'recoil';
+        blueFighter.x = Math.max(80, blueFighter.x - 22);
+        redFighter.action = 'recoil';
+        redFighter.x = Math.min(cssWidth - 80, redFighter.x + 22);
+    }
+
+    canvas.addEventListener('click', (e) => {
+        triggerManualClash(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches[0]) {
+            triggerManualClash(e.touches[0].clientX, e.touches[0].clientY);
+        }
+    }, { passive: true });
+
+    // Draw single stylized arcade stickman
+    function drawStickman(f) {
+        const x = f.x;
+        const y = f.y;
+        const dir = f.dir;
+        const crouchY = f.crouch;
+
+        ctx.save();
+        ctx.strokeStyle = f.color;
+        ctx.fillStyle = f.color;
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Neon Glow
+        ctx.shadowColor = f.color;
+        ctx.shadowBlur = 10;
+
+        // Head
+        ctx.beginPath();
+        ctx.arc(x, y - 56 + crouchY, 11, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Spine / Torso
+        ctx.beginPath();
+        ctx.moveTo(x, y - 45 + crouchY);
+        ctx.lineTo(x, y - 18 + crouchY);
+        ctx.stroke();
+
+        // Legs
+        ctx.beginPath();
+        if (f.crouch > 5) {
+            ctx.moveTo(x, y - 18 + crouchY);
+            ctx.lineTo(x - 14 * dir, y - 8);
+            ctx.lineTo(x - 18 * dir, y);
+            ctx.moveTo(x, y - 18 + crouchY);
+            ctx.lineTo(x + 12 * dir, y - 8);
+            ctx.lineTo(x + 16 * dir, y);
+        } else {
+            ctx.moveTo(x, y - 18 + crouchY);
+            ctx.lineTo(x - 12 * dir, y);
+            ctx.moveTo(x, y - 18 + crouchY);
+            ctx.lineTo(x + 12 * dir, y);
+        }
+        ctx.stroke();
+
+        // Arms & Katana
+        const shoulderX = x;
+        const shoulderY = y - 40 + crouchY;
+
+        let handX = x + (18 * dir);
+        let handY = y - 32 + crouchY;
+
+        if (f.action === 'slash' || f.action === 'lunge') {
+            handX = x + (32 * dir);
+            handY = y - 38 + crouchY;
+        } else if (f.action === 'parry') {
+            handX = x + (14 * dir);
+            handY = y - 44 + crouchY;
+        } else if (f.action === 'recoil') {
+            handX = x - (10 * dir);
+            handY = y - 26 + crouchY;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(handX, handY);
+        ctx.stroke();
+
+        // Katana Blade
+        ctx.save();
+        ctx.translate(handX, handY);
+        ctx.rotate(f.swordAngle);
+
+        // Hilt
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -6);
+        ctx.stroke();
+
+        // Crossguard
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-4, -6);
+        ctx.lineTo(4, -6);
+        ctx.stroke();
+
+        // Glowing Blade
+        ctx.strokeStyle = f.bladeColor;
+        ctx.shadowColor = f.bladeColor;
+        ctx.shadowBlur = 14;
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(0, -6);
+        ctx.lineTo(0, -38);
+        ctx.stroke();
+
+        // White core highlight
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(0, -6);
+        ctx.lineTo(0, -36);
+        ctx.stroke();
+
+        ctx.restore();
+
+        // Energy Parry Shield Arc
+        if (f.shieldAlpha > 0.05) {
+            ctx.save();
+            ctx.strokeStyle = f.color;
+            ctx.shadowColor = f.color;
+            ctx.shadowBlur = 16;
+            ctx.globalAlpha = Math.min(1, f.shieldAlpha);
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.arc(x + 22 * dir, y - 35, 25, -Math.PI * 0.45, Math.PI * 0.45, dir < 0);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        ctx.restore();
+    }
+
+    let choreographyTimer = 0;
+    let choreographyPhase = 0;
+
+    function renderLoop() {
+        if (document.hidden) {
+            animFrameId = requestAnimationFrame(renderLoop);
+            return;
+        }
+
+        const W = cssWidth;
+        const H = cssHeight;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, W, H);
+
+        // Floor reflection gradient
+        ctx.save();
+        const floorGrad = ctx.createLinearGradient(0, groundY, 0, H);
+        floorGrad.addColorStop(0, 'rgba(56, 189, 248, 0.08)');
+        floorGrad.addColorStop(0.5, 'rgba(168, 85, 247, 0.04)');
+        floorGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = floorGrad;
+        ctx.fillRect(0, groundY, W, H - groundY);
+
+        // Neon ground line
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(168, 85, 247, 0.4)';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(30, groundY);
+        ctx.lineTo(W - 30, groundY);
+        ctx.stroke();
+        ctx.restore();
+
+        const blueBaseX = Math.round(W * 0.38);
+        const redBaseX = Math.round(W * 0.62);
+        const midX = Math.round(W * 0.5);
+
+        choreographyTimer++;
+
+        // 4-Phase Choreography Cycle (3 seconds each)
+        if (choreographyTimer > 180) {
+            choreographyTimer = 0;
+            choreographyPhase = (choreographyPhase + 1) % 4;
+        }
+
+        if (choreographyPhase === 0) {
+            // Idle bounce & approach
+            const bounce = Math.sin(choreographyTimer * 0.08) * 3;
+            blueFighter.x = blueBaseX + Math.sin(choreographyTimer * 0.05) * 8;
+            blueFighter.y = groundY + bounce;
+            blueFighter.crouch = 0;
+            blueFighter.swordAngle = 0.35 + Math.sin(choreographyTimer * 0.07) * 0.15;
+            blueFighter.shieldAlpha *= 0.85;
+
+            redFighter.x = redBaseX - Math.sin(choreographyTimer * 0.05) * 8;
+            redFighter.y = groundY + bounce;
+            redFighter.crouch = 0;
+            redFighter.swordAngle = -0.35 - Math.sin(choreographyTimer * 0.07) * 0.15;
+            redFighter.shieldAlpha *= 0.85;
+
+        } else if (choreographyPhase === 1) {
+            // Blue strikes, Red parries
+            if (choreographyTimer < 40) {
+                const prog = choreographyTimer / 40;
+                blueFighter.x = blueBaseX + (midX - 25 - blueBaseX) * prog;
+                blueFighter.swordAngle = 0.35 - prog * 1.8;
+                blueFighter.action = 'slash';
+                redFighter.swordAngle = -0.35;
+                redFighter.shieldAlpha = prog * 0.95;
+                redFighter.action = 'parry';
+
+                if (choreographyTimer === 38) {
+                    addSparks(midX - 10, groundY - 35, 20, blueColor, '#fef08a');
+                    addShockwave(midX - 10, groundY - 35, blueColor);
+                }
+            } else if (choreographyTimer < 80) {
+                blueFighter.swordAngle = -0.6;
+                blueFighter.shieldAlpha *= 0.9;
+                redFighter.shieldAlpha = 0.85;
+                redFighter.x = redBaseX + 12;
+            } else {
+                blueFighter.x += (blueBaseX - blueFighter.x) * 0.08;
+                redFighter.x += (redBaseX - redFighter.x) * 0.08;
+                blueFighter.swordAngle += (0.35 - blueFighter.swordAngle) * 0.08;
+                redFighter.shieldAlpha *= 0.88;
+            }
+
+        } else if (choreographyPhase === 2) {
+            // Neutral stance reset
+            const bounce = Math.sin(choreographyTimer * 0.08) * 2.5;
+            blueFighter.x += (blueBaseX - blueFighter.x) * 0.1;
+            redFighter.x += (redBaseX - redFighter.x) * 0.1;
+            blueFighter.y = groundY + bounce;
+            redFighter.y = groundY + bounce;
+            blueFighter.swordAngle += (0.35 - blueFighter.swordAngle) * 0.1;
+            redFighter.swordAngle += (-0.35 - redFighter.swordAngle) * 0.1;
+            blueFighter.shieldAlpha *= 0.85;
+            redFighter.shieldAlpha *= 0.85;
+
+        } else if (choreographyPhase === 3) {
+            // Red counter-strikes, Blue parries
+            if (choreographyTimer < 40) {
+                const prog = choreographyTimer / 40;
+                redFighter.x = redBaseX - (redBaseX - (midX + 25)) * prog;
+                redFighter.swordAngle = -0.35 + prog * 1.8;
+                redFighter.action = 'slash';
+                blueFighter.swordAngle = 0.35;
+                blueFighter.shieldAlpha = prog * 0.95;
+                blueFighter.action = 'parry';
+
+                if (choreographyTimer === 38) {
+                    addSparks(midX + 10, groundY - 35, 20, redColor, '#fef08a');
+                    addShockwave(midX + 10, groundY - 35, redColor);
+                }
+            } else if (choreographyTimer < 80) {
+                redFighter.swordAngle = 0.6;
+                redFighter.shieldAlpha *= 0.9;
+                blueFighter.shieldAlpha = 0.85;
+                blueFighter.x = blueBaseX - 12;
+            } else {
+                redFighter.x += (redBaseX - redFighter.x) * 0.08;
+                blueFighter.x += (blueBaseX - blueFighter.x) * 0.08;
+                redFighter.swordAngle += (-0.35 - redFighter.swordAngle) * 0.08;
+                blueFighter.shieldAlpha *= 0.88;
+            }
+        }
+
+        // Draw Shadows below fighters
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(blueFighter.x, groundY + 2, 16, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(redFighter.x, groundY + 2, 16, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Draw Fighters
+        drawStickman(blueFighter);
+        drawStickman(redFighter);
+
+        // Update & Render Shockwaves
+        for (let i = shockwaves.length - 1; i >= 0; i--) {
+            const sw = shockwaves[i];
+            sw.radius += 2.2;
+            sw.alpha *= 0.91;
+            if (sw.alpha < 0.02 || sw.radius >= sw.maxRadius) {
+                shockwaves.splice(i, 1);
+                continue;
+            }
+            ctx.save();
+            ctx.strokeStyle = sw.color;
+            ctx.globalAlpha = sw.alpha;
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = sw.color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Update & Render Sparks
+        for (let i = sparks.length - 1; i >= 0; i--) {
+            const s = sparks[i];
+            s.x += s.vx;
+            s.y += s.vy;
+            s.vy += 0.16;
+            s.alpha -= s.decay;
+
+            if (s.alpha <= 0 || s.y > groundY + 5) {
+                sparks.splice(i, 1);
+                continue;
+            }
+
+            ctx.save();
+            ctx.fillStyle = s.color;
+            ctx.globalAlpha = Math.max(0, s.alpha);
+            ctx.shadowColor = s.color;
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Update & Render Floating Texts
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            const ft = floatingTexts[i];
+            ft.y += ft.vy;
+            ft.alpha -= 0.022;
+
+            if (ft.alpha <= 0) {
+                floatingTexts.splice(i, 1);
+                continue;
+            }
+
+            ctx.save();
+            ctx.font = 'bold 12px "DM Sans", -apple-system, sans-serif';
+            ctx.fillStyle = ft.color;
+            ctx.globalAlpha = Math.max(0, ft.alpha);
+            ctx.textAlign = 'center';
+            ctx.shadowColor = ft.color;
+            ctx.shadowBlur = 10;
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.restore();
+        }
+
+        animFrameId = requestAnimationFrame(renderLoop);
+    }
+
+    animFrameId = requestAnimationFrame(renderLoop);
+}
+
 function triggerColdBootNotice(elementId, msg) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -436,6 +912,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSaceAvatarSelection();
     initRandomFeatureDeck();
     initNetworkStatusListeners();
+    initLobbySparringAnimation();
 });
 
 function join_custom_room() {

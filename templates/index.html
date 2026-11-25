@@ -109,7 +109,7 @@
     </script>
 
     <link rel="icon" type="image/png" href="/static/favicon.png">
-    <link rel="stylesheet" href="/static/style.css?v=2.3.4">
+    <link rel="stylesheet" href="/static/style.css?v=2.3.10">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="/static/profile.js?v=2.3.3"></script>
 </head>
@@ -147,20 +147,29 @@
         </header>
 
         <section class="home-hero">
-            <div class="hub-badge">
-                <span class="hub-badge-dot"></span>
-                <span>Made by Arrows Development Hub</span>
+            <div class="arcade-genre-badge">
+                <span class="arcade-badge-glow"></span>
+                <span class="arcade-badge-icon">🕹️</span>
+                <span>CYBER MARTIAL ARTS ARENA</span>
+                <span class="arcade-badge-sep">·</span>
+                <span class="arcade-badge-sub">ARROWS DEV HUB</span>
             </div>
 
-            <h1 class="hero-title">
-                Your next move<br>
-                <span>starts with code.</span>
+            <h1 class="hero-title arcade-hero-title">
+                CLASH NEON BLADES.<br>
+                <span>CODE YOUR VICTORY.</span>
             </h1>
 
-            <p class="hero-copy">
-                Build a combat strategy in Python, duel in a private 1v1 arena,
-                or practice solo against autonomous AI bots with human-like pacing and trigonometric physics.
+            <p class="hero-copy arcade-hero-copy">
+                Duel autonomous AI bosses or battle friends live in browser-based martial arts combat.
+                Code custom Python algorithms or brawl with 1-click tactical decks!
             </p>
+
+            <!-- ⚔️ Live Autonomous Stickman Sparring Hero Canvas -->
+            <div class="arcade-hero-sparring-wrapper" title="Interactive Sparring Arena · Click anywhere to clash blades!">
+                <canvas id="lobby_sparring_canvas" width="800" height="160" aria-label="Interactive Stickman Sparring Arena"></canvas>
+                <div class="sparring-canvas-hint">⚡ Click or tap arena to trigger an instant blade clash!</div>
+            </div>
 
             <!-- Fluid Percentage-Based Dual Arena Grid (No fixed sizes, fills screen gracefully) -->
             <div class="landing-arena-grid" aria-labelledby="welcome-title">
@@ -168,9 +177,9 @@
                 <!-- LEFT COLUMN: SOLO AI ARCADE ARENA (6 Stages + Practice Dojo) -->
                 <div class="arena-card solo-arena-card">
                     <div class="solo-bot-header">
-                        <span class="action-label" style="color: var(--accent); font-weight: 700; letter-spacing: 1px; font-size: 11px;">SOLO PRACTICE ARENA</span>
-                        <h3 style="font-size: 21px; font-weight: 700; margin: 6px 0 4px; color: var(--text);">Quick Play vs Autonomous AI Bots</h3>
-                        <p class="solo-bot-lead">Test loops, counters, and trigonometric spells solo against AI calibrated with human-paced reaction latency:</p>
+                        <div class="arcade-card-header-badge solo-badge">🕹️ ARCADE BOSS GAUNTLET</div>
+                        <h3 class="arcade-card-title">6-Stage Campaign &amp; Adaptive AI</h3>
+                        <p class="solo-bot-lead">Climb the autonomous AI ladder calibrated with humanized reaction delays and predictive counter-play:</p>
                     </div>
                     
                     <div style="margin: 12px 0 10px; display: flex; align-items: center; justify-content: space-between;">
@@ -372,9 +381,9 @@
                 <!-- RIGHT COLUMN: MULTIPLAYER 1V1 DUELING ARENA (Host / Join) -->
                 <div class="arena-card multiplayer-arena-card">
                     <div class="multiplayer-card-header">
-                        <span class="action-label" style="color: #10b981; font-weight: 700; letter-spacing: 1px; font-size: 11px;">MULTIPLAYER DUELING ARENA</span>
-                        <h3 style="font-size: 21px; font-weight: 700; margin: 6px 0 4px; color: var(--text);">Private 1v1 PvP Match</h3>
-                        <p class="solo-bot-lead">Generate an instant battle room or paste an invite link to duel a friend live:</p>
+                        <div class="arcade-card-header-badge pvp-badge">⚔️ LIVE 1v1 PVP DUEL</div>
+                        <h3 class="arcade-card-title">Real-Time WebSocket Arena</h3>
+                        <p class="solo-bot-lead">Generate an instant battle room or paste an invite link to duel a friend with 60 FPS physics:</p>
                     </div>
 
                     <div class="room-actions-split">
@@ -470,7 +479,7 @@
         </section>
     </main>
     <script src="/static/audio.js?v=2.3.8"></script>
-    <script src="/static/main.js?v=2.3.3"></script>
+    <script src="/static/main.js?v=2.3.10"></script>
     <!-- ========================================== -->
     <!-- 📖 FIGHTER'S HANDBOOK CURRICULUM MODAL     -->
     <!-- ========================================== -->

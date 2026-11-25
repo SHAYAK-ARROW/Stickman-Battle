@@ -1323,6 +1323,40 @@ button { color: inherit; }
     background: var(--accent);
 }
 
+.arcade-genre-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(168, 85, 247, 0.45);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.18) 0%, rgba(56, 189, 248, 0.12) 100%);
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.22);
+    color: #f1f5f9;
+    font: 700 11px/1 'DM Sans', sans-serif;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+}
+.arcade-badge-glow {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 8px #38bdf8;
+    animation: pulse 1.8s infinite;
+}
+.arcade-badge-icon {
+    font-size: 13px;
+}
+.arcade-badge-sep {
+    color: rgba(255, 255, 255, 0.3);
+}
+.arcade-badge-sub {
+    color: #c084fc;
+    font-weight: 600;
+}
+
 .hero-title {
     margin: 0;
     font: 700 clamp(36px, 5.5vw, 56px)/1.06 var(--heading);
@@ -1336,12 +1370,114 @@ button { color: inherit; }
     -webkit-text-fill-color: transparent;
 }
 
+.arcade-hero-title {
+    font-weight: 800;
+    text-shadow: 0 0 35px rgba(168, 85, 247, 0.35);
+}
+.arcade-hero-title span {
+    background: linear-gradient(135deg, #38bdf8 0%, #c084fc 50%, #f43f5e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.45));
+}
+
 .hero-copy {
     max-width: 620px;
     margin: 18px auto 36px;
     color: var(--text-secondary);
     font-size: 15px;
     line-height: 1.7;
+}
+
+.arcade-hero-copy {
+    max-width: 680px;
+    font-size: 15.5px;
+    line-height: 1.65;
+    color: #cbd5e1;
+    margin: 14px auto 18px;
+}
+
+/* ⚔️ Live Stickman Sparring Canvas Hero Wrapper */
+.arcade-hero-sparring-wrapper {
+    position: relative;
+    width: min(100%, 820px);
+    margin: 10px auto 26px;
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    border-radius: 16px;
+    background: radial-gradient(ellipse at 50% 60%, rgba(30, 27, 75, 0.5) 0%, rgba(13, 15, 23, 0.95) 100%);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(168, 85, 247, 0.16), inset 0 0 20px rgba(56, 189, 248, 0.08);
+    overflow: hidden;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.arcade-hero-sparring-wrapper:hover {
+    border-color: rgba(56, 189, 248, 0.55);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 32px rgba(56, 189, 248, 0.22), inset 0 0 25px rgba(244, 63, 94, 0.1);
+}
+
+#lobby_sparring_canvas {
+    display: block;
+    width: 100%;
+    height: 160px;
+    cursor: crosshair;
+}
+
+.sparring-canvas-hint {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: rgba(203, 213, 225, 0.75);
+    text-transform: uppercase;
+    pointer-events: none;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    background: rgba(15, 23, 42, 0.6);
+    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 🕹️ Arcade Mode Cards Headers */
+.arcade-card-header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+.arcade-card-header-badge.solo-badge {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+}
+.arcade-card-header-badge.pvp-badge {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+}
+
+.arcade-card-title {
+    font-size: 21px;
+    font-weight: 700;
+    margin: 6px 0 4px;
+    color: #f8fafc;
+    letter-spacing: -0.3px;
+}
+
+.solo-arena-card {
+    border-top: 3px solid #a855f7 !important;
+}
+.multiplayer-arena-card {
+    border-top: 3px solid #10b981 !important;
 }
 
 /* ── Welcome Card - Spacious 2-Column Actions ──────────────── */
