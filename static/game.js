@@ -405,7 +405,7 @@ function showDefeatDialog(oppTitle, combatDuration, opponentHp, codeLines) {
     if (hpEl) hpEl.innerText = `${opponentHp} / 10`;
 
     const linesEl = document.getElementById('vic_code_lines');
-    if (linesEl) linesEl.innerText = `${codeLines} lines`;
+    if (linesEl) linesEl.innerText = `${codeLines} ${codeLines === 1 ? 'line' : 'lines'}`;
 
     const cleanOpp = oppTitle.replace(/[👑🥋🌱🛡️📐🗡️🔥🐣]/g, '').trim();
     const shareUrl = window.location.origin ? window.location.origin : 'https://arrows-dev.itch.io/stickman-battle';
@@ -436,7 +436,7 @@ function showDefeatDialog(oppTitle, combatDuration, opponentHp, codeLines) {
                 dialog.setAttribute('open', '');
             }
         } catch(e) {}
-    }, 600);
+    }, 1600);
 }
 
 function showVictoryDialog(data) {
@@ -476,11 +476,11 @@ function showVictoryDialog(data) {
         codeLines = val ? val.split('\n').filter(l => l.trim().length > 0).length : 1;
     }
     const linesEl = document.getElementById('vic_code_lines');
-    if (linesEl) linesEl.innerText = `${codeLines} lines`;
+    if (linesEl) linesEl.innerText = `${codeLines} ${codeLines === 1 ? 'line' : 'lines'}`;
 
     const oppName = (data.opponent_title || 'SACE Bot').replace(/[👑🥋🌱🛡️📐🗡️🔥🐣]/g, '').trim();
     const shareUrl = window.location.origin ? window.location.origin : 'https://arrows-dev.itch.io/stickman-battle';
-    const challengeMsg = `⚔️ I just defeated ${oppName} in Stickman Battle in ${data.combat_duration}s with ${data.hp_remaining}/10 HP (${codeLines} lines of Python)!\nCan your code beat mine? 🔥\n🎮 Play free in browser 👉 ${shareUrl}`;
+    const challengeMsg = `⚔️ I just defeated ${oppName} in Stickman Battle in ${data.combat_duration}s with ${data.hp_remaining}/10 HP (${codeLines} ${codeLines === 1 ? 'line' : 'lines'} of Python)!\nCan your code beat mine? 🔥\n🎮 Play free in browser 👉 ${shareUrl}`;
     currentMatchChallengeMsg = challengeMsg;
 
     const quoteEl = document.getElementById('vic_challenge_text');
@@ -524,7 +524,7 @@ function showVictoryDialog(data) {
                 dialog.setAttribute('open', '');
             }
         } catch(e) {}
-    }, 700);
+    }, 1600);
 }
 
 socket.on('match_victory_receipt', function(data) {
@@ -654,8 +654,39 @@ function drawTrigCurve(context, options) {
     context.stroke();
 }
 
+window._arenaLastFrame = null;
+window._entranceStartAt = window._entranceStartAt || 0;
+window._entranceDuration = window._entranceDuration || 2700;
+window._koAnimStartAt = 0;
+window._koSparkedPlayers = {};
+let _cinematicRafId = null;
+let _cinematicEndAt = 0;
+
+function startArenaCinematicLoop(durationMs) {
+    const now = Date.now();
+    _cinematicEndAt = Math.max(_cinematicEndAt, now + (durationMs || 2200));
+    if (_cinematicRafId) return;
+    function step() {
+        if (Date.now() > _cinematicEndAt) {
+            _cinematicRafId = null;
+            return;
+        }
+        if (window._arenaLastFrame) {
+            draw_on_camvas(window._arenaLastFrame, true);
+        }
+        _cinematicRafId = requestAnimationFrame(step);
+    }
+    _cinematicRafId = requestAnimationFrame(step);
+}
+window.startArenaCinematicLoop = startArenaCinematicLoop;
+
 socket.on('match_start', () => {
     console.log("Match started!");
+    if (!window._entranceStartAt || (Date.now() - window._entranceStartAt) > 10000) {
+        window._entranceStartAt = Date.now();
+        window._entranceDuration = 1500;
+        startArenaCinematicLoop(1550);
+    }
     if (!matchTrackedStarted) {
         matchStartTime = Date.now();
         matchCodeRunCount = 0;
@@ -1025,8 +1056,11 @@ function getPlayerProfileTheme() {
     return { icon: avatarIcon, color: themeColor, name: avatarName };
 }
 
-function draw_on_camvas(data) {
+function draw_on_camvas(data, isLocalAnimFrame = false) {
     if (!data || !data.player1 || !data.player2) return;
+    if (!isLocalAnimFrame) {
+        window._arenaLastFrame = data;
+    }
 
     const isPaused = !!data.is_paused;
     isMatchPaused = isPaused;
@@ -1044,7 +1078,7 @@ function draw_on_camvas(data) {
     }
 
     // --- PROCEDURAL AUDIO SFX & COMBAT TELEMETRY EVENT STREAM ---
-    if (!isPaused) {
+    if (!isPaused && !isLocalAnimFrame) {
         const eventsHandled = new Set();
         const targetIsBot = (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM);
         const targetName = (t) => t === 1 ? 'P1' : (targetIsBot ? 'Bot' : 'P2');
@@ -1306,13 +1340,45 @@ function draw_on_camvas(data) {
     // Render sword slash trails & motion blur arcs behind fighters
     draw_sword_trails();
 
+    function easeOutCubic(t) {
+        const c = Math.max(0, Math.min(1, t));
+        return 1 - Math.pow(1 - c, 3);
+    }
+
     // Player Ankar Function
     function draw_player(player, color, playerKey) {
         let x = player.x;
         let y = player.y;
         let dir = player.direction; // 1 (Right) or -1 (Left)
         let is_crouching = player.is_crouching || false;
-        let crouchY = is_crouching ? 35 : 0;
+        const otherPlayer = (playerKey === 'p1') ? data.player2 : data.player1;
+
+        const nowMs = Date.now();
+        const selfDead = (player.heart !== undefined && player.heart <= 0);
+        const otherDead = Boolean(otherPlayer && otherPlayer.heart !== undefined && otherPlayer.heart <= 0);
+        const inKoPose = Boolean(window._koAnimStartAt && (selfDead || otherDead));
+        const koElapsed = inKoPose ? Math.max(0, nowMs - window._koAnimStartAt) : 0;
+        const koLoserT = (inKoPose && selfDead) ? easeOutCubic(Math.min(1, koElapsed / 650)) : 0;
+        const koWinnerT = (inKoPose && !selfDead && otherDead) ? easeOutCubic(Math.min(1, koElapsed / 500)) : 0;
+
+        const entElapsed = window._entranceStartAt ? (nowMs - window._entranceStartAt) : 999999;
+        const entDur = window._entranceDuration || 2700;
+        const inEntrance = !inKoPose && !is_crouching && (player.heart > 0) && entElapsed >= 0 && entElapsed < entDur;
+        let entranceKneel = 0;
+        if (inEntrance) {
+            const p = entElapsed / entDur;
+            let standProgress = 0;
+            if (entDur >= 2200) {
+                if (p >= 0.48) standProgress = easeOutCubic((p - 0.48) / 0.25);
+            } else {
+                if (p >= 0.35) standProgress = easeOutCubic((p - 0.35) / 0.50);
+            }
+            entranceKneel = 1 - Math.max(0, Math.min(1, standProgress));
+        }
+
+        const kneelAmt = (inKoPose && selfDead) ? koLoserT : entranceKneel;
+        let crouchY = is_crouching ? 35 : (kneelAmt * 34);
+        let headLeanX = kneelAmt * (selfDead ? 16 : 9) * dir;
         
         // Defensive cosecant curve projected in front of the fighter.
         if (player.has_dome) {
@@ -1353,7 +1419,7 @@ function draw_on_camvas(data) {
         const renderColor = isFlashed ? '#ffffff' : color;
         ctx.fillStyle = renderColor;
         ctx.beginPath();
-        ctx.arc(x, y + crouchY, 20, 0, Math.PI * 2);
+        ctx.arc(x + headLeanX, y + crouchY, 20, 0, Math.PI * 2);
         ctx.fill();
 
         // 🎯 Floating "▼ YOU" Marker above Player 1 (Never lose track of your fighter!)
@@ -1367,7 +1433,7 @@ function draw_on_camvas(data) {
             const textWidth = ctx.measureText(tagText).width;
             const pillW = textWidth + 12;
             const pillH = 16;
-            const pillX = x - (pillW / 2);
+            const pillX = x + headLeanX - (pillW / 2);
             const pillY = markerY - pillH - 4;
 
             // Pill container with custom avatar theme glow
@@ -1391,14 +1457,14 @@ function draw_on_camvas(data) {
             ctx.fillStyle = p1Theme.color;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(tagText, x, pillY + (pillH / 2) + 0.5);
+            ctx.fillText(tagText, x + headLeanX, pillY + (pillH / 2) + 0.5);
 
             // Downward pointing arrow ▼
             ctx.fillStyle = p1Theme.color;
             ctx.beginPath();
-            ctx.moveTo(x - 4, markerY - 3);
-            ctx.lineTo(x + 4, markerY - 3);
-            ctx.lineTo(x, markerY + 2);
+            ctx.moveTo(x + headLeanX - 4, markerY - 3);
+            ctx.lineTo(x + headLeanX + 4, markerY - 3);
+            ctx.lineTo(x + headLeanX, markerY + 2);
             ctx.closePath();
             ctx.fill();
 
@@ -1409,6 +1475,11 @@ function draw_on_camvas(data) {
         ctx.strokeStyle = renderColor;
         ctx.lineWidth = 5;
         ctx.beginPath();
+        const hipX = x - (kneelAmt * 10 * dir);
+        const hipY = y + 80 + (kneelAmt * 22);
+        const shoulderY = y + 40 + crouchY;
+        const neckX = x + headLeanX * 0.75;
+
         if (is_crouching) {
             // Bent low crouch/duck stance
             ctx.moveTo(x, y + 20 + crouchY); // Gola
@@ -1420,6 +1491,18 @@ function draw_on_camvas(data) {
             ctx.moveTo(x - (10 * dir), y + 70 + crouchY);
             ctx.lineTo(x + (15 * dir), y + 100);
             ctx.lineTo(x + (20 * dir), y + 130);
+        } else if (kneelAmt > 0.02) {
+            // Kneeling samurai bow / defeated kneel stance
+            ctx.moveTo(neckX, y + 20 + crouchY);
+            ctx.lineTo(hipX, hipY);
+            // Back leg folds onto knee at crimson floor (y + 128)
+            ctx.moveTo(hipX, hipY);
+            ctx.lineTo(x - (18 * dir), y + 100 + (kneelAmt * 28));
+            ctx.lineTo(x - (36 * dir), y + 128);
+            // Front leg plants forward knee bent
+            ctx.moveTo(hipX, hipY);
+            ctx.lineTo(x + (18 * kneelAmt * dir), y + 100);
+            ctx.lineTo(x + ((20 - 4 * kneelAmt) * dir), y + 130);
         } else {
             ctx.moveTo(x, y + 20); // Gola
             ctx.lineTo(x, y + 80); // Komor
@@ -1434,7 +1517,22 @@ function draw_on_camvas(data) {
         let sword_hand_x, sword_hand_y;
         let shield_hand_x, shield_hand_y;
 
-        if (is_blocking) {
+        if (inKoPose && selfDead) {
+            sword_hand_x = x + ((35 - koLoserT * 19) * dir);
+            sword_hand_y = y + 45 + (koLoserT * 32);
+            shield_hand_x = x + ((20 - koLoserT * 10) * dir);
+            shield_hand_y = y + 55 + (koLoserT * 24);
+        } else if (entranceKneel > 0.02) {
+            sword_hand_x = x + ((35 - entranceKneel * 16) * dir);
+            sword_hand_y = y + 45 + (entranceKneel * 28);
+            shield_hand_x = x + ((20 - entranceKneel * 6) * dir);
+            shield_hand_y = y + 55 + (entranceKneel * 20);
+        } else if (koWinnerT > 0.02) {
+            sword_hand_x = x + ((35 - koWinnerT * 12) * dir);
+            sword_hand_y = y + 45 - (koWinnerT * 25);
+            shield_hand_x = x + (20 * dir);
+            shield_hand_y = y + 55;
+        } else if (is_blocking) {
             shield_hand_x = x + (40 * dir);
             shield_hand_y = y + 42 + crouchY;
             sword_hand_x = x + (15 * dir);
@@ -1447,11 +1545,11 @@ function draw_on_camvas(data) {
         }
 
         // Dhaler hat (Arm to shield)
-        ctx.moveTo(x, y + 40 + crouchY);
+        ctx.moveTo(neckX, shoulderY);
         ctx.lineTo(shield_hand_x, shield_hand_y);
         
         // Toloyarer hat (Arm to sword)
-        ctx.moveTo(x, y + 40 + crouchY);
+        ctx.moveTo(neckX, shoulderY);
         ctx.lineTo(sword_hand_x, sword_hand_y);
         
         ctx.stroke(); // Shorir aaka sesh
@@ -1459,10 +1557,53 @@ function draw_on_camvas(data) {
         // --- STYLIZED SWORD (Crossguard, grip, pommel & tapered blade) ---
         let has_sword = player.has_sword !== undefined ? player.has_sword : true;
         let swordLen = player.sword_length || 50;
-        if (has_sword && player.sword_angle !== undefined) {
+        const dropSwordOnKo = Boolean(inKoPose && selfDead && has_sword && koLoserT > 0.05);
+
+        if (dropSwordOnKo) {
+            // Defeated fighter drops sword spinning onto the crimson floor (y=594)
+            const floorY = 594;
+            const bounceOffset = koLoserT < 0.78 ? 0 : Math.sin(((koLoserT - 0.78) / 0.22) * Math.PI) * 7;
+            const dropX = x + ((32 + koLoserT * 24) * dir);
+            const dropY = (y + 52) + (floorY - (y + 52)) * koLoserT - bounceOffset;
+            const dropRad = ((86 * koLoserT + 20) * dir) * (Math.PI / 180);
+
+            if (koLoserT >= 0.90 && playerKey && !window._koSparkedPlayers[playerKey]) {
+                window._koSparkedPlayers[playerKey] = true;
+                spawnCombatSparks(dropX, floorY, '#cbd5e1', 8);
+            }
+
+            ctx.save();
+            ctx.translate(dropX, dropY);
+            ctx.rotate(dropRad);
+            ctx.strokeStyle = "#475569";
+            ctx.lineWidth = 3.2;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, 10);
+            ctx.stroke();
+            ctx.strokeStyle = "#94a3b8";
+            ctx.beginPath();
+            ctx.moveTo(-7, 0);
+            ctx.lineTo(7, 0);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(-2.6, 0);
+            ctx.lineTo(-2, -swordLen + 8);
+            ctx.lineTo(0, -swordLen);
+            ctx.lineTo(2, -swordLen + 8);
+            ctx.lineTo(2.6, 0);
+            ctx.closePath();
+            ctx.fillStyle = "rgba(203, 213, 225, 0.8)";
+            ctx.fill();
+            ctx.lineWidth = 1.1;
+            ctx.strokeStyle = "#e2e8f0";
+            ctx.stroke();
+            ctx.restore();
+        } else if (has_sword && player.sword_angle !== undefined) {
             ctx.save();
             ctx.translate(sword_hand_x, sword_hand_y);
-            let rad = ((player.sword_angle + 45) * dir) * (Math.PI / 180);
+            const swordAnglePoseOffset = entranceKneel > 0.02 ? (entranceKneel * 105) : (koWinnerT > 0.02 ? (-koWinnerT * 42) : 0);
+            let rad = ((player.sword_angle + 45 + swordAnglePoseOffset) * dir) * (Math.PI / 180);
             ctx.rotate(rad);
             
             const isHeavy = player.is_heavy;
@@ -2094,7 +2235,10 @@ function draw_on_camvas(data) {
         ctx.restore();
     }
 
-    if (is_game_over && !prevGameOver) {
+    if (is_game_over && !prevGameOver && !isLocalAnimFrame) {
+        window._koAnimStartAt = Date.now();
+        window._koSparkedPlayers = {};
+        startArenaCinematicLoop(2200);
         const p1Dead = (data.player1 && data.player1.heart <= 0);
         const p2Dead = (data.player2 && data.player2.heart <= 0);
         const isDraw = p1Dead && p2Dead;
@@ -2182,7 +2326,9 @@ function draw_on_camvas(data) {
             showDefeatDialog(oppName, combatDur, botHp, codeLines);
         }
     }
-    prevGameOver = is_game_over;
+    if (!isLocalAnimFrame) {
+        prevGameOver = is_game_over;
+    }
 
     const restartBtn = document.getElementById('restart_btn');
     if (restartBtn) {
@@ -2385,6 +2531,11 @@ window.executeSnippetDirect = function(snippet) {
 function request_restart() {
     closeVictoryDialog();
     prevGameOver = false;
+    window._koAnimStartAt = 0;
+    window._koSparkedPlayers = {};
+    window._entranceStartAt = Date.now();
+    window._entranceDuration = 1400;
+    startArenaCinematicLoop(1450);
     matchStartTime = Date.now();
     matchCodeRunCount = 0;
     matchTrackedStarted = false;
@@ -2405,6 +2556,13 @@ socket.on('game_restarted', () => {
     console.log("Game restarted!");
     closeVictoryDialog();
     prevGameOver = false;
+    window._koAnimStartAt = 0;
+    window._koSparkedPlayers = {};
+    if (!window._entranceStartAt || (Date.now() - window._entranceStartAt) > 1600) {
+        window._entranceStartAt = Date.now();
+        window._entranceDuration = 1400;
+        startArenaCinematicLoop(1450);
+    }
     matchStartTime = Date.now();
     matchCodeRunCount = 0;
     matchTrackedStarted = false;

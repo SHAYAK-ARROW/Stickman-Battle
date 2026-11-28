@@ -104,6 +104,7 @@ class SaceBattleBot:
         self.decision_interval = random.uniform(*self.interval_range)
         self.last_decision_time = time.time()
         self.last_banter_time = time.time()
+        self.last_crouch_time = 0.0
         self.last_evasion_time = 0.0
         self.last_melee_reflex_time = 0.0
         self.evaded_spell_ids = set()
@@ -132,6 +133,7 @@ class SaceBattleBot:
         """Resets timers and in-round telemetry for a fresh round."""
         self.last_decision_time = time.time()
         self.last_banter_time = time.time()
+        self.last_crouch_time = 0.0
         self.last_evasion_time = 0.0
         self.last_melee_reflex_time = 0.0
         self.evaded_spell_ids.clear()
@@ -424,6 +426,11 @@ class SaceBattleBot:
                 active_spells=active_spells,
                 current_frame=getattr(room.engine, "frame_count", None)
             )
+            if action_name == "crouch":
+                if now - getattr(self, "last_crouch_time", 0.0) < 2.2:
+                    action_name, param = ("move", -2)
+                else:
+                    self.last_crouch_time = now
             execute_action(bot_char, action_name, param)
 
             # --- DEADLY MICRO-COMBOS (Energy Disciplined: Only when close and energy >= 40) ---

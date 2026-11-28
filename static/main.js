@@ -300,17 +300,17 @@ function setSaceAvatarLevel(level) {
     const subHeaderEl = document.getElementById('sace_section_intel');
 
     if (lvl === 1) {
-        if (titleEl) titleEl.innerText = "👑 SACE Master Bot (Avatar 1)";
+        if (titleEl) titleEl.innerText = "SACE Master Bot (Avatar 1)";
         if (badgeEl) badgeEl.innerText = "Apprentice";
         if (descEl) descEl.innerText = "Slow reaction speed · Forgives mistakes · Perfect starting dojo";
         if (subHeaderEl) subHeaderEl.innerText = "Apprentice Dojo · Forgives Mistakes";
     } else if (lvl === 2) {
-        if (titleEl) titleEl.innerText = "👑 SACE Master Bot (Avatar 2)";
+        if (titleEl) titleEl.innerText = "SACE Master Bot (Avatar 2)";
         if (badgeEl) badgeEl.innerText = "Tactical";
         if (descEl) descEl.innerText = "Reads repetitive loops · Punishes predictable attack chains";
         if (subHeaderEl) subHeaderEl.innerText = "Tactical Duelist · Punishes Whiffs";
     } else {
-        if (titleEl) titleEl.innerText = "👑 SACE Master Bot (Avatar 3)";
+        if (titleEl) titleEl.innerText = "SACE Master Bot (Avatar 3)";
         if (badgeEl) badgeEl.innerText = "Grandmaster";
         if (descEl) descEl.innerText = "Learns your combat habits live · Parries attack loops · Phase 2 Enrage!";
         if (subHeaderEl) subHeaderEl.innerText = "Adaptive Brain · Studies Your Code";

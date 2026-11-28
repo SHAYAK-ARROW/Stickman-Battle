@@ -158,7 +158,7 @@ python game.py
 ## 📚 6. Master Function & Symbol Dictionary
 
 > **Instant Lookup Reference for Agents & Developers**  
-> Total indexed functions: **~328 functions** (158 Python backend + 170 JavaScript frontend).  
+> Total indexed functions: **~329 functions** (158 Python backend + 171 JavaScript frontend).  
 > *How to inspect:* Search symbol with `Select-String` / `grep` to find exact line, then read with `read_file(StartLine, EndLine)`.
 
 ### 🐍 Python Backend & AI Modules
@@ -392,7 +392,7 @@ python game.py
 | `triggerColdBootNotice(elementId, msg)` | L1477 | UI / client helper routine |
 | `join_custom_room()` | L1492 | UI / client helper routine |
 
-#### `static/game.js` — Game Cockpit Runtime & WebSocket Bridge (39 functions)
+#### `static/game.js` — Game Cockpit Runtime & WebSocket Bridge (40 functions)
 
 | Function / Routine | Baseline Line | Description / Purpose |
 | :--- | :---: | :--- |
@@ -414,6 +414,7 @@ python game.py
 | `notify()` | L536 | UI / client helper routine |
 | `closeVictoryDialog()` | L570 | UI / client helper routine |
 | `drawTrigCurve(context, options)` | L616 | UI / client helper routine |
+| `startArenaCinematicLoop(durationMs)` | L665 | Drives local 60 FPS entrance kneel/rise and K.O. sword-drop animations |
 | `spawnCombatSparks(x, y, color, count)` | L850 | Spawns kinetic combat spark particles |
 | `draw_combat_sparks()` | L868 | Renders active spark particles |
 | `spawnCombatPopup(x, y, text, color, scale)` | L745 | Spawns floating damage/clash/dodge text popups |

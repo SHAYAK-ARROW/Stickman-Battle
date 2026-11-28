@@ -1931,7 +1931,7 @@ class MasterBotBrain:
                 else:
                     return ("run", 3)
 
-        # 4. Low Self-Energy Preservation: conserve stamina, avoid stalling!
+        # 4. Low Self-Energy Preservation: conserve stamina, step back to recover instead of crouch-looping!
         if self_energy < 15:
             if dist_cat == "CLOSE":
                 if self_energy >= 10:
@@ -1939,9 +1939,9 @@ class MasterBotBrain:
                 elif self_energy >= 5:
                     return ("swing", 0)
                 else:
-                    return ("crouch", 0)
+                    return ("move", -2)
             elif dist_cat == "MID":
-                return ("dodge", 1) if self_energy >= 10 else ("move", 1)
+                return ("dodge", 1) if self_energy >= 10 else ("move", -1)
             else:
                 return ("move", 1)
 
@@ -2115,7 +2115,7 @@ class MasterBotBrain:
                 elif self_energy >= 5:
                     chosen = ("swing", 0)
                 else:
-                    chosen = ("crouch", 0)
+                    chosen = ("move", -2)
             elif dist_cat == "MID":
                 if self_energy >= 10:
                     chosen = ("dodge", 1)

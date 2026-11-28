@@ -60,7 +60,7 @@
 
         <div class="brand-text-wrap">
 
-            <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v2.3</span></span>
+            <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v2.4</span></span>
 
             <span class="brand-subtitle">Made by Arrows Development Hub</span>
 
@@ -1614,6 +1614,11 @@ function startBattleCountdown() {
 
     overlay.style.display = 'flex';
     overlay.style.opacity = '1';
+    window._entranceStartAt = Date.now();
+    window._entranceDuration = 2700;
+    if (typeof window.startArenaCinematicLoop === 'function') {
+        window.startArenaCinematicLoop(2750);
+    }
 
     function setStep(label, color, popClass, soundFn) {
         numText.innerText = label;
@@ -1695,11 +1700,15 @@ function startBattleCountdown() {
             overlay.style.opacity = '1';
         }, 260);
 
-        if (window.codeMirrorInstance) {
-            window.codeMirrorInstance.focus();
+        // Keep keyboard focus on arena so Keys 1-6 quick moves work immediately
+        if (window.codeMirrorInstance && typeof window.codeMirrorInstance.getInputField === 'function') {
+            window.codeMirrorInstance.getInputField().blur();
         } else {
             const ed = document.getElementById('ide') || document.getElementById('code_input');
-            if (ed) ed.focus();
+            if (ed && typeof ed.blur === 'function') ed.blur();
+        }
+        if (document.activeElement && document.activeElement !== document.body && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
         }
     }, 2700);
 }
@@ -1737,7 +1746,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/audio.js?v=2.3.8"></script>
 
-<script src="/static/game.js?v=2.4.0"></script>
+<script src="/static/game.js?v=2.4.1"></script>
 
 <script src="/static/lib/codemirror/codemirror.min.js"></script>
 

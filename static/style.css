@@ -4968,6 +4968,8 @@ li.CodeMirror-hint-active .hint-desc {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding-bottom: 135px;
+    background: transparent;
     pointer-events: none;
     z-index: 99;
     overflow: hidden;
