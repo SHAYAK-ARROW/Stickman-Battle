@@ -470,7 +470,8 @@ function initLobbySparringAnimation() {
         toppleState: 'upright',
         toppleDir: 1,
         toppleTimer: 0,
-        isDragged: false
+        isDragged: false,
+        isChoreoVaulting: false
     };
 
     const redFighter = {
@@ -492,7 +493,8 @@ function initLobbySparringAnimation() {
         toppleState: 'upright',
         toppleDir: -1,
         toppleTimer: 0,
-        isDragged: false
+        isDragged: false,
+        isChoreoVaulting: false
     };
 
     function updateFighterOrientations() {
@@ -586,6 +588,7 @@ function initLobbySparringAnimation() {
 
         if (dragTarget) {
             dragTarget.isDragged = true;
+            dragTarget.isChoreoVaulting = false;
             dragTarget.toppleState = 'upright';
             dragTarget.toppleAngle = 0;
             dragTarget.action = 'idle';
@@ -961,8 +964,8 @@ function initLobbySparringAnimation() {
 
         // ── Physics Integration (Gravity, Inertia, Friction, Recovery) ────
         [blueFighter, redFighter].forEach(f => {
-            // Mid-air gravity drop or falling tumble
-            if (!f.isDragged && f.y < groundY) {
+            // Mid-air gravity drop or falling tumble (skip while executing scripted leapfrog vault)
+            if (!f.isDragged && !f.isChoreoVaulting && f.y < groundY) {
                 f.vy += 1.2;
                 f.y += f.vy;
                 f.x += f.vx;
@@ -1073,9 +1076,10 @@ function initLobbySparringAnimation() {
         }
 
         // ── ⚔️ Autonomous Acrobatic Combat Choreography (Both Ready) ────────
+        const inVaultPhase = (choreographyPhase === 2 && (blueFighter.isChoreoVaulting || redFighter.isChoreoVaulting));
         const bothReady = (!blueFighter.isDragged && !redFighter.isDragged &&
                            blueFighter.toppleState === 'upright' && redFighter.toppleState === 'upright' &&
-                           blueFighter.y >= groundY - 2 && redFighter.y >= groundY - 2);
+                           (inVaultPhase || (blueFighter.y >= groundY - 2 && redFighter.y >= groundY - 2)));
 
         if (bothReady) {
             choreographyTimer++;
@@ -1099,9 +1103,16 @@ function initLobbySparringAnimation() {
             if (choreographyTimer > (phaseDurations[choreographyPhase] || 120)) {
                 choreographyTimer = 0;
                 choreographyPhase = (choreographyPhase + 1) % 4;
+                blueFighter.isChoreoVaulting = false;
+                redFighter.isChoreoVaulting = false;
                 // Roll new dynamic combat variance and near-miss / whiff chance
                 combatErrorJitter = (Math.random() - 0.5) * 16;
                 combatWhiffRoll = (Math.random() < 0.24);
+            }
+
+            if (choreographyPhase !== 2) {
+                blueFighter.isChoreoVaulting = false;
+                redFighter.isChoreoVaulting = false;
             }
 
             if (choreographyPhase === 0) {
@@ -1186,23 +1197,33 @@ function initLobbySparringAnimation() {
                 }
 
             } else if (choreographyPhase === 2) {
-                // Sequence 2: 🤸 ACROBATIC LEAPFROG VAULT OVER OPPONENT'S HEAD! (Paced & Varied Apex)
+                // Sequence 2: 🤸 ACROBATIC LEAPFROG VAULT OVER OPPONENT'S HEAD! (Smooth continuous arc)
                 const midX = (leftF.baseX + rightF.baseX) * 0.5;
-                const vaultApex = 75 + combatErrorJitter; // Natural jump height error/variation
+                const vaultApex = 82 + combatErrorJitter; // Natural jump height error/variation
+                const targetVaultX = Math.min(W - 36, rightF.baseX + 60);
 
                 if (choreographyTimer < 56) {
                     const prog = choreographyTimer / 56;
+                    leftF.isChoreoVaulting = true;
+                    rightF.isChoreoVaulting = false;
+
                     // Right dashes low with ground katana sweep
                     rightF.x = rightF.baseX - (rightF.baseX - (midX - 25)) * prog;
                     rightF.crouch = prog * 15;
                     rightF.swordAngle = -0.35 - prog * 1.1;
                     rightF.action = 'lunge';
 
-                    // Left vaults completely over Right's head into high air!
-                    leftF.x = leftF.baseX + ((rightF.baseX + 60) - leftF.baseX) * prog;
-                    leftF.y = groundY - Math.sin(prog * Math.PI) * vaultApex;
+                    // Left vaults smoothly over Right's head in one clean parabolic arc
+                    leftF.x = leftF.baseX + (targetVaultX - leftF.baseX) * prog;
+                    leftF.y = Math.max(minHeadRoomY, groundY - Math.sin(prog * Math.PI) * vaultApex);
                     leftF.swordAngle = 0.35 + prog * (Math.PI * 1.5);
                     leftF.action = 'slash';
+
+                    // Turn to face each other once passing overhead
+                    if (leftF.x > rightF.x) {
+                        leftF.dir = -1;
+                        rightF.dir = 1;
+                    }
 
                     // Clashes right at peak mid-air apex!
                     if (choreographyTimer === 28) {
@@ -1215,17 +1236,35 @@ function initLobbySparringAnimation() {
                         addFloatingText(clashX, clashY - 25, jumpTexts[Math.floor(Math.random() * jumpTexts.length)], '#38bdf8');
                     }
                 } else if (choreographyTimer < 95) {
-                    leftF.y += (groundY - leftF.y) * 0.1;
-                    leftF.crouch = 10;
+                    if (choreographyTimer === 56) {
+                        leftF.isChoreoVaulting = false;
+                        leftF.y = groundY;
+                        leftF.crouch = 12;
+                        addSparks(leftF.x, groundY - 2, 7, leftF.color, '#ffffff');
+                        playAudio('kipup');
+                    }
+                    leftF.y = groundY;
+                    leftF.x = targetVaultX;
+                    leftF.crouch *= 0.92;
                     rightF.crouch *= 0.92;
                     rightF.shieldAlpha = 0.85;
+                    if (leftF.x > rightF.x) {
+                        leftF.dir = -1;
+                        rightF.dir = 1;
+                    }
                 } else {
+                    leftF.isChoreoVaulting = false;
+                    rightF.isChoreoVaulting = false;
                     leftF.y = groundY;
-                    leftF.x += (leftF.baseX - leftF.x) * 0.05;
-                    rightF.x += (rightF.baseX - rightF.x) * 0.05;
+                    leftF.x += (leftF.baseX - leftF.x) * 0.08;
+                    rightF.x += (rightF.baseX - rightF.x) * 0.08;
                     leftF.swordAngle += (0.35 - leftF.swordAngle) * 0.06;
                     rightF.swordAngle += (-0.35 - rightF.swordAngle) * 0.06;
                     rightF.shieldAlpha *= 0.9;
+                    if (leftF.x > rightF.x) {
+                        leftF.dir = -1;
+                        rightF.dir = 1;
+                    }
                 }
 
             } else if (choreographyPhase === 3) {
