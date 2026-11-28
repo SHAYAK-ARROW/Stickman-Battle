@@ -115,15 +115,18 @@
     </script>
 
     <link rel="icon" type="image/png" href="/static/favicon.png">
-    <link rel="stylesheet" href="/static/style.css?v=2.4.1">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="/static/profile.js?v=2.3.5"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"></noscript>
+    <link rel="stylesheet" href="/static/style.css?v=2.4.4">
+    <script src="/static/profile.js?v=2.3.5" defer></script>
 </head>
 <body class="home-page">
     <main class="home-shell">
         <header class="site-header">
-            <a class="brand" href="/" aria-label="Stickman Battle home">
-                <img class="brand-mark" src="/static/favicon.png" alt="Stickman Battle Icon" width="32" height="32">
+            <a class="brand" href="/">
+                <img class="brand-mark" src="/static/favicon.png" alt="" width="32" height="32">
                 <div class="brand-text-wrap">
                     <span class="brand-title">Stickman <span class="brand-light">Battle</span> <span class="version-badge">v2.4</span></span>
                     <span class="brand-subtitle">Made by Arrows Development Hub</span>
@@ -187,7 +190,7 @@
                 <div class="arena-card solo-arena-card">
                     <div class="solo-bot-header">
                         <div class="arcade-card-header-badge solo-badge">SOLO CAMPAIGN</div>
-                        <h3 class="arcade-card-title">6-Stage Boss Ladder</h3>
+                        <h2 class="arcade-card-title">6-Stage Boss Ladder</h2>
                         <p class="solo-bot-lead">Defeat each boss in order. Every stage brings a new weapon style and counter:</p>
                     </div>
                     
@@ -387,7 +390,7 @@
                 <div class="arena-card multiplayer-arena-card">
                     <div class="multiplayer-card-header">
                         <div class="arcade-card-header-badge pvp-badge">1V1 MULTIPLAYER</div>
-                        <h3 class="arcade-card-title">Duel a Friend</h3>
+                        <h2 class="arcade-card-title">Duel a Friend</h2>
                         <p class="solo-bot-lead">Create a private room or paste an invite code to fight head-to-head live:</p>
                     </div>
 
@@ -464,8 +467,8 @@
             </nav>
         </section>
     </main>
-    <script src="/static/audio.js?v=2.3.8"></script>
-    <script src="/static/main.js?v=2.4.3"></script>
+    <script src="/static/audio.js?v=2.3.8" defer></script>
+    <script src="/static/main.js?v=2.4.3" defer></script>
     <!-- ========================================== -->
     <!-- 📖 FIGHTER'S HANDBOOK CURRICULUM MODAL     -->
     <!-- ========================================== -->

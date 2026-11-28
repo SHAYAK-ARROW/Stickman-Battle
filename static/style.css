@@ -1,6 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
-
-/* ── Design Tokens ─────────────────────────────────────────── */
+/* ── Design Tokens (Google Fonts loaded non-blocking in HTML) ── */
 :root {
     color-scheme: dark;
     font-family: 'DM Sans', 'Segoe UI', sans-serif;
@@ -590,12 +588,12 @@ button { color: inherit; }
 
 .button-primary {
     background: var(--accent);
-    color: #1a1424;
+    color: #ffffff;
     border-color: var(--accent);
 }
 .button-primary:hover:not(:disabled) {
-    background: #c5aee6;
-    border-color: #c5aee6;
+    background: #f43f5e;
+    border-color: #f43f5e;
 }
 
 .button-secondary {
