@@ -4355,10 +4355,53 @@ li.CodeMirror-hint-active .hint-desc {
     #game_canvas {
         width: 100% !important;
         height: auto !important;
-        max-height: calc(100vh - 100px) !important;
+        max-height: calc(100vh - 118px) !important;
         max-width: 100% !important;
         object-fit: contain !important;
         display: block !important;
+    }
+
+    /* Compact Battle Start Gate in landscape so Title & FIGHT! never clip */
+    .battle-start-gate {
+        padding: 4px !important;
+        overflow-y: auto !important;
+    }
+    .gate-card {
+        width: 92% !important;
+        max-width: 92% !important;
+        padding: 8px 12px !important;
+        gap: 4px !important;
+        border-radius: 10px !important;
+    }
+    .gate-badge {
+        font-size: 8.5px !important;
+        padding: 2px 7px !important;
+    }
+    .gate-title {
+        font-size: 14px !important;
+        margin-top: 0 !important;
+        line-height: 1.15 !important;
+    }
+    .gate-intel-box {
+        padding: 4px 8px !important;
+        gap: 2px !important;
+        margin: 0 !important;
+    }
+    .gate-intel-label {
+        font-size: 8.5px !important;
+    }
+    .gate-intel-text {
+        font-size: 10.5px !important;
+        line-height: 1.25 !important;
+    }
+    .gate-desc,
+    .gate-hint {
+        display: none !important;
+    }
+    .gate-enter-btn {
+        margin-top: 2px !important;
+        padding: 6px 18px !important;
+        font-size: 12px !important;
     }
 
     /* Tactical Panic / Emergency Bar */
@@ -4437,16 +4480,16 @@ li.CodeMirror-hint-active .hint-desc {
 
     /* Editor Frame & CodeMirror */
     .editor-frame {
-        height: 145px !important;
-        min-height: 145px !important;
-        max-height: 145px !important;
+        height: 130px !important;
+        min-height: 130px !important;
+        max-height: 130px !important;
         overflow: hidden !important;
-        margin-bottom: 2px !important;
+        margin-bottom: 4px !important;
     }
     .CodeMirror {
-        height: 145px !important;
-        min-height: 145px !important;
-        max-height: 145px !important;
+        height: 130px !important;
+        min-height: 130px !important;
+        max-height: 130px !important;
         font-size: 11px !important;
         line-height: 1.4 !important;
         border-radius: 6px !important;
@@ -4457,29 +4500,62 @@ li.CodeMirror-hint-active .hint-desc {
         padding: 0 3px !important;
     }
 
-    /* 1-Click Duel chips (Horizontal scroll) */
+    /* Circular Quick Moves Dock (unclipped single row) */
     .quick-code-chips-row,
-    .quick-duel-chips-wrap {
+    .tactical-action-dock {
         display: flex !important;
         flex-wrap: nowrap !important;
-        overflow-x: auto !important;
-        gap: 3px !important;
-        padding: 2px 0 !important;
-        max-height: 26px !important;
-        -webkit-overflow-scrolling: touch;
+        align-items: center !important;
+        gap: 6px !important;
+        padding: 4px 8px !important;
+        margin-bottom: 4px !important;
+        max-height: none !important;
+        overflow: visible !important;
+        border-radius: 12px !important;
     }
-    .quick-code-chips-row::-webkit-scrollbar,
-    .quick-duel-chips-wrap::-webkit-scrollbar {
-        height: 3px;
-    }
-    .code-chip,
-    .quick-chip {
-        font-size: 8.5px !important;
-        padding: 1px 5px !important;
-        min-height: 18px !important;
-        height: 18px !important;
-        white-space: nowrap !important;
+    .dock-header {
+        padding: 0 !important;
         flex-shrink: 0 !important;
+    }
+    .dock-title-badge {
+        font-size: 8.5px !important;
+        line-height: 1.1 !important;
+    }
+    .dock-hotkey-hint,
+    .dock-separator {
+        display: none !important;
+    }
+    .dock-divider {
+        height: 22px !important;
+    }
+    .dock-buttons-container {
+        width: auto !important;
+        flex: 1 1 auto !important;
+        justify-content: space-between !important;
+        gap: 4px !important;
+        flex-wrap: nowrap !important;
+    }
+    .dock-action-wrapper {
+        gap: 2px !important;
+    }
+    .dock-action-circle {
+        width: 30px !important;
+        height: 30px !important;
+        min-width: 30px !important;
+        min-height: 30px !important;
+        max-width: 30px !important;
+        max-height: 30px !important;
+    }
+    .circle-icon {
+        font-size: 13px !important;
+    }
+    .circle-key {
+        width: 12px !important;
+        height: 12px !important;
+        font-size: 7px !important;
+    }
+    .circle-label {
+        font-size: 7px !important;
     }
 
     /* Editor Toolbar & Run Button */
@@ -4487,19 +4563,24 @@ li.CodeMirror-hint-active .hint-desc {
     .editor-bottom-bar {
         display: flex !important;
         flex-direction: row !important;
+        flex-wrap: wrap !important;
         gap: 4px !important;
         padding-top: 2px !important;
+        margin-top: 2px !important;
         align-items: center !important;
+        width: 100% !important;
     }
     .editor-toolbar .button,
     .editor-bottom-bar .button {
-        font-size: 10px !important;
-        padding: 3px 8px !important;
+        font-size: 9.5px !important;
+        padding: 3px 6px !important;
         min-height: 24px !important;
         height: 24px !important;
+        min-width: 0 !important;
+        white-space: nowrap !important;
     }
     #run_btn {
-        flex: 1 !important;
+        flex: 1 1 auto !important;
         font-weight: 700 !important;
     }
 }
@@ -5185,11 +5266,53 @@ li.CodeMirror-hint-active .hint-desc {
         overflow-x: visible;
         gap: 5px;
     }
-    .emergency-defense-bar {
+    .emergency-bar {
         flex-wrap: wrap;
         gap: 6px;
         padding: 6px 8px;
     }
+
+    /* Responsive stacked cards for Commands Manual on mobile so Description never clips */
+    #commands_dialog {
+        width: calc(100% - 14px);
+        max-width: 100%;
+        max-height: 88vh;
+        padding: 12px;
+        margin: auto;
+    }
+    #commands_dialog .dialog-header-row h3 {
+        font-size: 15px;
+    }
+    .manual-table-wrap {
+        max-height: calc(88vh - 125px);
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+    #commands_dialog thead {
+        display: none;
+    }
+    #commands_dialog table,
+    #commands_dialog tbody,
+    #commands_dialog tr,
+    #commands_dialog td {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        border-right: 0;
+    }
+    #commands_dialog tr {
+        padding: 9px 10px;
+        border-bottom: 1px solid var(--border);
+    }
+    #commands_dialog td {
+        border-bottom: 0;
+        padding: 2px 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (max-width: 720px) and (orientation: portrait) {
 
     /* 4. Compact Battle Gate so Stage Title, Intel & FIGHT! button never clip on phone */
     .battle-start-gate {
