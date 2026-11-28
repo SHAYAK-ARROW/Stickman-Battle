@@ -3514,8 +3514,13 @@ li.CodeMirror-hint-active .hint-desc {
 /* 💾 In-Game Cyber Save Strategy Modal */
 #save_strategy_dialog {
     width: min(440px, calc(100% - 32px));
-    max-height: 86vh;
-    overflow: hidden;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    margin: auto;
     padding: 0;
     border: 1px solid rgba(80, 250, 123, 0.45);
     border-radius: 14px;
@@ -3639,8 +3644,13 @@ li.CodeMirror-hint-active .hint-desc {
 /* 📁 Strategy Vault Dialog Deck Modal */
 #strategy_vault_dialog {
     width: min(960px, calc(100% - 24px));
-    max-height: 88vh;
-    overflow: hidden;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    margin: auto;
     padding: 22px;
     border: 1px solid rgba(189, 147, 249, 0.4);
     border-radius: var(--radius, 12px);
@@ -4591,13 +4601,19 @@ li.CodeMirror-hint-active .hint-desc {
 .victory-challenge-dialog {
     width: min(540px, calc(100% - 24px));
     max-width: 540px;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
     background: linear-gradient(145deg, #0d1117 0%, #161b22 60%, #1a162b 100%);
     border: 1px solid rgba(245, 158, 11, 0.45);
     border-radius: 16px;
     padding: 0;
+    margin: auto;
     color: #f1f5f9;
     box-shadow: 0 0 50px rgba(245, 158, 11, 0.22), 0 20px 40px rgba(0, 0, 0, 0.7);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .victory-challenge-dialog.is-defeat {
@@ -4812,11 +4828,39 @@ li.CodeMirror-hint-active .hint-desc {
 
 .vic-footer-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
     padding-top: 6px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-height: 680px), (max-width: 600px) {
+    .vic-dialog-shell {
+        padding: 16px 14px;
+        gap: 11px;
+    }
+    .vic-trophy-glow {
+        font-size: 36px;
+    }
+    .vic-title {
+        font-size: 20px;
+    }
+    .vic-stats-grid {
+        gap: 7px;
+    }
+    .vic-stat-card {
+        padding: 8px 4px;
+    }
+    .vic-btn {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+    .vic-footer-row .vic-sub-btn {
+        flex: 1 1 calc(50% - 6px);
+        text-align: center;
+    }
 }
 
 .vic-sub-btn {
@@ -4889,7 +4933,9 @@ li.CodeMirror-hint-active .hint-desc {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     animation: fadeInOverlay 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -4897,6 +4943,10 @@ li.CodeMirror-hint-active .hint-desc {
     position: relative;
     width: 100%;
     max-width: 440px;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    margin: auto;
     background: linear-gradient(155deg, #131728 0%, #090b14 100%);
     border: 1px solid rgba(239, 68, 68, 0.45);
     border-radius: 24px;
