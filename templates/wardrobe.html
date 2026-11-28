@@ -673,13 +673,14 @@ sword.change_color("crimson")</textarea>
                     name: avatar.name,
                     color: avatar.theme
                 }));
+                localStorage.setItem('sb_player_avatar', avatar.icon);
             } catch(e) {}
 
             renderAvatarGallery();
             updateEquippedBadge(avatar);
 
-            if (window.AudioEngine && window.AudioEngine.playButtonClick) {
-                window.AudioEngine.playButtonClick();
+            if (window.AudioEngine && window.AudioEngine.playClick) {
+                window.AudioEngine.playClick();
             }
         }
 

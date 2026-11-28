@@ -178,7 +178,7 @@
 
         // Update all avatar choice button highlights
         document.querySelectorAll('.profile-avatar-choice').forEach(btn => {
-            btn.classList.toggle('is-active', btn.textContent.trim() === avatar);
+            btn.classList.toggle('is-active', btn.getAttribute('data-icon') === avatar);
         });
 
         // Update all rank badges & rank dots
@@ -245,7 +245,7 @@
                         <label class="profile-section-label" for="profile_name_field">FIGHTER HANDLE (MAX 20 CHARS)</label>
                         <div class="profile-input-group">
                             <span class="profile-input-icon">👤</span>
-                            <input type="text" id="profile_name_field" class="profile-text-input" maxlength="20" placeholder="Enter your fighter handle..." value="${getPlayerName()}">
+                            <input type="text" id="profile_name_field" class="profile-text-input" maxlength="20" placeholder="Enter your fighter handle...">
                             <button type="button" class="button button-primary profile-save-btn" onclick="window.PlayerProfile.saveNameFromModal()">Save</button>
                         </div>
                         <div id="profile_save_feedback" class="profile-feedback-msg" style="display: none;"></div>
@@ -298,9 +298,10 @@
 
         document.body.appendChild(modal);
 
-        // Bind Enter key on name field
+        // Bind Enter key and safely populate handle without HTML attribute escaping issues
         const inputField = modal.querySelector('#profile_name_field');
         if (inputField) {
+            inputField.value = getPlayerName();
             inputField.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     saveNameFromModal();
