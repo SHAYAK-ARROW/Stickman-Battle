@@ -1,7 +1,7 @@
 # 🗺️ STICKMAN BATTLE — CODEBASE ARCHITECTURE & SYSTEM MAP
 
 > **Quick Reference Guide for Developers & AI Agents**  
-> **Active Git Branch:** `v2.3` *(Work exclusively on `v2.3` — STRICTLY NO PUSH, NO MERGE TO MAIN)*  
+> **Active Git Branch:** `v2.4` *(Work exclusively on `v2.4` — STRICTLY NO PUSH, NO MERGE TO MAIN)*  
 > **Tech Stack:** Python 3.10+ · Flask · Flask-SocketIO · HTML5 Canvas (60 FPS) · CodeMirror 5 · Web Audio API · Vanilla JS
 
 ---
@@ -149,7 +149,7 @@ python game.py
 ---
 
 ## 🔒 5. Development Constraints
-1. **BRANCH SAFETY:** Work exclusively on local branch `v2.3`. **NEVER push or merge to `main`.**
+1. **BRANCH SAFETY:** Work exclusively on local branch `v2.4`. **NEVER push or merge to `main`.**
 2. **NO BROWSER PROMPTS:** Never use native `prompt()`, `alert()`, or `confirm()`. Use stylized in-game cyber modals.
 3. **COMMUNICATION:** Friendly, warm Bengali using polite informal "তুমি".
 
