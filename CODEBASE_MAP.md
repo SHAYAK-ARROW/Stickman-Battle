@@ -158,7 +158,7 @@ python game.py
 ## 📚 6. Master Function & Symbol Dictionary
 
 > **Instant Lookup Reference for Agents & Developers**  
-> Total indexed functions: **~322 functions** (155 Python backend + 167 JavaScript frontend).  
+> Total indexed functions: **~325 functions** (155 Python backend + 170 JavaScript frontend).  
 > *How to inspect:* Search symbol with `Select-String` / `grep` to find exact line, then read with `read_file(StartLine, EndLine)`.
 
 ### 🐍 Python Backend & AI Modules
@@ -354,18 +354,18 @@ python game.py
 
 | Function / Routine | Baseline Line | Description / Purpose |
 | :--- | :---: | :--- |
-| `showToast({ title, message, type = 'info', duration = 3500 })` | L2 | Displays floating cyberpunk notification toast with auto-dismiss |
-| `closeToast()` | L24 | Dismisses active notification toast |
-| `start_game()` | L44 | Navigates to solo practice or multiplayer queue |
-| `getUnlockedStage()` | L61 | Reads player's unlocked campaign boss stage from storage |
-| `showStageLockedModal(requiredStageNum, targetDiff)` | L92 | Displays modal when player attempts to access locked boss stage |
-| `closeStageLockedModal()` | L140 | Closes stage locked modal dialog |
-| `play_bot(difficulty)` | L147 | Launches match against selected bot difficulty stage |
-| `play_quick_play()` | L173 | Instantly starts match at player's highest unlocked campaign stage |
-| `updateArcadeLadderUI()` | L188 | Updates visual lock/unlock badges on arcade stage cards |
-| `setSaceAvatarLevel(level)` | L226 | Configures AI avatar visual styling based on difficulty level |
-| `initSaceAvatarSelection()` | L292 | Initializes boss selector carousel and click handlers |
-| `initRandomFeatureDeck()` | L405 | UI / client helper routine |
+| `trackGameEvent(eventName, params)` | L2 | Sends GA4 events in prod while skipping localhost |
+| `showToast({ title, message, type = 'info', duration = 3500 })` | L24 | Displays floating notification toast with auto-dismiss |
+| `closeToast()` | L46 | Dismisses active notification toast |
+| `start_game()` | L66 | Navigates to solo practice or multiplayer queue |
+| `getUnlockedStage()` | L83 | Reads player's unlocked campaign boss stage from storage |
+| `showStageLockedModal(requiredStageNum, targetDiff)` | L114 | Displays modal when player attempts to access locked boss stage |
+| `closeStageLockedModal()` | L162 | Closes stage locked modal dialog |
+| `play_bot(difficulty)` | L169 | Launches match against selected bot difficulty stage |
+| `play_quick_play()` | L195 | Instantly starts match at player's highest unlocked campaign stage |
+| `updateArcadeLadderUI()` | L210 | Updates visual lock/unlock badges on arcade stage cards |
+| `setSaceAvatarLevel(level)` | L248 | Configures AI avatar visual styling based on difficulty level |
+| `initSaceAvatarSelection()` | L314 | Initializes boss selector carousel and click handlers |
 | `showNetworkToast(isOnline)` | L429 | Displays connection status toast (reconnecting, online, degraded) |
 | `initNetworkStatusListeners()` | L450 | UI / client helper routine |
 | `initLobbySparringAnimation()` | L459 | ── Live Autonomous Stickman Sparring Open Arena Stage (Full-Hero Unbounded Physi |
@@ -389,11 +389,12 @@ python game.py
 | `triggerColdBootNotice(elementId, msg)` | L1477 | UI / client helper routine |
 | `join_custom_room()` | L1492 | UI / client helper routine |
 
-#### `static/game.js` — Game Cockpit Runtime & WebSocket Bridge (35 functions)
+#### `static/game.js` — Game Cockpit Runtime & WebSocket Bridge (39 functions)
 
 | Function / Routine | Baseline Line | Description / Purpose |
 | :--- | :---: | :--- |
-| `showNetworkToast(isOnline, customMsg)` | L14 | Displays connection status toast (reconnecting, online, degraded) |
+| `trackGameEvent(eventName, params)` | L11 | Sends GA4 events in prod while skipping localhost |
+| `showNetworkToast(isOnline, customMsg)` | L35 | Displays connection status toast (reconnecting, online, degraded) |
 | `updateConnectionStatus(status)` | L38 | Updates UI indicator dot reflecting WebSocket ping & health |
 | `showToast({ title, message, type = 'info', duration = 3500 })` | L60 | Displays floating cyberpunk notification toast with auto-dismiss |
 | `closeToast()` | L82 | Dismisses active notification toast |
@@ -410,8 +411,11 @@ python game.py
 | `notify()` | L536 | UI / client helper routine |
 | `closeVictoryDialog()` | L570 | UI / client helper routine |
 | `drawTrigCurve(context, options)` | L616 | UI / client helper routine |
-| `spawnCombatSparks(x, y, color, count)` | L701 | UI / client helper routine |
-| `draw_combat_sparks()` | L719 | UI / client helper routine |
+| `spawnCombatSparks(x, y, color, count)` | L850 | Spawns kinetic combat spark particles |
+| `draw_combat_sparks()` | L868 | Renders active spark particles |
+| `spawnCombatPopup(x, y, text, color, scale)` | L745 | Spawns floating damage/clash/dodge text popups |
+| `drawCombatPopups()` | L759 | Renders fading combat popup text |
+| `drawArenaBackdrop()` | L785 | Renders Night Dojo backdrop, lanterns & 100px floor ticks |
 | `draw_sword_trails()` | L749 | UI / client helper routine |
 | `getBotProfileTheme()` | L814 | --- 🥋 FIGHTER PROFILE AVATAR & BOT THEME ENGINE --- |
 | `getPlayerProfileTheme()` | L832 | UI / client helper routine |

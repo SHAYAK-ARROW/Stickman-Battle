@@ -115,7 +115,7 @@
     </script>
 
     <link rel="icon" type="image/png" href="/static/favicon.png">
-    <link rel="stylesheet" href="/static/style.css?v=2.3.28">
+    <link rel="stylesheet" href="/static/style.css?v=2.4.1">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="/static/profile.js?v=2.3.5"></script>
 </head>
@@ -160,8 +160,7 @@
                 <div class="hero-content-overlay">
                     <div class="arcade-genre-badge">
                         <span class="arcade-badge-glow"></span>
-                        <span class="arcade-badge-icon">🕹️</span>
-                        <span>CYBER MARTIAL ARTS ARENA</span>
+                        <span>PYTHON ARENA DUEL</span>
                         <span class="arcade-badge-sep">·</span>
                         <span class="arcade-badge-sub">ARROWS DEV HUB</span>
                     </div>
@@ -172,14 +171,12 @@
                     </h1>
 
                     <p class="hero-copy arcade-hero-copy">
-                        Battle ruthless AI bosses or duel friends live in real-time martial arts combat.
-                        Command your fighter with Python code or brawl with instant tactical cards!
+                        Write Python scripts or trigger quick moves to beat 6 boss fighters or duel a friend live.
                     </p>
                 </div>
 
                 <div class="sparring-canvas-hint">
-                    <span class="sparring-hint-icon">⚡</span>
-                    <span>Fling or drag fighters to battle · True blade collision &amp; kinetic recoil</span>
+                    <span>Drag or throw fighters in the arena above</span>
                 </div>
             </div>
 
@@ -189,26 +186,26 @@
                 <!-- LEFT COLUMN: SOLO AI ARCADE ARENA (6 Stages + Practice Dojo) -->
                 <div class="arena-card solo-arena-card">
                     <div class="solo-bot-header">
-                        <div class="arcade-card-header-badge solo-badge">🕹️ ARCADE BOSS GAUNTLET</div>
-                        <h3 class="arcade-card-title">6-Stage Campaign &amp; Boss Gauntlet</h3>
-                        <p class="solo-bot-lead">Climb the 6-stage boss ladder. Each AI adapts to your fight style with razor-sharp martial counters:</p>
+                        <div class="arcade-card-header-badge solo-badge">SOLO CAMPAIGN</div>
+                        <h3 class="arcade-card-title">6-Stage Boss Ladder</h3>
+                        <p class="solo-bot-lead">Defeat each boss in order. Every stage brings a new weapon style and counter:</p>
                     </div>
                     
                     <div style="margin: 12px 0 10px; display: flex; align-items: center; justify-content: space-between;">
-                        <span style="font-size: 11.5px; font-weight: 700; color: #a855f7; letter-spacing: 0.8px; text-transform: uppercase;">⚔️ 6-Stage Arcade Progression Ladder</span>
-                        <span style="font-size: 11px; color: #94a3b8;">Milestones saved in browser</span>
+                        <span style="font-size: 11px; font-weight: 700; color: #f43f5e; letter-spacing: 0.8px; text-transform: uppercase;">Boss Progression</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Saved in browser</span>
                     </div>
 
-                    <!-- ⚡ Quick Play Dynamic Hero Button (Routes to Highest Unlocked Stage) -->
-                    <button type="button" class="button button-bot quick-play-hero-btn" onclick="play_quick_play()" title="Instant Combat · Jumps directly to your highest unlocked challenge!" style="width:100%; margin-bottom: 12px; border-color: rgba(56, 189, 248, 0.5); background: linear-gradient(135deg, rgba(56, 189, 248, 0.14) 0%, rgba(168, 85, 247, 0.14) 100%); padding: 12px 16px; box-shadow: 0 0 16px rgba(56, 189, 248, 0.15); display: flex; align-items: center;">
-                        <div class="bot-logo-badge" title="Quick Play" style="width: 38px; height: 38px; background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.5); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                            <span style="font-size: 20px;">⚡</span>
+                    <!-- Quick Play Dynamic Hero Button (Routes to Highest Unlocked Stage) -->
+                    <button type="button" class="button button-bot quick-play-hero-btn" onclick="play_quick_play()" title="Instant Combat · Jumps directly to your highest unlocked challenge!" style="width:100%; margin-bottom: 12px; border-color: rgba(244, 63, 94, 0.45); background: linear-gradient(135deg, rgba(244, 63, 94, 0.14) 0%, rgba(245, 158, 11, 0.12) 100%); padding: 12px 16px; display: flex; align-items: center;">
+                        <div class="bot-logo-badge" title="Quick Play" style="width: 38px; height: 38px; background: rgba(244, 63, 94, 0.18); border: 1px solid rgba(244, 63, 94, 0.45); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <span style="font-size: 18px;">⚔️</span>
                         </div>
                         <div class="bot-btn-content" style="text-align: left; margin-left: 8px;">
-                            <span id="quick_play_title" class="bot-btn-title" style="color: #38bdf8; font-weight: 800; font-size: 14.5px; letter-spacing: 0.5px;">⚡ QUICK PLAY</span>
+                            <span id="quick_play_title" class="bot-btn-title" style="color: #fbbf24; font-weight: 800; font-size: 14.5px; letter-spacing: 0.5px;">QUICK PLAY</span>
                             <span id="quick_play_subtitle" style="font-size: 11px; color: #94a3b8; display: block; margin-top: 2px;">Continue Campaign: Stage 1 · Byte Rusher</span>
                         </div>
-                        <span class="btn-arrow" aria-hidden="true" style="color: #38bdf8; font-weight: 800; font-size: 16px; margin-left: auto;">➔</span>
+                        <span class="btn-arrow" aria-hidden="true" style="color: #fbbf24; font-weight: 800; font-size: 16px; margin-left: auto;">→</span>
                     </button>
 
                     <div class="arcade-ladder-grid">
@@ -223,7 +220,7 @@
                                 </svg>
                             </div>
                             <div class="bot-btn-content">
-                                <span class="bot-btn-title">⚡ Byte Rusher</span>
+                                <span class="bot-btn-title">Byte Rusher</span>
                             </div>
                             <span class="btn-arrow" aria-hidden="true">→</span>
                         </button>
@@ -238,7 +235,7 @@
                                 </svg>
                             </div>
                             <div class="bot-btn-content">
-                                <span class="bot-btn-title">🛡️ Iron Turtle</span>
+                                <span class="bot-btn-title">Iron Turtle</span>
                             </div>
                             <span class="btn-arrow" aria-hidden="true">→</span>
                         </button>
@@ -254,7 +251,7 @@
                                 </svg>
                             </div>
                             <div class="bot-btn-content">
-                                <span class="bot-btn-title">🌊 Wave Weaver</span>
+                                <span class="bot-btn-title">Wave Weaver</span>
                             </div>
                             <span class="btn-arrow" aria-hidden="true">→</span>
                         </button>
@@ -270,7 +267,7 @@
                                 </svg>
                             </div>
                             <div class="bot-btn-content">
-                                <span class="bot-btn-title">🗡️ Shadow Duelist</span>
+                                <span class="bot-btn-title">Shadow Duelist</span>
                             </div>
                             <span class="btn-arrow" aria-hidden="true">→</span>
                         </button>
@@ -286,7 +283,7 @@
                                 </svg>
                             </div>
                             <div class="bot-btn-content">
-                                <span class="bot-btn-title">🔥 Berserker Ronin</span>
+                                <span class="bot-btn-title">Berserker Ronin</span>
                             </div>
                             <span class="btn-arrow" aria-hidden="true">→</span>
                         </button>
@@ -304,20 +301,20 @@
                                 </svg>
                             </div>
                             <div class="bot-btn-content">
-                                <span class="bot-btn-title" style="color: #fbbf24;">👑 Apex Sovereign</span>
+                                <span class="bot-btn-title" style="color: #fbbf24;">Apex Sovereign</span>
                             </div>
                             <span class="btn-arrow" aria-hidden="true">→</span>
                         </button>
                     </div>
 
-                    <!-- 👑 Grandmaster Trial: SACE Master Bot (Adaptive RL AI) -->
+                    <!-- Grandmaster Trial: SACE Master Bot -->
                     <div style="margin: 18px 0 8px; display: flex; align-items: center; justify-content: space-between;">
-                        <span style="font-size: 11px; font-weight: 700; color: #f59e0b; letter-spacing: 0.8px; text-transform: uppercase;">👑 Grandmaster Trial · Adaptive AI</span>
-                        <span id="sace_section_intel" style="font-size: 11px; color: #c084fc; font-weight: 600;">Adaptive Brain · Studies Your Code</span>
+                        <span style="font-size: 11px; font-weight: 700; color: #f59e0b; letter-spacing: 0.8px; text-transform: uppercase;">Grandmaster Trial</span>
+                        <span id="sace_section_intel" style="font-size: 11px; color: #94a3b8; font-weight: 600;">Studies your attack loops</span>
                     </div>
 
-                    <!-- 🎛️ SACE Master Bot Avatar Radio Toggle Selector -->
-                    <div class="sace-avatar-radio-group" role="radiogroup" aria-label="SACE Master Bot Avatar Level" style="display: flex; gap: 8px; margin-bottom: 10px; background: rgba(15, 23, 42, 0.65); padding: 5px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.22);">
+                    <!-- SACE Master Bot Avatar Radio Toggle Selector -->
+                    <div class="sace-avatar-radio-group" role="radiogroup" aria-label="SACE Master Bot Avatar Level" style="display: flex; gap: 8px; margin-bottom: 10px; background: rgba(15, 16, 22, 0.75); padding: 5px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.22);">
                         <button type="button" class="sace-avatar-radio-btn" id="sace_avatar_btn_1" role="radio" aria-checked="false" onclick="setSaceAvatarLevel(1)" style="flex: 1; padding: 7px 10px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: #94a3b8; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;">
                             <span class="avatar-num" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); font-size: 11px; font-weight: 700;">1</span>
                             <span>Apprentice</span>
@@ -326,14 +323,14 @@
                             <span class="avatar-num" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); font-size: 11px; font-weight: 700;">2</span>
                             <span>Tactical</span>
                         </button>
-                        <button type="button" class="sace-avatar-radio-btn is-active" id="sace_avatar_btn_3" role="radio" aria-checked="true" onclick="setSaceAvatarLevel(3)" style="flex: 1; padding: 7px 10px; border-radius: 7px; border: 1px solid rgba(245, 158, 11, 0.65); background: linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(168, 85, 247, 0.22) 100%); color: #fbbf24; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 0 12px rgba(245, 158, 11, 0.25); transition: all 0.2s ease;">
-                            <span class="avatar-num" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #fbbf24; color: #1e1b4b; font-size: 11px; font-weight: 800;">3</span>
+                        <button type="button" class="sace-avatar-radio-btn is-active" id="sace_avatar_btn_3" role="radio" aria-checked="true" onclick="setSaceAvatarLevel(3)" style="flex: 1; padding: 7px 10px; border-radius: 7px; border: 1px solid rgba(245, 158, 11, 0.65); background: linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(225, 29, 72, 0.18) 100%); color: #fbbf24; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;">
+                            <span class="avatar-num" style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #fbbf24; color: #181014; font-size: 11px; font-weight: 800;">3</span>
                             <span>Grandmaster</span>
                         </button>
                     </div>
 
                     <div class="sace-master-card-container" style="width: 100%;">
-                        <button type="button" class="button button-bot button-sace-master" style="width: 100%; border-color: rgba(245, 158, 11, 0.55); background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(147, 51, 234, 0.16) 100%); box-shadow: 0 0 16px rgba(245, 158, 11, 0.12); display: flex; align-items: center; gap: 14px; padding: 14px 18px; box-sizing: border-box;" onclick="play_bot('master')">
+                        <button type="button" class="button button-bot button-sace-master" style="width: 100%; border-color: rgba(245, 158, 11, 0.5); background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(225, 29, 72, 0.1) 100%); display: flex; align-items: center; gap: 14px; padding: 14px 18px; box-sizing: border-box;" onclick="play_bot('master')">
                             <div class="bot-logo-badge" title="SACE Master Bot">
                                 <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
                                     <rect width="36" height="36" rx="9" fill="#d97706" fill-opacity="0.22" stroke="#fbbf24" stroke-opacity="0.6" stroke-width="1.4"/>
@@ -341,21 +338,21 @@
                                     <circle cx="18" cy="9" r="2" fill="#fef08a"/>
                                     <circle cx="10" cy="12" r="1.6" fill="#fef08a"/>
                                     <circle cx="26" cy="12" r="1.6" fill="#fef08a"/>
-                                    <circle cx="18" cy="20" r="3.2" fill="#a855f7" stroke="#fbbf24" stroke-width="1.2"/>
+                                    <circle cx="18" cy="20" r="3.2" fill="#e11d48" stroke="#fbbf24" stroke-width="1.2"/>
                                     <defs>
                                         <linearGradient id="sace_crown_grad" x1="7" y1="9" x2="29" y2="26" gradientUnits="userSpaceOnUse">
                                             <stop stop-color="#fbbf24" stop-opacity="0.6"/>
-                                            <stop offset="1" stop-color="#9333ea" stop-opacity="0.6"/>
+                                            <stop offset="1" stop-color="#e11d48" stop-opacity="0.6"/>
                                         </linearGradient>
                                     </defs>
                                 </svg>
                             </div>
                             <div class="bot-btn-content" style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; flex: 1;">
                                 <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span id="sace_card_title" class="bot-btn-title" style="color: #fbbf24; font-weight: 800; font-size: 14px; letter-spacing: 0.3px;">👑 SACE Master Bot (Avatar 3)</span>
-                                    <span id="sace_card_badge" style="font-size: 9.5px; padding: 2px 7px; background: rgba(168, 85, 247, 0.25); border: 1px solid rgba(168, 85, 247, 0.5); color: #e9d5ff; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Grandmaster</span>
+                                    <span id="sace_card_title" class="bot-btn-title" style="color: #fbbf24; font-weight: 800; font-size: 14px; letter-spacing: 0.3px;">SACE Master Bot (Avatar 3)</span>
+                                    <span id="sace_card_badge" style="font-size: 9.5px; padding: 2px 7px; background: rgba(245, 158, 11, 0.18); border: 1px solid rgba(245, 158, 11, 0.45); color: #fde68a; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Grandmaster</span>
                                 </div>
-                                <span id="sace_card_desc" style="font-size: 11.5px; color: #94a3b8; margin-top: 3px;">Learns your combat habits live · Parries attack loops · Phase 2 Enrage!</span>
+                                <span id="sace_card_desc" style="font-size: 11.5px; color: #94a3b8; margin-top: 3px;">Tracks your move patterns · Parries spam · Phase 2 Enrage</span>
                             </div>
                             <span class="btn-arrow" aria-hidden="true" style="color: #fbbf24; font-weight: 700; font-size: 18px; margin-left: auto;">→</span>
                         </button>
@@ -363,12 +360,12 @@
 
                     <!-- Practice Dojo (Training Dummy) -->
                     <div style="margin: 18px 0 8px; display: flex; align-items: center; justify-content: space-between;">
-                        <span style="font-size: 11px; font-weight: 700; color: #38bdf8; letter-spacing: 0.8px; text-transform: uppercase;">🥋 Peaceful Training Ground</span>
-                        <span style="font-size: 11px; color: #94a3b8;">Immortal sparring partner</span>
+                        <span style="font-size: 11px; font-weight: 700; color: #38bdf8; letter-spacing: 0.8px; text-transform: uppercase;">Practice Dojo</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Test moves freely</span>
                     </div>
 
                     <div class="bot-buttons-row">
-                        <button type="button" class="button button-bot button-dummy" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.08);" onclick="play_bot('dummy')">
+                        <button type="button" class="button button-bot button-dummy" style="border-color: rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.06);" onclick="play_bot('dummy')">
                             <div class="bot-logo-badge" title="Practice Dojo">
                                 <svg class="bot-logo-svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
                                     <rect width="36" height="36" rx="9" fill="#0284c7" fill-opacity="0.14" stroke="#38bdf8" stroke-opacity="0.35" stroke-width="1.2"/>
@@ -378,7 +375,7 @@
                                 </svg>
                             </div>
                             <div class="bot-btn-content">
-                                <span class="bot-btn-title" style="color: #38bdf8;">🥋 Practice Dojo</span>
+                                <span class="bot-btn-title" style="color: #38bdf8;">Training Dummy</span>
                             </div>
                             <span class="btn-arrow" aria-hidden="true">→</span>
                         </button>
@@ -389,18 +386,18 @@
                 <!-- RIGHT COLUMN: MULTIPLAYER 1V1 DUELING ARENA (Host / Join) -->
                 <div class="arena-card multiplayer-arena-card">
                     <div class="multiplayer-card-header">
-                        <div class="arcade-card-header-badge pvp-badge">⚔️ LIVE 1v1 PVP DUEL</div>
-                        <h3 class="arcade-card-title">Real-Time WebSocket Arena</h3>
-                        <p class="solo-bot-lead">Generate an instant battle room or paste an invite link to duel a friend with 60 FPS physics:</p>
+                        <div class="arcade-card-header-badge pvp-badge">1V1 MULTIPLAYER</div>
+                        <h3 class="arcade-card-title">Duel a Friend</h3>
+                        <p class="solo-bot-lead">Create a private room or paste an invite code to fight head-to-head live:</p>
                     </div>
 
                     <div class="room-actions-split">
                         <div class="action-block host-block">
                             <span class="action-label">CREATE NEW ROOM</span>
                             <h3>Host a Battle</h3>
-                            <p>Generate a secure room with instant invite URL and share with Player 2.</p>
+                            <p>Get an invite link to send to Player 2.</p>
                             <button class="button button-primary button-large" onclick="start_game()" style="width: 100%;">
-                                <span>Create battle room</span>
+                                <span>Create Battle Room</span>
                                 <span class="btn-arrow" aria-hidden="true">→</span>
                             </button>
                             <div id="coldboot_host_notice" class="coldboot-notice"></div>
@@ -411,9 +408,9 @@
                         </div>
 
                         <div class="action-block join-block">
-                            <span class="action-label">ENTER AN EXISTING MATCH</span>
+                            <span class="action-label">JOIN A MATCH</span>
                             <h3>Join a Friend</h3>
-                            <p>Paste the room code or invite link shared by Player 1 to jump into duel.</p>
+                            <p>Paste the room code or invite link from Player 1.</p>
                             <form class="join-form" onsubmit="event.preventDefault(); join_custom_room();">
                                 <div class="join-controls">
                                     <input type="text" id="room_input" placeholder="e.g. room_a1b2c3 or invite URL" autocomplete="off" aria-label="Room code or invite link">
@@ -423,37 +420,18 @@
                         </div>
                     </div>
 
-                    <!-- Pro Status Banner -->
+                    <!-- Clean Status Banner -->
                     <div class="pvp-badge-banner">
                         <span class="pvp-pulse-dot"></span>
-                        <span>Zero install · WebSockets 60fps physics · Live friend takeover</span>
+                        <span>No signup required — share room link to duel</span>
                     </div>
                 </div>
 
             </div>
-
-            <!-- Dynamic 20-Card Tactical Deck (3 Picked at Random per reload) -->
-            <div class="features-grid" id="features_cards_grid">
-                <div class="feature-item">
-                    <div class="feature-icon">⚡</div>
-                    <h4>Python Battle Logic</h4>
-                    <p>Program attacks, dashes, jumps, crouches, and shields with real-time sensory feedback.</p>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-icon">📐</div>
-                    <h4>Trigonometric Spells</h4>
-                    <p>Cast <code>sin_wave(power)</code> or <code>math.sin()</code> spells directly in Python using trigonometry as your weapon.</p>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-icon">🤖</div>
-                    <h4>Adaptive Boss Combat</h4>
-                    <p>Battle 6 unique AI bosses that react, parry, and counter-attack like real martial artists.</p>
-                </div>
-            </div>
         </section>
 
         <footer class="home-footer">
-            <span>Stickman Battle</span> · <span>Made with precision by <b>Arrows Development Hub</b></span> · <button type="button" class="header-info-link" onclick="openInfoModal()" style="background: none; border: none; font: inherit; color: var(--text-secondary); cursor: pointer; text-decoration: underline; padding: 0;" title="Game Info & Feedback">Game Info &amp; Feedback</button>
+            <span>Stickman Battle</span> · <span>Built by <b>Arrows Development Hub</b></span> · <button type="button" class="header-info-link" onclick="openInfoModal()" style="background: none; border: none; font: inherit; color: var(--text-secondary); cursor: pointer; text-decoration: underline; padding: 0;" title="Game Info & Feedback">Game Info &amp; Feedback</button>
         </footer>
 
         <!-- Generative Engine Optimization (GEO) Knowledge Block & No-JS Fallback -->
@@ -487,7 +465,7 @@
         </section>
     </main>
     <script src="/static/audio.js?v=2.3.8"></script>
-    <script src="/static/main.js?v=2.3.30"></script>
+    <script src="/static/main.js?v=2.4.1"></script>
     <!-- ========================================== -->
     <!-- 📖 FIGHTER'S HANDBOOK CURRICULUM MODAL     -->
     <!-- ========================================== -->

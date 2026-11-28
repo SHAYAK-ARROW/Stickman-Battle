@@ -731,6 +731,136 @@ let prevGameOver = false;
 let p1HitFlashUntil = 0;
 let p2HitFlashUntil = 0;
 let prevClash = false;
+let arenaShake = 0;
+const _lastEvasionLogAt = { p1: 0, p2: 0 };
+
+// --- FLOATING COMBAT POPUPS & DOJO ARENA EFFECTS ---
+const combatPopups = [];
+function spawnCombatPopup(x, y, text, color, scale) {
+    if (combatPopups.length > 24) combatPopups.shift();
+    combatPopups.push({
+        x: x + (Math.random() - 0.5) * 18,
+        y: y,
+        vy: -1.65,
+        text: text,
+        color: color || '#fbbf24',
+        scale: scale || 1,
+        alpha: 1.0
+    });
+}
+
+function drawCombatPopups() {
+    if (combatPopups.length === 0) return;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = combatPopups.length - 1; i >= 0; i--) {
+        const p = combatPopups[i];
+        p.y += p.vy;
+        p.vy *= 0.96;
+        p.alpha -= 0.022;
+        if (p.alpha <= 0.02) {
+            combatPopups.splice(i, 1);
+            continue;
+        }
+        ctx.globalAlpha = Math.min(1, p.alpha);
+        const fontSize = Math.round(14 * p.scale);
+        ctx.font = `800 ${fontSize}px 'Space Grotesk', sans-serif`;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(10, 11, 15, 0.92)';
+        ctx.strokeText(p.text, p.x, p.y);
+        ctx.fillStyle = p.color;
+        ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.restore();
+}
+
+function drawArenaBackdrop() {
+    const W = canvas.width;
+    const H = canvas.height;
+    const floorY = 595;
+
+    // 1. Forged Night Dojo Sky Gradient
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, floorY);
+    skyGrad.addColorStop(0, '#090a0d');
+    skyGrad.addColorStop(0.65, '#111116');
+    skyGrad.addColorStop(1, '#191418');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, floorY);
+
+    // 2. Distant Torii / Dojo Timber Pillars & Warm Lantern Haze
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.022)';
+    // Left & Right Dojo Support Pillars
+    ctx.fillRect(88, 120, 16, floorY - 120);
+    ctx.fillRect(W - 104, 120, 16, floorY - 120);
+    // Top Dojo Crossbeam
+    ctx.fillRect(56, 138, W - 112, 12);
+    ctx.fillRect(72, 162, W - 144, 6);
+
+    // Warm Amber Lantern Glows on Dojo Pillars
+    [130, W - 130].forEach(lx => {
+        const lanGrad = ctx.createRadialGradient(lx, 210, 4, lx, 210, 95);
+        lanGrad.addColorStop(0, 'rgba(245, 158, 11, 0.14)');
+        lanGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = lanGrad;
+        ctx.beginPath();
+        ctx.arc(lx, 210, 95, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.25)';
+        ctx.fillRect(lx - 5, 202, 10, 16);
+    });
+
+    // Subtle Arena Perspective Grid Lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.028)';
+    ctx.lineWidth = 1;
+    for (let gx = 100; gx < W; gx += 100) {
+        ctx.beginPath();
+        ctx.moveTo(gx, 168);
+        ctx.lineTo(gx, floorY);
+        ctx.stroke();
+    }
+    for (let gy = 260; gy < floorY; gy += 95) {
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        ctx.lineTo(W, gy);
+        ctx.stroke();
+    }
+
+    // Center Arena Crest Ring
+    ctx.strokeStyle = 'rgba(244, 63, 94, 0.08)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(W / 2, floorY - 115, 72, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 3. Stone / Steel Dojo Floor & Tactile 100px Distance Marks
+    ctx.fillStyle = '#18161a';
+    ctx.fillRect(0, floorY, W, H - floorY);
+
+    ctx.strokeStyle = '#e11d48';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, floorY);
+    ctx.lineTo(W, floorY);
+    ctx.stroke();
+
+    // Distance ruler ticks every 100px for Python coders
+    ctx.save();
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+    ctx.font = '600 9px Consolas, monospace';
+    ctx.textAlign = 'center';
+    for (let dx = 100; dx < W; dx += 100) {
+        ctx.beginPath();
+        ctx.moveTo(dx, floorY - 4);
+        ctx.lineTo(dx, floorY + 3);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
 
 // --- DYNAMIC COMBAT SPARK SYSTEM ---
 const combatSparks = [];
@@ -930,8 +1060,10 @@ function draw_on_camvas(data) {
                         if (!document.hidden && window.AudioEngine) window.AudioEngine.playSwordClash();
                         const clashX = evt.x || ((data.player1.x + data.player2.x) / 2);
                         const clashY = evt.y || 470;
+                        arenaShake = Math.max(arenaShake, 4.5);
                         spawnCombatSparks(clashX, clashY, '#fef08a', 15);
-                        logCombatTelemetry('clash', '[SWORD CLASH]', '⚔️ Mid-air Sword Clash! Kinetic sparks erupted!');
+                        spawnCombatPopup(clashX, clashY - 38, 'CLASH!', '#fbbf24', 1.05);
+                        logCombatTelemetry('clash', '[CLASH]', 'Blades clashed mid-air!');
                         eventsHandled.add('clash');
                         break;
 
@@ -939,8 +1071,9 @@ function draw_on_camvas(data) {
                         if (!document.hidden && window.AudioEngine) window.AudioEngine.playShieldBlock();
                         const defX = (evt.defender === 1 ? data.player1.x : data.player2.x) + (evt.defender === 1 ? 25 : -25);
                         spawnCombatSparks(defX, 470, '#38bdf8', 12);
-                        const weaponDesc = evt.projectile ? evt.projectile.replace('_', ' ') : 'sword strike';
-                        logCombatTelemetry('shield', '[SHIELD BLOCK]', `🛡️ ${defenderLabel}'s shield blocked incoming ${weaponDesc}!`);
+                        spawnCombatPopup(defX, 430, 'BLOCKED', '#94a3b8', 0.9);
+                        const weaponDesc = evt.projectile ? evt.projectile.replace('_', ' ') : 'strike';
+                        logCombatTelemetry('shield', '[BLOCK]', `${defenderLabel} blocked ${weaponDesc}`);
                         eventsHandled.add('shield_block');
                         break;
 
@@ -953,22 +1086,26 @@ function draw_on_camvas(data) {
                             }
                         }
                         const breakX = (evt.defender === 1 ? data.player1.x : data.player2.x) + (evt.defender === 1 ? 25 : -25);
+                        arenaShake = Math.max(arenaShake, 11);
                         spawnCombatSparks(breakX, 470, '#ef4444', 20);
-                        logCombatTelemetry('shield', '[SHIELD BREAK]', `💥 CRACK! ${defenderLabel}'s guard SHATTERED by heavy attack! (-1 Heart)`);
+                        spawnCombatPopup(breakX, 415, 'GUARD BROKEN! -1', '#ef4444', 1.15);
+                        logCombatTelemetry('shield', '[BREAK]', `${defenderLabel}'s guard shattered! (-1 HP)`);
                         eventsHandled.add('shield_break');
                         eventsHandled.add('hit');
                         break;
 
                     case 'damage_hit':
                         const isHeavy = !!evt.is_heavy;
-                        if (evt.target === 1) p1HitFlashUntil = Date.now() + 350;
-                        else p2HitFlashUntil = Date.now() + 350;
+                        if (evt.target === 1) p1HitFlashUntil = Date.now() + 140;
+                        else p2HitFlashUntil = Date.now() + 140;
                         if (!document.hidden && window.AudioEngine) window.AudioEngine.playDamageHit(isHeavy);
                         const tgtX = (evt.target === 1 ? data.player1.x : data.player2.x);
+                        arenaShake = Math.max(arenaShake, isHeavy ? 10 : 6);
                         spawnCombatSparks(tgtX, 470, isHeavy ? '#f43f5e' : '#fbbf24', isHeavy ? 15 : 8);
                         const dmgVal = evt.damage || 1;
-                        const srcDesc = evt.projectile ? evt.projectile.replace('_', ' ') : (isHeavy ? 'Heavy Cleave' : 'Sword Slash');
-                        logCombatTelemetry('hit', '[DAMAGE HIT]', `💥 ${defenderLabel} struck by ${srcDesc}! (-${dmgVal} DMG)`);
+                        spawnCombatPopup(tgtX, 420, isHeavy ? `-${dmgVal} HEAVY!` : `-${dmgVal}`, isHeavy ? '#fbbf24' : '#f43f5e', isHeavy ? 1.2 : 1.05);
+                        const srcDesc = evt.projectile ? evt.projectile.replace('_', ' ') : (isHeavy ? 'Heavy Strike' : 'Slash');
+                        logCombatTelemetry('hit', '[HIT]', `${defenderLabel} took ${srcDesc} (-${dmgVal} HP)`);
                         eventsHandled.add('hit');
                         break;
 
@@ -979,13 +1116,20 @@ function draw_on_camvas(data) {
                         }
                         const absorbX = (evt.defender === 1 ? data.player1.x : data.player2.x) + (evt.defender === 1 ? 25 : -25);
                         spawnCombatSparks(absorbX, 470, '#c084fc', 12);
+                        spawnCombatPopup(absorbX, 430, 'ABSORBED', '#e2e8f0', 0.9);
                         const pName = (evt.projectile || 'spell').replace('_', ' ');
-                        logCombatTelemetry('spell', '[DEFENSE]', `🔮 ${defenderLabel}'s harmonic barrier absorbed incoming ${pName}!`);
+                        logCombatTelemetry('spell', '[GUARD]', `${defenderLabel} absorbed ${pName}`);
                         break;
 
                     case 'evasion':
                         if (!document.hidden && window.AudioEngine) window.AudioEngine.playDodge();
-                        logCombatTelemetry('dodge', '[EVASION]', `💨 ${defenderLabel} ducked / evaded incoming attack!`);
+                        const evX = (evt.defender === 1 ? data.player1.x : data.player2.x);
+                        spawnCombatPopup(evX, 425, 'DODGE', '#e2e8f0', 0.85);
+                        const evKey = (evt.defender === 1) ? 'p1' : 'p2';
+                        if (Date.now() - _lastEvasionLogAt[evKey] > 2400) {
+                            _lastEvasionLogAt[evKey] = Date.now();
+                            logCombatTelemetry('dodge', '[DODGE]', `${defenderLabel} ducked attack`);
+                        }
                         eventsHandled.add('evasion');
                         break;
 
@@ -994,9 +1138,11 @@ function draw_on_camvas(data) {
                             if (window.AudioEngine.playTrigFusion) window.AudioEngine.playTrigFusion();
                             else window.AudioEngine.playSwordClash();
                         }
+                        arenaShake = Math.max(arenaShake, 8);
                         spawnCombatSparks(evt.x || 400, evt.y || 470, '#38bdf8', 25);
                         spawnCombatSparks(evt.x || 400, evt.y || 470, '#f43f5e', 15);
-                        logCombatTelemetry('spell', '[TRIG FUSION]', `⚡ Harmonic Fusion! Sin + Cos collided at X=${Math.round(evt.x || 400)} -> Shockwave & Spike!`);
+                        spawnCombatPopup(evt.x || 400, (evt.y || 470) - 45, 'TRIG FUSION!', '#fbbf24', 1.15);
+                        logCombatTelemetry('spell', '[FUSION]', `Sin + Cos collided at X=${Math.round(evt.x || 400)}`);
                         break;
 
                     case 'wave_clash':
@@ -1005,7 +1151,7 @@ function draw_on_camvas(data) {
                             else window.AudioEngine.playDamageHit(false);
                         }
                         spawnCombatSparks(evt.x || 400, evt.y || 470, '#22d3ee', 14);
-                        logCombatTelemetry('spell', '[WAVE CLASH]', `💥 Wave Neutralization! Opposing waves collided and dissipated!`);
+                        logCombatTelemetry('spell', '[WAVE]', `Opposing waves neutralized`);
                         break;
 
                     case 'spell_slice':
@@ -1015,8 +1161,9 @@ function draw_on_camvas(data) {
                         }
                         const sliceX = (data.player1.x + data.player2.x) / 2;
                         spawnCombatSparks(sliceX, 470, '#fef08a', 14);
+                        spawnCombatPopup(sliceX, 430, 'SLICED!', '#fbbf24', 1.0);
                         const waveName = (evt.spell || 'wave').replace('_', ' ');
-                        logCombatTelemetry('clash', '[SPELL SLICE]', `🗡️ Mid-air Slice! Thrown sword severed incoming ${waveName}!`);
+                        logCombatTelemetry('clash', '[SLICE]', `Thrown sword cut ${waveName}`);
                         break;
 
                     case 'sword_catch':
@@ -1024,7 +1171,7 @@ function draw_on_camvas(data) {
                             if (window.AudioEngine.playSwordCatch) window.AudioEngine.playSwordCatch();
                         }
                         const ownerLbl = targetName(evt.player || 1);
-                        logCombatTelemetry('item', '[WEAPON RETURN]', `🪃 Boomerang sword returned to ${ownerLbl}'s hand!`);
+                        logCombatTelemetry('item', '[RETURN]', `Sword returned to ${ownerLbl}`);
                         break;
                 }
             });
@@ -1104,12 +1251,18 @@ function draw_on_camvas(data) {
         if (!eventsHandled.has('evasion')) {
             if (data.player1.is_crouching && !prevP1Crouching) {
                 if (!document.hidden && window.AudioEngine) window.AudioEngine.playDodge();
-                logCombatTelemetry('dodge', '[EVASION]', '💨 P1 crouched / evaded');
+                if (Date.now() - _lastEvasionLogAt.p1 > 2400) {
+                    _lastEvasionLogAt.p1 = Date.now();
+                    logCombatTelemetry('dodge', '[DODGE]', 'P1 crouched');
+                }
             }
             if (data.player2.is_crouching && !prevP2Crouching) {
                 if (!document.hidden && window.AudioEngine) window.AudioEngine.playDodge();
                 const target = targetIsBot ? 'Bot' : 'P2';
-                logCombatTelemetry('dodge', '[EVASION]', `💨 ${target} crouched / evaded`);
+                if (Date.now() - _lastEvasionLogAt.p2 > 2400) {
+                    _lastEvasionLogAt.p2 = Date.now();
+                    logCombatTelemetry('dodge', '[DODGE]', `${target} crouched`);
+                }
             }
         }
         prevP1Crouching = !!data.player1.is_crouching;
@@ -1137,14 +1290,18 @@ function draw_on_camvas(data) {
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // --- GROUND (Bhumi) ---
-    ctx.strokeStyle = "green";
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.moveTo(0, 600);
-    ctx.lineTo(canvas.width, 600);
-    ctx.stroke();
+
+    ctx.save();
+    if (arenaShake > 0.4) {
+        const sx = (Math.random() - 0.5) * arenaShake * 2;
+        const sy = (Math.random() - 0.5) * arenaShake * 1.4;
+        ctx.translate(sx, sy);
+        arenaShake *= 0.82;
+    } else {
+        arenaShake = 0;
+    }
+
+    drawArenaBackdrop();
 
     // Render sword slash trails & motion blur arcs behind fighters
     draw_sword_trails();
@@ -1191,8 +1348,10 @@ function draw_on_camvas(data) {
             ctx.restore();
         }
 
-        // Matha (Head)
-        ctx.fillStyle = color;
+        // Matha (Head) with brief arcade hit-flash
+        const isFlashed = (playerKey === 'p1' && Date.now() < p1HitFlashUntil) || (playerKey === 'p2' && Date.now() < p2HitFlashUntil);
+        const renderColor = isFlashed ? '#ffffff' : color;
+        ctx.fillStyle = renderColor;
         ctx.beginPath();
         ctx.arc(x, y + crouchY, 20, 0, Math.PI * 2);
         ctx.fill();
@@ -1247,7 +1406,7 @@ function draw_on_camvas(data) {
         }
         
         // Baki shorir (Body)
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = renderColor;
         ctx.lineWidth = 5;
         ctx.beginPath();
         if (is_crouching) {
@@ -1848,8 +2007,10 @@ function draw_on_camvas(data) {
     }
 
     // Winner Banner - clean modern pill
-    // Render active kinetic combat sparks on top of players and weapons
+    // Render active kinetic combat sparks & floating damage popups on top
     draw_combat_sparks();
+    drawCombatPopups();
+    ctx.restore();
 
     let is_game_over = false;
     let winnerText = "";
@@ -2594,3 +2755,12 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
     const pb = document.getElementById('pause_bot_btn');
     if (pb) pb.style.display = 'inline-flex';
 }
+
+// Allow clicking label text underneath any Quick Move circle button
+document.querySelectorAll('.dock-action-wrapper').forEach(wrapper => {
+    wrapper.addEventListener('click', (e) => {
+        if (e.target.closest('button.dock-action-circle')) return;
+        const btn = wrapper.querySelector('button.dock-action-circle');
+        if (btn && !btn.disabled) btn.click();
+    });
+});

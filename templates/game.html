@@ -39,7 +39,7 @@
 
     <link rel="stylesheet" href="/static/lib/codemirror/dracula.min.css">
 
-    <link rel="stylesheet" href="/static/style.css?v=2.3.28">
+    <link rel="stylesheet" href="/static/style.css?v=2.4.1">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="/static/profile.js?v=2.3.5"></script>
@@ -129,24 +129,24 @@
 
 <section id="battle_layout" aria-label="Battle arena and code editor">
 
-<!-- 📡 COLUMN 1 (20%): LIVE COMBAT TELEMETRY & TACTICAL INTEL -->
+<!-- Match Log Sidebar -->
 <div id="combat_telemetry_terminal" class="panel telemetry-sidebar-panel">
     <div class="panel-heading telemetry-sidebar-heading">
         <div>
-            <p class="eyebrow">LIVE TELEMETRY</p>
-            <h2>Combat feed</h2>
+            <p class="eyebrow">LIVE MATCH</p>
+            <h2>Battle Log</h2>
         </div>
         <div class="telemetry-meta">
             <span id="telemetry_counter" class="telemetry-badge">Ready</span>
-            <button type="button" class="telemetry-clear-btn" onclick="window.clearCombatTelemetry && window.clearCombatTelemetry()" title="Clear telemetry log">Clear</button>
+            <button type="button" class="telemetry-clear-btn" onclick="window.clearCombatTelemetry && window.clearCombatTelemetry()" title="Clear log">Clear</button>
         </div>
     </div>
     
     <div id="telemetry_log_feed" class="telemetry-feed" role="log" aria-live="polite">
         <div class="telemetry-entry sys">
             <span class="telemetry-time">00:00</span>
-            <span class="telemetry-tag sys">[SYSTEM]</span>
-            <span class="telemetry-msg">Combat telemetry online. Arena physics & sensors active.</span>
+            <span class="telemetry-tag sys">[READY]</span>
+            <span class="telemetry-msg">Arena ready. Write Python or press 1-6 to fight.</span>
         </div>
     </div>
 
@@ -272,15 +272,14 @@
             <h2 id="gate_title" class="gate-title">STICKMAN DUEL</h2>
             <div id="gate_intel_box" class="gate-intel-box" style="display: none;">
                 <div class="gate-intel-header">
-                    <span class="gate-intel-icon">🎯</span>
-                    <span class="gate-intel-label">Boss Intel</span>
+                    <span class="gate-intel-label">FIGHTER TIPS</span>
                 </div>
                 <div id="gate_intel_text" class="gate-intel-text"></div>
             </div>
-            <p id="gate_desc" class="gate-desc">Prepare your Python battle algorithm. Duel begins the moment you step in.</p>
+            <p id="gate_desc" class="gate-desc">Get ready. Click Fight or press any key when ready.</p>
             <button id="gate_enter_btn" type="button" class="gate-enter-btn" onclick="enterBattleGate(event)">
                 <span class="gate-btn-icon">⚔️</span>
-                <span id="gate_btn_text">ENTER BATTLE</span>
+                <span id="gate_btn_text">FIGHT!</span>
             </button>
             <div class="gate-hint">
                 <span>💡 Tip: Click anywhere or press any key to enter</span>
@@ -371,15 +370,15 @@
 
 <!-- Tactical Emergency Defense Bar -->
 
-<div class="emergency-bar" aria-label="Tactical emergency defense actions">
+<div class="emergency-bar" aria-label="Emergency defense actions">
 
-    <span class="emergency-label">TACTICAL PANIC:</span>
+    <span class="emergency-label">PANIC:</span>
 
     <button id="emergency_shield_btn" type="button" class="emergency-btn" onclick="triggerEmergency('shield')" title="Emergency Shield block for 1.5s (Cost: 15⚡, Cooldown: 8s). Shortcut: Alt+S">
 
         <span class="emergency-icon">🛡️</span>
 
-        <span class="emergency-text">Emergency Shield</span>
+        <span class="emergency-text">Shield</span>
 
         <span class="emergency-badge">[Alt+S]</span>
 
@@ -391,7 +390,7 @@
 
         <span class="emergency-icon">💨</span>
 
-        <span class="emergency-text">Emergency Dodge</span>
+        <span class="emergency-text">Dodge</span>
 
         <span class="emergency-badge">[Alt+D]</span>
 
@@ -405,7 +404,7 @@
 
 </div>
 
-<!-- ↔️ INTERACTIVE SPLITTER: DRAG TO RESIZE ARENA & EDITOR · DOUBLE-CLICK TO RESET -->
+<!-- Interactive Splitter -->
 <div id="layout_splitter" class="layout-splitter" role="separator" aria-orientation="vertical" tabindex="0" title="Drag to resize Arena & Editor · Double-click to reset">
     <div class="splitter-handle"></div>
 </div>
@@ -414,7 +413,7 @@
 
     <div class="panel-heading editor-heading">
 
-        <div><p class="eyebrow">YOUR STRATEGY</p><h2>Code editor</h2></div>
+        <div><p class="eyebrow">PYTHON SCRIPT</p><h2>Code editor</h2></div>
 
         <div class="editor-header-actions">
             <span id="char_counter" class="char-counter" style="font-size: 11px; font-family: var(--mono, monospace); color: var(--text-secondary); margin-right: 6px;" title="Code length / Limit">0/2000</span>
@@ -505,7 +504,7 @@ else:
         <!-- ⚡ Tactical Action Arcade Deck (100% Circular Action Buttons with Hotkeys & Cooldowns) -->
     <div id="quick_code_chips_row" class="quick-code-chips-row tactical-action-dock" role="toolbar" aria-label="Quick Tactical Action Arcade Deck">
         <div class="dock-header">
-            <span class="dock-title-badge">⚡ COMBAT DECK</span>
+            <span class="dock-title-badge">QUICK MOVES</span>
             <span class="dock-hotkey-hint">Keys 1–6 · Alt+1..6 in Editor</span>
         </div>
 
@@ -1738,7 +1737,7 @@ if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
 
 <script src="/static/audio.js?v=2.3.8"></script>
 
-<script src="/static/game.js?v=2.3.25"></script>
+<script src="/static/game.js?v=2.4.0"></script>
 
 <script src="/static/lib/codemirror/codemirror.min.js"></script>
 
