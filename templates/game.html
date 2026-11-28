@@ -1455,11 +1455,11 @@ if (currentIsBotRoom) {
     if (st) {
         if (BOT_DIFFICULTY === 'master' || BOT_DIFFICULTY === 'sace') {
             const avatarTitles = {
-                '1': '👑 SACE Master Bot (Avatar 1: Apprentice)',
-                '2': '👑 SACE Master Bot (Avatar 2: Tactical)',
-                '3': '👑 SACE Master Bot (Avatar 3: Grandmaster)'
+                '1': '👑 SACE Master Bot (Tier 1: Apprentice)',
+                '2': '👑 SACE Master Bot (Tier 2: Tactical)',
+                '3': '👑 SACE Master Bot (Tier 3: Grandmaster)'
             };
-            st.innerText = avatarTitles[BOT_AVATAR_LEVEL] || '👑 SACE Master Bot (Avatar 3: Grandmaster)';
+            st.innerText = avatarTitles[BOT_AVATAR_LEVEL] || '👑 SACE Master Bot (Tier 3: Grandmaster)';
         } else {
             st.innerText = 'Solo vs Bot (' + (BOT_DIFFICULTY === 'hard' ? 'Hard' : (BOT_DIFFICULTY || 'Easy')) + ')';
         }
@@ -1494,9 +1494,9 @@ const STAGE_TITLES = {
     'duelist': '🗡️ Stage 4: Shadow Duelist',
     'berserker': '🔥 Stage 5: Berserker Ronin',
     'apex': '👑 Stage 6: Apex Sovereign',
-    'master': (typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '1') ? '👑 SACE Master Bot (Avatar 1: Apprentice)' : ((typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '2') ? '👑 SACE Master Bot (Avatar 2: Tactical)' : '👑 SACE Master Bot (Avatar 3: Grandmaster)'),
-    'sace': (typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '1') ? '👑 SACE Master Bot (Avatar 1: Apprentice)' : ((typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '2') ? '👑 SACE Master Bot (Avatar 2: Tactical)' : '👑 SACE Master Bot (Avatar 3: Grandmaster)'),
-    'easy': '🌱 Solo vs Bot (Easy)',
+    'master': (typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '1') ? '👑 SACE Master Bot (Tier 1: Apprentice)' : ((typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '2') ? '👑 SACE Master Bot (Tier 2: Tactical)' : '👑 SACE Master Bot (Tier 3: Grandmaster)'),
+    'sace': (typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '1') ? '👑 SACE Master Bot (Tier 1: Apprentice)' : ((typeof BOT_AVATAR_LEVEL !== 'undefined' && BOT_AVATAR_LEVEL === '2') ? '👑 SACE Master Bot (Tier 2: Tactical)' : '👑 SACE Master Bot (Tier 3: Grandmaster)'),
+    'easy': '⚡ Solo vs Bot (Easy)',
     'hard': '🔥 Solo vs Bot (Hard)'
 };
 
@@ -1507,7 +1507,7 @@ const STAGE_INTEL = {
     'weaver': 'Trig spells (sin/cos) · Crouch or jump to evade, or clash with throw_sword()',
     'duelist': 'Agile dashes · Flips behind player · Turn around quickly or back-dodge',
     'berserker': 'Combos & rapid counters · High aggression · Block early and strike on cooldown',
-    'apex': 'Grandmaster Boss · Sub-second reflex · Master all sensors and spell fusion',
+    'apex': 'Final Ladder Boss · Sub-second reflex · Master all sensors and spell fusion',
     'master': 'Adaptive Neural AI · Learns your habits across matches · Counters repetitive loops',
     'sace': 'Adaptive Neural AI · Learns your habits across matches · Counters repetitive loops',
     'dummy': 'Infinite Health · Zero Pressure · Peaceful Combat Sandbox for test loops',

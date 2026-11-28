@@ -43,12 +43,12 @@
     const VALID_AVATAR_ICONS = AVATARS.map(a => a.icon).concat(['⚔️', '⚡', '🧙']);
 
     const STAGE_RANKS = {
-        1: { rank: 'Novice Coder', badge: 'LVL 1', color: '#10b981', stageName: 'Beginner' },
-        2: { rank: 'Byte Striker', badge: 'LVL 2', color: '#38bdf8', stageName: 'Byte Rusher' },
-        3: { rank: 'Iron Guardian', badge: 'LVL 3', color: '#6366f1', stageName: 'Iron Turtle' },
-        4: { rank: 'Wave Sorcerer', badge: 'LVL 4', color: '#8b5cf6', stageName: 'Wave Weaver' },
-        5: { rank: 'Shadow Master', badge: 'LVL 5', color: '#ec4899', stageName: 'Shadow Duelist' },
-        6: { rank: 'Apex Grandmaster', badge: 'MAX', color: '#f59e0b', stageName: 'Apex Sovereign' }
+        1: { rank: 'Byte Novice', badge: 'STAGE 1', color: '#10b981', stageName: 'Byte Rusher' },
+        2: { rank: 'Iron Guardian', badge: 'STAGE 2', color: '#38bdf8', stageName: 'Iron Turtle' },
+        3: { rank: 'Wave Sorcerer', badge: 'STAGE 3', color: '#8b5cf6', stageName: 'Wave Weaver' },
+        4: { rank: 'Shadow Striker', badge: 'STAGE 4', color: '#f43f5e', stageName: 'Shadow Duelist' },
+        5: { rank: 'Berserker Ronin', badge: 'STAGE 5', color: '#f97316', stageName: 'Berserker Ronin' },
+        6: { rank: 'Apex Sovereign', badge: 'MAX', color: '#f59e0b', stageName: 'Apex Sovereign' }
     };
 
     function generateRandomName() {

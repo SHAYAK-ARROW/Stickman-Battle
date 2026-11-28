@@ -18,13 +18,13 @@ BOT_CONFIGS = {
         "style": "beginner"
     },
     "easy": {
-        "title": "🌱 Byte Rusher",
+        "title": "⚡ Byte Rusher",
         "interval": (1.6, 2.4),
         "mistake": 0.45,
         "style": "rusher"
     },
     "rusher": {
-        "title": "🌱 Byte Rusher",
+        "title": "⚡ Byte Rusher",
         "interval": (1.6, 2.4),
         "mistake": 0.45,
         "style": "rusher"
@@ -36,7 +36,7 @@ BOT_CONFIGS = {
         "style": "turtle"
     },
     "weaver": {
-        "title": "📐 Wave Weaver",
+        "title": "🌊 Wave Weaver",
         "interval": (1.0, 1.5),
         "mistake": 0.20,
         "style": "weaver"

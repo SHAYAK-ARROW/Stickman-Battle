@@ -369,10 +369,10 @@ def game_info():
 BOT_TITLES = {
     'dummy': '🥋 Training Dummy',
     'beginner': '🐣 Beginner Bot',
-    'easy': '🌱 Byte Rusher',
-    'rusher': '🌱 Byte Rusher',
+    'easy': '⚡ Byte Rusher',
+    'rusher': '⚡ Byte Rusher',
     'turtle': '🛡️ Iron Turtle',
-    'weaver': '📐 Wave Weaver',
+    'weaver': '🌊 Wave Weaver',
     'duelist': '🗡️ Shadow Duelist',
     'hard': '🔥 Berserker Ronin',
     'berserker': '🔥 Berserker Ronin',
@@ -462,9 +462,9 @@ def play_vs_bot(difficulty):
     if diff in ('master', 'sace'):
         level_str = str(request.args.get('level', '3')).strip()
         level_map = {
-            '1': (0.25, '👑 SACE Master Bot (Avatar 1: Apprentice)'),
-            '2': (0.75, '👑 SACE Master Bot (Avatar 2: Tactical)'),
-            '3': (1.00, '👑 SACE Master Bot (Avatar 3: Grandmaster)')
+            '1': (0.25, '👑 SACE Master Bot (Tier 1: Apprentice)'),
+            '2': (0.75, '👑 SACE Master Bot (Tier 2: Tactical)'),
+            '3': (1.00, '👑 SACE Master Bot (Tier 3: Grandmaster)')
         }
         diff_val, title = level_map.get(level_str, level_map['3'])
         room.bot = SaceBattleBot(difficulty=diff_val, avatar_level=level_str)
