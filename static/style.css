@@ -4649,6 +4649,24 @@ li.CodeMirror-hint-active .hint-desc {
     color: #f87171;
 }
 
+.victory-challenge-dialog.is-draw {
+    border-color: rgba(56, 189, 248, 0.5);
+    background: linear-gradient(145deg, #0b1320 0%, #121826 60%, #14192a 100%);
+    box-shadow: 0 0 50px rgba(56, 189, 248, 0.22), 0 20px 40px rgba(0, 0, 0, 0.75);
+}
+
+.victory-challenge-dialog.is-draw .vic-title {
+    background: linear-gradient(135deg, #38bdf8 0%, #818cf8 55%, #c084fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.victory-challenge-dialog.is-draw .vic-security-seal {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.35);
+    color: #38bdf8;
+}
+
 .victory-challenge-dialog::backdrop {
     background: rgba(4, 6, 12, 0.85);
     backdrop-filter: blur(8px);
@@ -5360,6 +5378,50 @@ li.CodeMirror-hint-active .hint-desc {
         white-space: normal;
         overflow-wrap: anywhere;
     }
+
+    /* Prevent iOS Safari forced viewport auto-zoom on form input tap (< 16px) */
+    .dialog-search-row input,
+    #save_modal_input,
+    .vault-title-input {
+        font-size: 16px;
+    }
+}
+
+/* Floating Mobile Keyboard Toolbar (Run Code + Hide Keyboard while typing) */
+.mobile-kb-bar {
+    position: fixed;
+    right: 10px;
+    bottom: 10px;
+    z-index: 99990;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 7px;
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(10px);
+}
+.mobile-kb-bar.is-visible {
+    display: inline-flex;
+}
+.kb-bar-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1.1;
+}
+.kb-run-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+}
+.kb-done-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
 }
 
 @media (max-width: 720px) and (orientation: portrait) {

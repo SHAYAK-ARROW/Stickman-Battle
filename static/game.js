@@ -239,7 +239,6 @@ function sendPlayerTabState(forceHidden) {
 document.addEventListener('visibilitychange', () => sendPlayerTabState());
 window.addEventListener('pagehide', () => sendPlayerTabState(true));
 window.addEventListener('pageshow', () => sendPlayerTabState());
-window.addEventListener('blur', () => sendPlayerTabState(true));
 window.addEventListener('focus', () => sendPlayerTabState(false));
 
 function toggle_bot_pause() {
@@ -374,26 +373,27 @@ let matchStartTime = Date.now();
 let matchCodeRunCount = 0;
 let matchTrackedStarted = false;
 
-function showDefeatDialog(oppTitle, combatDuration, opponentHp, codeLines) {
+function showDefeatDialog(oppTitle, combatDuration, opponentHp, codeLines, isDraw = false) {
     const dialog = document.getElementById('victory_challenge_dialog');
     if (!dialog) return;
 
-    dialog.classList.add('is-defeat');
+    dialog.classList.toggle('is-defeat', !isDraw);
+    dialog.classList.toggle('is-draw', !!isDraw);
 
     const trophyEl = document.getElementById('vic_trophy_glow');
-    if (trophyEl) trophyEl.innerText = '💀';
+    if (trophyEl) trophyEl.innerText = isDraw ? '🤝' : '💀';
 
     const titleEl = document.getElementById('vic_title');
-    if (titleEl) titleEl.innerText = 'DEFEATED IN COMBAT!';
+    if (titleEl) titleEl.innerText = isDraw ? 'DRAW MATCH!' : 'DEFEATED IN COMBAT!';
 
     const oppEl = document.getElementById('vic_opponent_title');
-    if (oppEl) oppEl.innerText = `Defeated by ${oppTitle}`;
+    if (oppEl) oppEl.innerText = isDraw ? `Double K.O. vs ${oppTitle}` : `Defeated by ${oppTitle}`;
 
     const sealIcon = document.getElementById('vic_seal_icon');
-    if (sealIcon) sealIcon.innerText = '⚔️';
+    if (sealIcon) sealIcon.innerText = isDraw ? '⚖️' : '⚔️';
 
     const sealEl = document.getElementById('vic_receipt_label');
-    if (sealEl) sealEl.innerText = 'Combat Concluded · Challenge a Friend';
+    if (sealEl) sealEl.innerText = isDraw ? 'Equal Honor · Rematch to Settle It' : 'Combat Concluded · Challenge a Friend';
 
     const timeEl = document.getElementById('vic_combat_time');
     if (timeEl) timeEl.innerText = `${combatDuration}s`;
@@ -411,11 +411,17 @@ function showDefeatDialog(oppTitle, combatDuration, opponentHp, codeLines) {
     const shareUrl = window.location.origin ? window.location.origin : 'https://arrows-dev.itch.io/stickman-battle';
 
     // Pure English challenge text:
-    const challengeMsg = `⚔️ I couldn't defeat ${cleanOpp}, can you? It just crushed my Python strategy in Stickman Battle! Can your code beat it? 🔥\n🎮 Play free in browser 👉 ${shareUrl}`;
+    const challengeMsg = isDraw
+        ? `🤝 Double K.O.! I tied ${cleanOpp} in Stickman Battle in ${combatDuration}s! Can your Python code beat it? 🔥\n🎮 Play free in browser 👉 ${shareUrl}`
+        : `⚔️ I couldn't defeat ${cleanOpp}, can you? It just crushed my Python strategy in Stickman Battle! Can your code beat it? 🔥\n🎮 Play free in browser 👉 ${shareUrl}`;
     currentMatchChallengeMsg = challengeMsg;
 
     const quoteEl = document.getElementById('vic_challenge_text');
-    if (quoteEl) quoteEl.innerText = `"I couldn't defeat ${cleanOpp}, can you? ⚔️ Can your Python code beat this bot?"`;
+    if (quoteEl) {
+        quoteEl.innerText = isDraw
+            ? `"Double K.O. against ${cleanOpp} in ${combatDuration}s! 🤝 Think your Python script can break the tie?"`
+            : `"I couldn't defeat ${cleanOpp}, can you? ⚔️ Can your Python code beat this bot?"`;
+    }
 
     const waBtn = document.getElementById('btn_whatsapp_share');
     if (waBtn) {
@@ -443,7 +449,7 @@ function showVictoryDialog(data) {
     const dialog = document.getElementById('victory_challenge_dialog');
     if (!dialog) return;
 
-    dialog.classList.remove('is-defeat');
+    dialog.classList.remove('is-defeat', 'is-draw');
 
     const trophyEl = document.getElementById('vic_trophy_glow');
     if (trophyEl) trophyEl.innerText = '🏆';
@@ -2323,7 +2329,7 @@ function draw_on_camvas(data, isLocalAnimFrame = false) {
                 codeLines = val ? val.split('\n').filter(l => l.trim().length > 0).length : 1;
             }
             const combatDur = Math.max(1, Math.round((Date.now() - matchStartTime) / 1000));
-            showDefeatDialog(oppName, combatDur, botHp, codeLines);
+            showDefeatDialog(oppName, combatDur, botHp, codeLines, isDraw);
         }
     }
     if (!isLocalAnimFrame) {
@@ -2346,7 +2352,7 @@ function draw_on_camvas(data, isLocalAnimFrame = false) {
     if (nextStageBtn) {
         const p1Dead = (data.player1 && data.player1.heart <= 0);
         const p2Dead = (data.player2 && data.player2.heart <= 0);
-        const wonMatch = (MY_PLAYER_ID === 1 && p2Dead) || (MY_PLAYER_ID === 2 && p1Dead);
+        const wonMatch = !(p1Dead && p2Dead) && ((MY_PLAYER_ID === 1 && p2Dead) || (MY_PLAYER_ID === 2 && p1Dead));
         const nextBotMap = {
             'easy': { key: 'turtle', label: 'Stage 2: Iron Turtle' },
             'rusher': { key: 'turtle', label: 'Stage 2: Iron Turtle' },
@@ -2530,6 +2536,7 @@ window.executeSnippetDirect = function(snippet) {
 
 function request_restart() {
     closeVictoryDialog();
+    latestVictoryReceipt = null;
     prevGameOver = false;
     window._koAnimStartAt = 0;
     window._koSparkedPlayers = {};
@@ -2555,6 +2562,7 @@ function request_restart() {
 socket.on('game_restarted', () => {
     console.log("Game restarted!");
     closeVictoryDialog();
+    latestVictoryReceipt = null;
     prevGameOver = false;
     window._koAnimStartAt = 0;
     window._koSparkedPlayers = {};
@@ -2920,5 +2928,22 @@ document.querySelectorAll('.dock-action-wrapper').forEach(wrapper => {
         if (e.target.closest('button.dock-action-circle')) return;
         const btn = wrapper.querySelector('button.dock-action-circle');
         if (btn && !btn.disabled) btn.click();
+    });
+});
+
+// Close modal <dialog> elements cleanly when clicking dark outside backdrop
+['victory_challenge_dialog', 'commands_dialog', 'save_strategy_dialog', 'strategy_vault_dialog'].forEach(id => {
+    const dlg = document.getElementById(id);
+    if (!dlg) return;
+    dlg.addEventListener('click', (e) => {
+        if (e.target !== dlg || !dlg.open) return;
+        const rect = dlg.getBoundingClientRect();
+        const clickedInDialog = (
+            e.clientX >= rect.left && e.clientX <= rect.right &&
+            e.clientY >= rect.top && e.clientY <= rect.bottom
+        );
+        if (!clickedInDialog && typeof dlg.close === 'function') {
+            dlg.close();
+        }
     });
 });

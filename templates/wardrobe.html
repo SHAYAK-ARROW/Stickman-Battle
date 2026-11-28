@@ -17,14 +17,14 @@
       gtag('config', 'G-GR82W4NQE9');
     </script>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-visual">
     <meta name="theme-color" content="#0e0f12">
     <title>🥋 Python Wardrobe Studio · Combat Customization</title>
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="/static/style.css?v=2.4.7">
+    <link rel="stylesheet" href="/static/style.css?v={{ asset_v('style.css') }}">
     <style>
         .wardrobe-container {
             max-width: 1300px;
@@ -436,7 +436,7 @@ sword.change_color("crimson")</textarea>
         </section>
     </div>
 
-    <script src="/static/audio.js"></script>
+    <script src="/static/audio.js?v={{ asset_v('audio.js') }}"></script>
     <script>
         // --- LIVE 60 FPS STICKMAN PREVIEW ENGINE ---
         const canvas = document.getElementById("wardrobe_canvas");

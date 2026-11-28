@@ -39,6 +39,29 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 86400
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "stickman_battle_sace_v2_anti_cheat_secret_2026")
 SECRET_KEY_BYTES = app.secret_key.encode('utf-8')
 
+_ASSET_VERSION_CACHE = {}
+
+def get_static_asset_version(filename):
+    """Return short content hash cached by (mtime_ns, size) for automatic cache busting."""
+    rel = filename.lstrip('/')
+    full_path = os.path.join(app.root_path, 'static', rel)
+    try:
+        st = os.stat(full_path)
+        sig = (st.st_mtime_ns, st.st_size)
+        cached = _ASSET_VERSION_CACHE.get(rel)
+        if cached and cached[0] == sig:
+            return cached[1]
+        with open(full_path, 'rb') as f:
+            digest = hashlib.sha256(f.read()).hexdigest()[:8]
+        _ASSET_VERSION_CACHE[rel] = (sig, digest)
+        return digest
+    except OSError:
+        return "2.4"
+
+@app.context_processor
+def inject_asset_version_helper():
+    return dict(asset_v=get_static_asset_version)
+
 # Secure yet flexible CORS configuration (supports localhost, 127.0.0.1, LAN IPs & Render)
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS")
 if ALLOWED_ORIGINS:
@@ -899,6 +922,8 @@ def handle_restart_game(data=None):
     if getattr(room, 'is_bot_room', False):
         room.connected_players.add(2)
         room.is_match_active = True
+        if getattr(room, 'bot', None) and hasattr(room.bot, 'last_decision_time'):
+            room.bot.last_decision_time = time.time() + 1.0  # Match 1.0s entrance grace on rematch
     elif 1 in room.connected_players and 2 in room.connected_players:
         room.is_match_active = True
     socketio.emit('game_restarted', to=room_id)

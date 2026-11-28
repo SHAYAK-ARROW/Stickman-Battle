@@ -8,6 +8,67 @@
 var codeMirrorInstance = null;
 var activeErrorLine = null;
 
+function isTouchDevice() {
+    try {
+        return Boolean(
+            (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+            ('ontouchstart' in window && navigator.maxTouchPoints > 0 && window.innerWidth <= 1024)
+        );
+    } catch (e) {
+        return false;
+    }
+}
+
+function showMobileKeyboardBar(show) {
+    let bar = document.getElementById('mobile_kb_bar');
+    if (!show) {
+        if (bar) bar.classList.remove('is-visible');
+        return;
+    }
+    if (!isTouchDevice() && window.innerWidth > 900) return;
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'mobile_kb_bar';
+        bar.className = 'mobile-kb-bar';
+        bar.innerHTML = `
+            <button type="button" class="kb-bar-btn kb-run-btn">▶ Run Code</button>
+            <button type="button" class="kb-bar-btn kb-done-btn">⌨ Hide</button>
+        `;
+        document.body.appendChild(bar);
+        bar.querySelector('.kb-run-btn').addEventListener('mousedown', (e) => e.preventDefault());
+        bar.querySelector('.kb-run-btn').addEventListener('click', () => {
+            if (typeof run === 'function') run();
+            else {
+                const runBtn = document.getElementById('run_btn');
+                if (runBtn) runBtn.click();
+            }
+        });
+        bar.querySelector('.kb-done-btn').addEventListener('mousedown', (e) => e.preventDefault());
+        bar.querySelector('.kb-done-btn').addEventListener('click', () => {
+            if (codeMirrorInstance) codeMirrorInstance.getInputField().blur();
+            else if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+            }
+            showMobileKeyboardBar(false);
+        });
+    }
+    if (window.visualViewport) {
+        const bottomGap = Math.max(8, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop + 8);
+        bar.style.bottom = `${bottomGap}px`;
+    }
+    bar.classList.add('is-visible');
+}
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+        const bar = document.getElementById('mobile_kb_bar');
+        if (bar && bar.classList.contains('is-visible')) {
+            const bottomGap = Math.max(8, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop + 8);
+            bar.style.bottom = `${bottomGap}px`;
+        }
+    });
+}
+
 function showDiagnostics(msg) {
     const diag = document.getElementById("editor_diagnostics");
     const diagMsg = document.getElementById("diag_message");
@@ -370,11 +431,20 @@ function initCodeMirror() {
         window.codeMirrorInstance = codeMirrorInstance;
         window.editor = codeMirrorInstance;
 
-        // Auto-unlock AudioContext if user clicks or focuses in editor
+        // Auto-unlock AudioContext and show mobile floating Run/Hide bar when focused
         codeMirrorInstance.on("focus", function() {
             if (window.AudioEngine && window.AudioEngine.handleFirstUserGesture) {
                 window.AudioEngine.handleFirstUserGesture();
             }
+            showMobileKeyboardBar(true);
+        });
+        codeMirrorInstance.on("blur", function() {
+            setTimeout(() => {
+                const active = document.activeElement;
+                if (!active || !active.closest('.mobile-kb-bar')) {
+                    showMobileKeyboardBar(false);
+                }
+            }, 120);
         });
         codeMirrorInstance.on("mousedown", function() {
             if (window.AudioEngine && window.AudioEngine.handleFirstUserGesture) {
@@ -382,8 +452,9 @@ function initCodeMirror() {
             }
         });
 
-        // Auto-show suggestions on typing letters or dot
+        // Auto-show suggestions on typing letters or dot (skip automatic popup on touch keyboards)
         codeMirrorInstance.on("inputRead", function(cm, change) {
+            if (isTouchDevice()) return;
             if (change.origin !== "+input") return;
             const ch = change.text[0];
             // Responsive auto-complete on typing identifiers or dot
@@ -591,7 +662,7 @@ function onStrategySlotChange(slotId) {
     if (codeMirrorInstance) {
         codeMirrorInstance.setValue(slot.code || `# Slot ${id}: [Empty Slot]\n`);
         codeMirrorInstance.save();
-        codeMirrorInstance.focus();
+        if (!isTouchDevice()) codeMirrorInstance.focus();
 
         const wrapper = codeMirrorInstance.getWrapperElement();
         if (wrapper) {
@@ -602,7 +673,7 @@ function onStrategySlotChange(slotId) {
         }
     } else if (ide) {
         ide.value = slot.code || "";
-        ide.focus();
+        if (!isTouchDevice()) ide.focus();
     }
 
     if (typeof showToast === 'function') {
@@ -732,7 +803,7 @@ function insertCurrentStrategy(explicitSlotId = null) {
     if (codeMirrorInstance) {
         codeMirrorInstance.setValue(slot.code);
         codeMirrorInstance.save();
-        codeMirrorInstance.focus();
+        if (!isTouchDevice()) codeMirrorInstance.focus();
 
         // Trigger visible pulse glow animation on editor
         const wrapper = codeMirrorInstance.getWrapperElement();
@@ -744,7 +815,7 @@ function insertCurrentStrategy(explicitSlotId = null) {
         }
     } else if (ide) {
         ide.value = slot.code;
-        ide.focus();
+        if (!isTouchDevice()) ide.focus();
     }
 
     closeStrategyVaultDialog();
@@ -934,7 +1005,7 @@ function insertSnippet(snippet) {
         const targetLine = cursor.line + (needsNewlineBefore ? 1 : 0);
         doc.setCursor({ line: targetLine, ch: snippet.length });
 
-        codeMirrorInstance.focus();
+        if (!isTouchDevice()) codeMirrorInstance.focus();
         codeMirrorInstance.save();
         return;
     }
@@ -959,7 +1030,7 @@ function insertSnippet(snippet) {
     editor.value = text.substring(0, start) + toInsert + text.substring(end);
     const newPos = start + toInsert.length;
     editor.selectionStart = editor.selectionEnd = newPos;
-    editor.focus();
+    if (!isTouchDevice()) editor.focus();
     
     if (typeof updateLineNumbers === 'function') updateLineNumbers();
     if (typeof updateIndentGuides === 'function') updateIndentGuides();

@@ -119,8 +119,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"></noscript>
-    <link rel="stylesheet" href="/static/style.css?v=2.4.7">
-    <script src="/static/profile.js?v=2.3.5" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v={{ asset_v('style.css') }}">
+    <script src="/static/profile.js?v={{ asset_v('profile.js') }}" defer></script>
 </head>
 <body class="home-page">
     <main class="home-shell">
@@ -467,8 +467,8 @@
             </nav>
         </section>
     </main>
-    <script src="/static/audio.js?v=2.3.8" defer></script>
-    <script src="/static/main.js?v=2.4.3" defer></script>
+    <script src="/static/audio.js?v={{ asset_v('audio.js') }}" defer></script>
+    <script src="/static/main.js?v={{ asset_v('main.js') }}" defer></script>
     <!-- ========================================== -->
     <!-- 📖 FIGHTER'S HANDBOOK CURRICULUM MODAL     -->
     <!-- ========================================== -->
