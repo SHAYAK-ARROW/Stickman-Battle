@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
     <!-- Google tag (gtag.js) -->
+    <script>
+      // 🛡️ Disable GA4 on localhost/dev to keep production telemetry 100% clean
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        window['ga-disable-G-GR82W4NQE9'] = true;
+      }
+    </script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-GR82W4NQE9"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -109,9 +115,9 @@
     </script>
 
     <link rel="icon" type="image/png" href="/static/favicon.png">
-    <link rel="stylesheet" href="/static/style.css?v=2.3.23">
+    <link rel="stylesheet" href="/static/style.css?v=2.3.28">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="/static/profile.js?v=2.3.3"></script>
+    <script src="/static/profile.js?v=2.3.5"></script>
 </head>
 <body class="home-page">
     <main class="home-shell">
@@ -147,28 +153,34 @@
         </header>
 
         <section class="home-hero">
-            <div class="arcade-genre-badge">
-                <span class="arcade-badge-glow"></span>
-                <span class="arcade-badge-icon">🕹️</span>
-                <span>CYBER MARTIAL ARTS ARENA</span>
-                <span class="arcade-badge-sep">·</span>
-                <span class="arcade-badge-sub">ARROWS DEV HUB</span>
-            </div>
+            <!-- ⚔️ Unified Cyber Hero Stage (Headline + Full-Height Interactive Canvas) -->
+            <div class="hero-stage-container">
+                <canvas id="lobby_sparring_canvas" aria-label="Interactive Stickman Sparring Arena"></canvas>
 
-            <h1 class="hero-title arcade-hero-title">
-                CLASH NEON BLADES.<br>
-                <span>CODE YOUR VICTORY.</span>
-            </h1>
+                <div class="hero-content-overlay">
+                    <div class="arcade-genre-badge">
+                        <span class="arcade-badge-glow"></span>
+                        <span class="arcade-badge-icon">🕹️</span>
+                        <span>CYBER MARTIAL ARTS ARENA</span>
+                        <span class="arcade-badge-sep">·</span>
+                        <span class="arcade-badge-sub">ARROWS DEV HUB</span>
+                    </div>
 
-            <p class="hero-copy arcade-hero-copy">
-                Battle ruthless AI bosses or duel friends live in real-time martial arts combat.
-                Command your fighter with Python code or brawl with instant tactical cards!
-            </p>
+                    <h1 class="hero-title arcade-hero-title">
+                        CLASH NEON BLADES.<br>
+                        <span>CODE YOUR VICTORY.</span>
+                    </h1>
 
-            <!-- ⚔️ Live Autonomous Stickman Sparring Hero Canvas & Kinematic Toy -->
-            <div class="arcade-hero-sparring-wrapper" title="Interactive Sparring Arena · Poke or drag fighters to test physics!">
-                <canvas id="lobby_sparring_canvas" width="800" height="160" aria-label="Interactive Stickman Sparring Arena"></canvas>
-                <div class="sparring-canvas-hint">⚡ Poke or drag fighters to topple · Click ground for shockwave · Code them with Python below! ⚔️</div>
+                    <p class="hero-copy arcade-hero-copy">
+                        Battle ruthless AI bosses or duel friends live in real-time martial arts combat.
+                        Command your fighter with Python code or brawl with instant tactical cards!
+                    </p>
+                </div>
+
+                <div class="sparring-canvas-hint">
+                    <span class="sparring-hint-icon">⚡</span>
+                    <span>Fling or drag fighters to battle · True blade collision &amp; kinetic recoil</span>
+                </div>
             </div>
 
             <!-- Fluid Percentage-Based Dual Arena Grid (No fixed sizes, fills screen gracefully) -->
@@ -475,7 +487,7 @@
         </section>
     </main>
     <script src="/static/audio.js?v=2.3.8"></script>
-    <script src="/static/main.js?v=2.3.25"></script>
+    <script src="/static/main.js?v=2.3.30"></script>
     <!-- ========================================== -->
     <!-- 📖 FIGHTER'S HANDBOOK CURRICULUM MODAL     -->
     <!-- ========================================== -->

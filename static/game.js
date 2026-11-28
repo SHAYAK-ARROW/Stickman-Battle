@@ -7,6 +7,32 @@ const socket = io({
 }); // Connect to the server using Socket.IO (prioritize WebSocket for low latency)
 window.socket = socket;
 
+// --- GOOGLE ANALYTICS (GA4) CUSTOM COMBAT TELEMETRY ---
+function trackGameEvent(eventName, params = {}) {
+    const isLocal = Boolean(
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.protocol === 'file:'
+    );
+    if (isLocal) {
+        console.log(`%c[GA4 Local Dev (Untracked)] ${eventName}`, 'color: #00e5ff; font-weight: bold;', params);
+        return;
+    }
+    try {
+        if (typeof window.gtag === 'function') {
+            window.gtag('event', eventName, {
+                app_name: 'StickmanBattle',
+                timestamp: Date.now(),
+                ...params
+            });
+            console.log(`[GA4 Tracked] ${eventName}`, params);
+        }
+    } catch (err) {
+        console.warn('[GA4] Event tracking skipped:', err);
+    }
+}
+window.trackGameEvent = trackGameEvent;
+
 // Connection Status Helpers
 const statusDot = document.getElementById('status_dot');
 const statusText = document.getElementById('status_text');
@@ -322,7 +348,7 @@ socket.on('connect', () => {
         sace_grant: saceGrant
     });
 
-    if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
+    if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM && window.gateDismissed) {
         socket.emit('start_match');
     }
 
@@ -345,8 +371,8 @@ socket.on('sace_brain_updated', function(data) {
 let latestVictoryReceipt = null;
 let currentMatchChallengeMsg = "";
 let matchStartTime = Date.now();
-
-socket.on('start_match', () => { matchStartTime = Date.now(); });
+let matchCodeRunCount = 0;
+let matchTrackedStarted = false;
 
 function showDefeatDialog(oppTitle, combatDuration, opponentHp, codeLines) {
     const dialog = document.getElementById('victory_challenge_dialog');
@@ -630,6 +656,16 @@ function drawTrigCurve(context, options) {
 
 socket.on('match_start', () => {
     console.log("Match started!");
+    if (!matchTrackedStarted) {
+        matchStartTime = Date.now();
+        matchCodeRunCount = 0;
+        matchTrackedStarted = true;
+        trackGameEvent('game_match_start', {
+            mode: (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'bot' : 'pvp',
+            difficulty: (typeof BOT_DIFFICULTY !== 'undefined' ? BOT_DIFFICULTY : 'pvp'),
+            player_id: typeof MY_PLAYER_ID !== 'undefined' ? MY_PLAYER_ID : 1
+        });
+    }
     if (window.AudioEngine) {
         if (typeof window.AudioEngine.setBgmMode === 'function') window.AudioEngine.setBgmMode('battle');
         window.AudioEngine.playMatchStart();
@@ -641,7 +677,7 @@ socket.on('match_start', () => {
     const runBtn = document.getElementById('run_btn');
     if (runBtn) {
         runBtn.disabled = false;
-        runBtn.innerText = "Run";
+        runBtn.innerText = "▶ RUN CODE (Ctrl+Enter)";
     }
 });
 
@@ -655,7 +691,7 @@ socket.on('bot_ready', (data) => {
     const runBtn = document.getElementById('run_btn');
     if (runBtn) {
         runBtn.disabled = false;
-        runBtn.innerText = "Run";
+        runBtn.innerText = "▶ RUN CODE (Ctrl+Enter)";
     }
 });
 
@@ -1902,6 +1938,15 @@ function draw_on_camvas(data) {
         const p2Dead = (data.player2 && data.player2.heart <= 0);
         const isDraw = p1Dead && p2Dead;
         const iWon = !isDraw && ((MY_PLAYER_ID === 1 && p2Dead) || (MY_PLAYER_ID === 2 && p1Dead));
+        const combatDuration = Math.max(1, Math.round((Date.now() - matchStartTime) / 1000));
+
+        trackGameEvent('game_match_end', {
+            result: iWon ? 'victory' : (isDraw ? 'draw' : 'defeat'),
+            duration_seconds: combatDuration,
+            commands_run: matchCodeRunCount,
+            mode: (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'bot' : 'pvp',
+            difficulty: (typeof BOT_DIFFICULTY !== 'undefined' ? BOT_DIFFICULTY : 'pvp')
+        });
 
         if (window.AudioEngine) {
             window.AudioEngine.playGameOver(iWon);
@@ -2031,7 +2076,7 @@ function draw_on_camvas(data) {
         } else if (data.is_match_active && runBtn.disabled && (runBtn.innerText.includes("Paused") || runBtn.innerText.includes("Waiting"))) {
             // Self-healing: if server reports active match and unpaused, ensure button is ready
             runBtn.disabled = false;
-            runBtn.innerText = "Run";
+            runBtn.innerText = "▶ RUN CODE (Ctrl+Enter)";
             const waitScreen = document.getElementById('wait_screen');
             if (waitScreen) waitScreen.style.display = 'none';
         }
@@ -2041,6 +2086,14 @@ function draw_on_camvas(data) {
 function run(customSnippet) {
     dismissDiagnostics();
     if (window.AudioEngine) window.AudioEngine.playClick();
+
+    matchCodeRunCount++;
+    trackGameEvent('game_code_run', {
+        source: customSnippet ? 'tactical_card' : 'editor_run',
+        mode: (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'bot' : 'pvp',
+        difficulty: (typeof BOT_DIFFICULTY !== 'undefined' ? BOT_DIFFICULTY : 'pvp'),
+        run_count: matchCodeRunCount
+    });
 
     // Auto-dismiss battle start gate upon running combat code
     const gate = document.getElementById('battle_start_gate');
@@ -2150,7 +2203,7 @@ function run(customSnippet) {
     window._runCodeSafetyTimeout = setTimeout(() => {
         if (runBtn && runBtn.innerText === "Running...") {
             runBtn.disabled = false;
-            runBtn.innerText = "Run";
+            runBtn.innerText = "▶ RUN CODE (Ctrl+Enter)";
             runBtn.style.opacity = "1";
         }
     }, 2500);
@@ -2172,6 +2225,13 @@ function request_restart() {
     closeVictoryDialog();
     prevGameOver = false;
     matchStartTime = Date.now();
+    matchCodeRunCount = 0;
+    matchTrackedStarted = false;
+    window.gateDismissed = true;
+    trackGameEvent('game_rematch_requested', {
+        mode: (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'bot' : 'pvp',
+        difficulty: (typeof BOT_DIFFICULTY !== 'undefined' ? BOT_DIFFICULTY : 'pvp')
+    });
     socket.emit('restart_game', {
         "room_id": typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default'
     });
@@ -2185,6 +2245,8 @@ socket.on('game_restarted', () => {
     closeVictoryDialog();
     prevGameOver = false;
     matchStartTime = Date.now();
+    matchCodeRunCount = 0;
+    matchTrackedStarted = false;
     try {
         const roomKey = typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default';
         sessionStorage.setItem('sb_gate_entered_' + roomKey, 'true');
@@ -2201,7 +2263,7 @@ socket.on('game_restarted', () => {
     const runBtn = document.getElementById('run_btn');
     if (runBtn) {
         runBtn.disabled = false;
-        runBtn.innerText = "Run";
+        runBtn.innerText = "▶ RUN CODE (Ctrl+Enter)";
     }
 });
 
@@ -2230,7 +2292,7 @@ socket.on('code_error', (data) => {
     const runBtn = document.getElementById("run_btn");
     if (runBtn) {
         runBtn.disabled = false;
-        runBtn.innerText = "Run";
+        runBtn.innerText = "▶ RUN CODE (Ctrl+Enter)";
         runBtn.style.opacity = "1";
     }
     if (data && data.error) {
@@ -2281,7 +2343,7 @@ socket.on('code_success', (data) => {
         runBtn.style.opacity = "1";
         setTimeout(() => {
             if (runBtn && !runBtn.disabled && (runBtn.innerText === "✓ Executed" || runBtn.innerText === "Ready")) {
-                runBtn.innerText = "Run";
+                runBtn.innerText = "▶ RUN CODE (Ctrl+Enter)";
             }
         }, 1200);
     }
@@ -2340,6 +2402,11 @@ function triggerEmergency(action) {
             window.AudioEngine.playDodge();
         }
     }
+    trackGameEvent('game_panic_trigger', {
+        action: action,
+        mode: (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) ? 'bot' : 'pvp',
+        difficulty: (typeof BOT_DIFFICULTY !== 'undefined' ? BOT_DIFFICULTY : 'pvp')
+    });
     socket.emit('emergency_action', { action: action });
 }
 
@@ -2383,6 +2450,20 @@ socket.on('emergency_cooldown', (data) => {
 socket.on('emergency_rejected', (data) => {
     showEmergencyFeedback(data.reason || 'Action rejected', 'danger');
 });
+
+// ⚡ Global Master Shortcut: Ctrl+Enter / Cmd+Enter to Run Code from ANYWHERE in the Arena
+window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'Enter' || e.code === 'Enter' || e.code === 'NumpadEnter')) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof run === 'function') {
+            run();
+        } else {
+            const runBtn = document.getElementById('run_btn');
+            if (runBtn) runBtn.click();
+        }
+    }
+}, true); // Capture phase: intercepts Ctrl+Enter reliably whether inside CodeMirror, inputs, or canvas
 
 // Tactical Keyboard Hotkeys (Alt+S for Shield, Alt+D for Dodge) & WASD Guidance
 let lastWASDToastTime = 0;

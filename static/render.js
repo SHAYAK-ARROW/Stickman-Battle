@@ -910,7 +910,7 @@ function draw_on_camvas(data) {
         } else if (data.is_match_active && runBtn.disabled) {
             // Self-healing: if server reports active match, ensure button is ready
             runBtn.disabled = false;
-            runBtn.innerText = "Run";
+            runBtn.innerText = "▶ RUN CODE (Ctrl+Enter)";
             const waitScreen = document.getElementById('wait_screen');
             if (waitScreen) waitScreen.style.display = 'none';
         }

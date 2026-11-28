@@ -1,3 +1,29 @@
+// --- GOOGLE ANALYTICS (GA4) TELEMETRY HELPER ---
+function trackGameEvent(eventName, params = {}) {
+    const isLocal = Boolean(
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.protocol === 'file:'
+    );
+    if (isLocal) {
+        console.log(`%c[GA4 Local Dev (Untracked)] ${eventName}`, 'color: #00e5ff; font-weight: bold;', params);
+        return;
+    }
+    try {
+        if (typeof window.gtag === 'function') {
+            window.gtag('event', eventName, {
+                app_name: 'StickmanBattle',
+                timestamp: Date.now(),
+                ...params
+            });
+            console.log(`[GA4 Tracked] ${eventName}`, params);
+        }
+    } catch (err) {
+        console.warn('[GA4] Event tracking skipped:', err);
+    }
+}
+window.trackGameEvent = trackGameEvent;
+
 // Reusable Modern Toast Notification
 function showToast({ title, message, type = 'info', duration = 3500 }) {
     let container = document.getElementById('toast_container');
@@ -42,6 +68,7 @@ function showToast({ title, message, type = 'info', duration = 3500 }) {
 }
 
 function start_game() {
+    trackGameEvent('lobby_host_pvp');
     // Server creates the private room and issues the Player 1 invite token.
     setTimeout(() => {
         triggerColdBootNotice('coldboot_host_notice', '⚡ Waking up arena servers... (Ready in ~20s if waking from sleep). Please wait!');
@@ -164,6 +191,7 @@ function play_bot(difficulty) {
     }
     const valid = ['easy', 'hard', 'dummy', 'beginner', 'rusher', 'turtle', 'weaver', 'duelist', 'berserker', 'apex', 'master', 'sace'];
     const diff = valid.includes(difficulty) ? difficulty : 'easy';
+    trackGameEvent('lobby_start_bot', { difficulty: diff, stage: stage || 1 });
     setTimeout(() => {
         triggerColdBootNotice('coldboot_bot_notice', '⚡ Launching arena bot simulator... Please wait!');
     }, 1200);
@@ -172,6 +200,7 @@ function play_bot(difficulty) {
 
 function play_quick_play() {
     const unlocked = getUnlockedStage();
+    trackGameEvent('lobby_quick_play', { unlocked_stage: unlocked });
     const stageMapping = {
         1: 'rusher',
         2: 'turtle',
@@ -455,7 +484,7 @@ function initNetworkStatusListeners() {
     }
 }
 
-// ── Live Autonomous Stickman Sparring Hero Canvas ────────────────
+// ── Live Autonomous Stickman Sparring Open Arena Stage (Full-Hero Unbounded Physics) ────
 function initLobbySparringAnimation() {
     const canvas = document.getElementById('lobby_sparring_canvas');
     if (!canvas) return;
@@ -463,30 +492,37 @@ function initLobbySparringAnimation() {
     if (!ctx) return;
 
     let animFrameId = null;
-    let cssWidth = 800;
-    let cssHeight = 160;
+    let cssWidth = 1200;
+    let cssHeight = 460;
+    let groundY = 408;
+    const minHeadRoomY = 74; // Ensures stickman head (y - 56, r=11 -> top at y - 67) and raised sword never clip at canvas top
 
-    // Handle High-DPI screens
+    // Handle High-DPI screens and dynamic container size
     function resizeCanvas() {
         const rect = canvas.getBoundingClientRect();
-        cssWidth = rect.width || 800;
-        cssHeight = rect.height || 160;
+        cssWidth = Math.max(600, Math.round(rect.width || 1200));
+        cssHeight = Math.max(380, Math.round(rect.height || 460));
+        groundY = Math.round(cssHeight - 52);
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         canvas.width = Math.round(cssWidth * dpr);
         canvas.height = Math.round(cssHeight * dpr);
         if (ctx.resetTransform) ctx.resetTransform();
         ctx.scale(dpr, dpr);
-    }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
 
-    const groundY = 125;
+        if (blueFighter && !blueFighter.isDragged && blueFighter.toppleState === 'upright') {
+            blueFighter.y = groundY;
+        }
+        if (redFighter && !redFighter.isDragged && redFighter.toppleState === 'upright') {
+            redFighter.y = groundY;
+        }
+    }
+
     const blueColor = '#38bdf8';
     const blueBlade = '#0ea5e9';
     const redColor = '#f43f5e';
     const redBlade = '#e11d48';
 
-    // Particle system
+    // Particle & effect systems
     const sparks = [];
     const floatingTexts = [];
     const shockwaves = [];
@@ -494,14 +530,14 @@ function initLobbySparringAnimation() {
     function addSparks(x, y, count, primaryColor, altColor) {
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.9;
-            const speed = 2.0 + Math.random() * 5.5;
+            const speed = 2.0 + Math.random() * 6.0;
             sparks.push({
                 x,
                 y,
                 vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed - 1.2,
+                vy: Math.sin(angle) * speed - 1.4,
                 color: Math.random() > 0.4 ? primaryColor : (Math.random() > 0.5 ? altColor : '#fef08a'),
-                size: 1.5 + Math.random() * 2.2,
+                size: 1.5 + Math.random() * 2.4,
                 alpha: 1,
                 decay: 0.02 + Math.random() * 0.03
             });
@@ -513,7 +549,7 @@ function initLobbySparringAnimation() {
             x,
             y,
             radius: 4,
-            maxRadius: 48,
+            maxRadius: 52,
             color: color || '#fef08a',
             alpha: 0.95
         });
@@ -541,13 +577,13 @@ function initLobbySparringAnimation() {
         } catch (_) {}
     }
 
-    // Fighters state with dynamic base positioning and kinematic ragdoll physics
+    // Dynamic fighters with authentic kinetic velocity and positioning
     const blueFighter = {
         name: 'Blue',
-        dir: 1, // Facing right
-        x: 320,
+        dir: 1,
+        x: 440,
         y: groundY,
-        baseX: 320,
+        baseX: 440,
         vx: 0,
         vy: 0,
         color: blueColor,
@@ -558,7 +594,7 @@ function initLobbySparringAnimation() {
         action: 'idle',
         toppleAngle: 0,
         toppleAngVel: 0,
-        toppleState: 'upright', // 'upright' | 'falling' | 'dazed' | 'recovering'
+        toppleState: 'upright',
         toppleDir: 1,
         toppleTimer: 0,
         isDragged: false
@@ -566,10 +602,10 @@ function initLobbySparringAnimation() {
 
     const redFighter = {
         name: 'Red',
-        dir: -1, // Facing left
-        x: 480,
+        dir: -1,
+        x: 760,
         y: groundY,
-        baseX: 480,
+        baseX: 760,
         vx: 0,
         vy: 0,
         color: redColor,
@@ -597,35 +633,19 @@ function initLobbySparringAnimation() {
     }
 
     function initFighterPositions() {
-        blueFighter.baseX = Math.round(cssWidth * 0.34);
+        const midX = Math.round(cssWidth * 0.5);
+        blueFighter.baseX = midX - 160;
         blueFighter.x = blueFighter.baseX;
-        redFighter.baseX = Math.round(cssWidth * 0.66);
+        blueFighter.y = groundY;
+        redFighter.baseX = midX + 160;
         redFighter.x = redFighter.baseX;
+        redFighter.y = groundY;
         updateFighterOrientations();
     }
+
+    resizeCanvas();
     initFighterPositions();
-
-    function knockFighterOver(f, fallDir) {
-        f.toppleState = 'falling';
-        f.toppleDir = fallDir || (f.dir * -1);
-        f.toppleAngVel = f.toppleDir * 0.16;
-        f.vx = f.toppleDir * 3.8;
-        f.action = 'toppled';
-        f.shieldAlpha = 0;
-        playAudio('hit');
-
-        const pokeLabels = ['💫 OOF!', '😵 WHOA!', '🤸 TIMBER!', '💥 POKED!'];
-        const chosen = pokeLabels[Math.floor(Math.random() * pokeLabels.length)];
-        addFloatingText(f.x, groundY - 45, chosen, f.color);
-
-        // Opponent reacts to the knockdown
-        const opponent = f === blueFighter ? redFighter : blueFighter;
-        if (opponent.toppleState === 'upright') {
-            const taunts = ['😏 HAH!', '⚔️ TOO EASY!', '⚡ DOWN!', '🎯 GOT \'EM!'];
-            addFloatingText(opponent.x, groundY - 45, taunts[Math.floor(Math.random() * taunts.length)], opponent.color);
-            opponent.swordAngle = opponent.dir * -0.6; // Brandish blade in triumph
-        }
-    }
+    window.addEventListener('resize', resizeCanvas);
 
     function triggerManualClash(clickX, clickY) {
         addSparks(clickX, clickY, 32, blueColor, redColor);
@@ -636,12 +656,12 @@ function initLobbySparringAnimation() {
         const chosen = labels[Math.floor(Math.random() * labels.length)];
         addFloatingText(clickX, clickY - 18, chosen, '#fbbf24');
 
-        // Radial knockback on fighters
+        // Radial knockback impulse on fighters (engine.py physics)
         [blueFighter, redFighter].forEach(f => {
             if (f.toppleState !== 'upright') return;
             const dx = f.x - clickX;
             const dist = Math.abs(dx);
-            const force = Math.max(12, 34 - dist * 0.12);
+            const force = Math.max(6, 20 - dist * 0.04);
             const pushDir = dx >= 0 ? 1 : -1;
             f.vx += pushDir * force;
             f.action = 'recoil';
@@ -649,13 +669,14 @@ function initLobbySparringAnimation() {
         });
     }
 
-    // ── Mouse & Touch Ragdoll / Stand Placement Handlers ────────────
+    // ── Mouse & Touch Ragdoll Drag, Fling Toss & Stand Handlers ────────
     let dragTarget = null;
     let dragStartX = 0;
     let dragStartY = 0;
     let lastPointerX = 0;
     let lastPointerY = 0;
     let isActualDrag = false;
+    let pointerHistory = [];
 
     function getCanvasCoords(e) {
         const rect = canvas.getBoundingClientRect();
@@ -668,14 +689,9 @@ function initLobbySparringAnimation() {
     }
 
     function hitTestFighter(f, px, py) {
-        if (f.toppleState === 'upright') {
-            const dx = px - f.x;
-            const dy = py - (groundY - 30);
-            return Math.abs(dx) <= 42 && dy >= -48 && dy <= 45;
-        } else {
-            const lyingX = f.x + f.toppleDir * 28;
-            return Math.abs(px - lyingX) <= 50 && Math.abs(py - groundY) <= 38;
-        }
+        const dx = Math.abs(px - f.x);
+        const dy = py - f.y;
+        return dx <= 46 && dy >= -82 && dy <= 16;
     }
 
     function onPointerDown(e) {
@@ -685,6 +701,7 @@ function initLobbySparringAnimation() {
         lastPointerX = x;
         lastPointerY = y;
         isActualDrag = false;
+        pointerHistory = [{ x, y, t: performance.now() }];
 
         if (hitTestFighter(blueFighter, x, y)) {
             dragTarget = blueFighter;
@@ -696,6 +713,12 @@ function initLobbySparringAnimation() {
 
         if (dragTarget) {
             dragTarget.isDragged = true;
+            dragTarget.toppleState = 'upright';
+            dragTarget.toppleAngle = 0;
+            dragTarget.action = 'idle';
+            dragTarget.crouch = 0;
+            dragTarget.vx = 0;
+            dragTarget.vy = 0;
             canvas.style.cursor = 'grabbing';
         }
     }
@@ -705,16 +728,22 @@ function initLobbySparringAnimation() {
 
         if (dragTarget) {
             const dist = Math.hypot(x - dragStartX, y - dragStartY);
-            if (dist > 6) isActualDrag = true;
+            if (dist > 3) isActualDrag = true;
+
+            const now = performance.now();
+            pointerHistory.push({ x, y, t: now });
+            if (pointerHistory.length > 5) pointerHistory.shift();
 
             const deltaX = x - lastPointerX;
             dragTarget.vx = deltaX;
-            dragTarget.x = Math.max(40, Math.min(cssWidth - 40, x));
-            dragTarget.y = Math.min(groundY, Math.max(30, y));
+            dragTarget.x = Math.max(36, Math.min(cssWidth - 36, x));
+            dragTarget.y = Math.min(groundY, Math.max(minHeadRoomY, y));
 
-            // Ragdoll dangle tilt while dragged
+            // Dynamic dangle tilt when lifted high into the sky
             if (dragTarget.y < groundY - 10) {
-                dragTarget.toppleAngle = (deltaX * 0.08) - (dragTarget.dir * 0.2);
+                dragTarget.toppleAngle = deltaX * 0.04;
+            } else {
+                dragTarget.toppleAngle = 0;
             }
 
             lastPointerX = x;
@@ -731,33 +760,54 @@ function initLobbySparringAnimation() {
         f.isDragged = false;
         canvas.style.cursor = 'grab';
 
-        if (isActualDrag) {
-            // Check if user forcefully flung the fighter
-            if (Math.abs(f.vx) > 6.5) {
-                // High speed toss -> tumble and roll
-                knockFighterOver(f, f.vx >= 0 ? 1 : -1);
-            } else {
-                // Gentle release -> LAND ON FEET AND STAND AT NEW POSITION!
-                f.toppleState = 'upright';
-                f.toppleAngle = 0;
-                f.toppleAngVel = 0;
-                f.y = groundY;
-                f.crouch = 12; // Athletic crouch landing
-                f.action = 'idle';
-                f.vx = 0;
-                f.vy = 0;
-                f.baseX = Math.max(50, Math.min(cssWidth - 50, f.x));
-                f.x = f.baseX;
-                addSparks(f.x, groundY - 2, 9, f.color, '#ffffff');
-                playAudio('kipup');
-                addFloatingText(f.x, groundY - 45, '🥋 STAND!', f.color);
-                updateFighterOrientations();
-                choreographyTimer = 0;
-                choreographyPhase = 0; // Brief stance pause at new spot
-            }
+        // Calculate release fling velocity over recent motion
+        let flingVx = 0;
+        let flingVy = 0;
+        if (pointerHistory.length >= 2) {
+            const first = pointerHistory[0];
+            const last = pointerHistory[pointerHistory.length - 1];
+            const dt = Math.max(16, last.t - first.t);
+            flingVx = ((last.x - first.x) / dt) * 16.6;
+            flingVy = ((last.y - first.y) / dt) * 16.6;
         }
+
+        const flingSpeed = Math.hypot(flingVx, flingVy);
+
+        if (isActualDrag && flingSpeed >= 5.5) {
+            // 💥 HIGH SPEED FLING TOSS! Tumbles through air, rolls on floor, then springs back up!
+            f.vx = Math.max(-18, Math.min(18, flingVx));
+            f.vy = Math.max(-13, Math.min(8, flingVy));
+            f.toppleState = 'falling';
+            f.toppleDir = (f.vx >= 0) ? 1 : -1;
+            f.toppleAngVel = f.toppleDir * 0.18;
+            f.action = 'toppled';
+            addFloatingText(f.x, f.y - 45, '🤸 FLUNG!', f.color);
+            playAudio('hit');
+        } else {
+            // 🥋 GENTLE DROP: Lands smoothly on feet at new dropped location!
+            f.toppleState = 'upright';
+            f.toppleAngle = 0;
+            f.toppleAngVel = 0;
+            f.baseX = Math.max(60, Math.min(cssWidth - 60, f.x));
+            f.x = f.baseX;
+            f.y = groundY;
+            f.crouch = 10; // Athletic crouch landing dip
+            f.action = 'idle';
+            f.vx = 0;
+            f.vy = 0;
+
+            addSparks(f.x, groundY - 2, 9, f.color, '#ffffff');
+            playAudio('kipup');
+            addFloatingText(f.x, groundY - 50, '🥋 STANCE!', f.color);
+            updateFighterOrientations();
+
+            choreographyTimer = 0;
+            choreographyPhase = 0;
+        }
+
         dragTarget = null;
         isActualDrag = false;
+        pointerHistory = [];
     }
 
     function onPointerUp(e) {
@@ -772,14 +822,18 @@ function initLobbySparringAnimation() {
             return;
         }
         const { x, y } = getCanvasCoords(e);
-        if (hitTestFighter(blueFighter, x, y)) {
-            const fallDir = (x < blueFighter.x) ? 1 : -1;
-            knockFighterOver(blueFighter, fallDir);
-        } else if (hitTestFighter(redFighter, x, y)) {
-            const fallDir = (x < redFighter.x) ? 1 : -1;
-            knockFighterOver(redFighter, fallDir);
+        // If clicked on empty space, trigger shockwave push!
+        if (!hitTestFighter(blueFighter, x, y) && !hitTestFighter(redFighter, x, y)) {
+            triggerManualClash(x, Math.min(groundY, y));
         } else {
-            triggerManualClash(x, y);
+            // Clicked a fighter: quick martial blade guard flourish
+            const f = hitTestFighter(blueFighter, x, y) ? blueFighter : redFighter;
+            f.swordAngle = f.dir * 1.4;
+            f.shieldAlpha = 0.95;
+            f.action = 'parry';
+            addSparks(f.x, f.y - 30, 8, f.color, '#fff');
+            playAudio('shield');
+            addFloatingText(f.x, f.y - 50, '⚔️ PARRY READY!', f.color);
         }
         isActualDrag = false;
     }
@@ -800,12 +854,8 @@ function initLobbySparringAnimation() {
             const rect = canvas.getBoundingClientRect();
             const tx = e.changedTouches[0].clientX - rect.left;
             const ty = e.changedTouches[0].clientY - rect.top;
-            if (hitTestFighter(blueFighter, tx, ty)) {
-                knockFighterOver(blueFighter, tx < blueFighter.x ? 1 : -1);
-            } else if (hitTestFighter(redFighter, tx, ty)) {
-                knockFighterOver(redFighter, tx < redFighter.x ? 1 : -1);
-            } else {
-                triggerManualClash(tx, ty);
+            if (!hitTestFighter(blueFighter, tx, ty) && !hitTestFighter(redFighter, tx, ty)) {
+                triggerManualClash(tx, Math.min(groundY, ty));
             }
         }
         isActualDrag = false;
@@ -814,7 +864,7 @@ function initLobbySparringAnimation() {
         if (e.touches && e.touches[0]) onPointerMove(e);
     }, { passive: true });
 
-    // ── Draw stylized kinematic stickman with ragdoll support ───────
+    // ── Draw stylized kinematic stickman with authentic sword & struggle physics ─
     function drawStickman(f) {
         const x = f.x;
         const y = f.y;
@@ -823,11 +873,10 @@ function initLobbySparringAnimation() {
 
         ctx.save();
 
-        // Ragdoll rotation transformation around feet pivot
         if (f.toppleAngle !== 0) {
-            ctx.translate(x, groundY);
+            ctx.translate(x, y < groundY - 20 ? y : groundY);
             ctx.rotate(f.toppleAngle);
-            ctx.translate(-x, -groundY);
+            ctx.translate(-x, -(y < groundY - 20 ? y : groundY));
         }
 
         ctx.strokeStyle = f.color;
@@ -869,9 +918,20 @@ function initLobbySparringAnimation() {
         ctx.lineTo(x, y - 18 + crouchY);
         ctx.stroke();
 
-        // Legs
+        // Legs (with dangling struggle kick animation when held in air)
         ctx.beginPath();
-        if (f.toppleState === 'falling' || f.toppleState === 'dazed') {
+        if (f.isDragged && f.y < groundY - 20) {
+            // 🥋 DANGLE STRUGGLE: Cycling kicking legs while held by user!
+            const struggleTime = performance.now() * 0.018;
+            const kick1 = Math.sin(struggleTime) * 14;
+            const kick2 = -Math.sin(struggleTime) * 14;
+            ctx.moveTo(x, y - 18 + crouchY);
+            ctx.lineTo(x - 8 * dir + kick1, y - 6);
+            ctx.lineTo(x - 14 * dir + kick1 * 1.3, y + 6);
+            ctx.moveTo(x, y - 18 + crouchY);
+            ctx.lineTo(x + 8 * dir + kick2, y - 6);
+            ctx.lineTo(x + 14 * dir + kick2 * 1.3, y + 6);
+        } else if (f.toppleState === 'falling' || f.toppleState === 'dazed') {
             // Limp tuck
             ctx.moveTo(x, y - 18 + crouchY);
             ctx.lineTo(x - 8 * dir, y - 10);
@@ -880,7 +940,6 @@ function initLobbySparringAnimation() {
             ctx.lineTo(x + 6 * dir, y - 12);
             ctx.lineTo(x + 10 * dir, y - 4);
         } else if (f.crouch > 5) {
-            // Low crouch guard
             ctx.moveTo(x, y - 18 + crouchY);
             ctx.lineTo(x - 14 * dir, y - 8);
             ctx.lineTo(x - 18 * dir, y);
@@ -888,7 +947,6 @@ function initLobbySparringAnimation() {
             ctx.lineTo(x + 12 * dir, y - 8);
             ctx.lineTo(x + 16 * dir, y);
         } else {
-            // Athletic combat stance
             ctx.moveTo(x, y - 18 + crouchY);
             ctx.lineTo(x - 12 * dir, y);
             ctx.moveTo(x, y - 18 + crouchY);
@@ -903,7 +961,12 @@ function initLobbySparringAnimation() {
         let handX = x + (18 * dir);
         let handY = y - 32 + crouchY;
 
-        if (f.action === 'slash' || f.action === 'lunge') {
+        if (f.isDragged && f.y < groundY - 20) {
+            const wave = Math.sin(performance.now() * 0.02) * 6;
+            handX = x + (22 * dir);
+            handY = y - 36 + wave;
+            f.swordAngle = f.dir * 0.6 + Math.sin(performance.now() * 0.015) * 0.35;
+        } else if (f.action === 'slash' || f.action === 'lunge') {
             handX = x + (32 * dir);
             handY = y - 38 + crouchY;
         } else if (f.action === 'parry') {
@@ -912,9 +975,6 @@ function initLobbySparringAnimation() {
         } else if (f.action === 'recoil') {
             handX = x - (10 * dir);
             handY = y - 26 + crouchY;
-        } else if (f.toppleState === 'dazed' || f.toppleState === 'falling') {
-            handX = x + (12 * dir);
-            handY = y - 18 + crouchY;
         }
 
         ctx.beginPath();
@@ -983,6 +1043,8 @@ function initLobbySparringAnimation() {
 
     let choreographyTimer = 0;
     let choreographyPhase = 0;
+    let combatErrorJitter = 0;
+    let combatWhiffRoll = false;
 
     function renderLoop() {
         if (document.hidden) {
@@ -993,53 +1055,74 @@ function initLobbySparringAnimation() {
         const W = cssWidth;
         const H = cssHeight;
 
-        // Clear canvas
-        ctx.clearRect(0, 0, W, H);
-
-        // Floor reflection gradient
+        // Clean entire device pixel buffer to guarantee zero boundary streaks/smears on High-DPI screens
         ctx.save();
-        const floorGrad = ctx.createLinearGradient(0, groundY, 0, H);
-        floorGrad.addColorStop(0, 'rgba(56, 189, 248, 0.08)');
-        floorGrad.addColorStop(0.5, 'rgba(168, 85, 247, 0.04)');
-        floorGrad.addColorStop(1, 'transparent');
-        ctx.fillStyle = floorGrad;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+        // ── Seamless Holographic Cyber Floor (Edge-to-Edge Corner Coverage) ──
+        ctx.save();
+        const floorReflect = ctx.createLinearGradient(0, groundY, 0, H);
+        floorReflect.addColorStop(0, 'rgba(56, 189, 248, 0.09)');
+        floorReflect.addColorStop(0.5, 'rgba(168, 85, 247, 0.04)');
+        floorReflect.addColorStop(1, 'transparent');
+        ctx.fillStyle = floorReflect;
         ctx.fillRect(0, groundY, W, H - groundY);
 
-        // Neon ground line
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
-        ctx.lineWidth = 1.5;
-        ctx.shadowColor = 'rgba(168, 85, 247, 0.4)';
-        ctx.shadowBlur = 8;
+        const floorGrad = ctx.createLinearGradient(0, groundY, W, groundY);
+        floorGrad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
+        floorGrad.addColorStop(0.08, 'rgba(56, 189, 248, 0.85)');
+        floorGrad.addColorStop(0.5, 'rgba(168, 85, 247, 0.95)');
+        floorGrad.addColorStop(0.92, 'rgba(244, 63, 94, 0.85)');
+        floorGrad.addColorStop(1, 'rgba(244, 63, 94, 0.45)');
+        ctx.strokeStyle = floorGrad;
+        ctx.lineWidth = 2.4;
+        ctx.shadowColor = 'rgba(56, 189, 248, 0.6)';
+        ctx.shadowBlur = 12;
         ctx.beginPath();
-        ctx.moveTo(30, groundY);
-        ctx.lineTo(W - 30, groundY);
+        ctx.moveTo(0, groundY);
+        ctx.lineTo(W, groundY);
         ctx.stroke();
         ctx.restore();
 
-        const blueBaseX = Math.round(W * blueFighter.baseXRatio);
-        const redBaseX = Math.round(W * redFighter.baseXRatio);
-        const midX = Math.round(W * 0.5);
-
-        // ── Ragdoll Physics & Ninja Kip-Up State Machine ────────────
+        // ── Physics Integration (Gravity, Inertia, Friction, Recovery) ────
         [blueFighter, redFighter].forEach(f => {
-            if (f.isDragged) return; // Handled in pointermove
-
-            if (f.toppleState === 'falling') {
-                f.toppleAngle += f.toppleAngVel;
-                f.toppleAngVel += f.toppleDir * 0.018; // Angular gravity
+            // Mid-air gravity drop or falling tumble
+            if (!f.isDragged && f.y < groundY) {
+                f.vy += 1.2;
+                f.y += f.vy;
                 f.x += f.vx;
-                f.vx *= 0.88;
-                f.x = Math.max(50, Math.min(W - 50, f.x));
+                f.vx *= 0.97;
+                f.x = Math.max(36, Math.min(W - 36, f.x));
 
-                const targetFlat = f.toppleDir * (Math.PI * 0.47);
-                if (Math.abs(f.toppleAngle) >= Math.abs(targetFlat)) {
-                    f.toppleAngle = targetFlat;
-                    f.toppleAngVel = -f.toppleAngVel * 0.32; // Floor bounce
-                    addSparks(f.x + f.toppleDir * 24, groundY - 2, 7, '#94a3b8', f.color);
+                // Ceil clamp so flung/jumped fighters never clip at canvas top
+                if (f.y < minHeadRoomY) {
+                    f.y = minHeadRoomY;
+                    if (f.vy < 0) f.vy = 0;
+                }
 
-                    if (Math.abs(f.toppleAngVel) < 0.03) {
+                if (f.toppleState === 'falling') {
+                    f.toppleAngle += f.toppleAngVel;
+                }
+
+                if (f.y >= groundY) {
+                    f.y = groundY;
+                    f.vy = 0;
+
+                    if (f.toppleState === 'falling') {
+                        // Impact floor tumble
+                        f.toppleAngle = f.toppleDir * (Math.PI * 0.47);
                         f.toppleState = 'dazed';
-                        f.toppleTimer = 50; // ~0.8s on floor
+                        f.toppleTimer = 38; // ~0.6s tumble on floor
+                        addSparks(f.x + f.toppleDir * 20, groundY - 2, 9, '#94a3b8', f.color);
+                        playAudio('hit');
+                    } else {
+                        f.crouch = 8;
+                        f.baseX = f.x;
+                        updateFighterOrientations();
+                        addSparks(f.x, groundY - 2, 7, f.color, '#ffffff');
+                        playAudio('kipup');
                     }
                 }
             } else if (f.toppleState === 'dazed') {
@@ -1051,234 +1134,295 @@ function initLobbySparringAnimation() {
                     f.action = 'spring_recovery';
                     playAudio('kipup');
                     const recoveryCheers = ['🥷 KIP-UP!', '⚡ UP!', '⚔️ READY!'];
-                    addFloatingText(f.x, groundY - 45, recoveryCheers[Math.floor(Math.random() * recoveryCheers.length)], f.color);
+                    addFloatingText(f.x, groundY - 50, recoveryCheers[Math.floor(Math.random() * recoveryCheers.length)], f.color);
                 }
             } else if (f.toppleState === 'recovering') {
                 f.toppleTimer--;
                 const prog = 1 - (f.toppleTimer / 22);
-                f.y = groundY - Math.sin(prog * Math.PI) * 26; // High ninja spring hop
+                f.y = groundY - Math.sin(prog * Math.PI) * 32; // High ninja spring hop
                 f.toppleAngle = (1 - prog) * f.toppleDir * (Math.PI * 0.47);
                 if (f.toppleTimer <= 0) {
                     f.toppleAngle = 0;
                     f.y = groundY;
-                    f.crouch = 12; // Athletic crouch landing
+                    f.crouch = 10;
                     f.toppleState = 'upright';
                     f.action = 'idle';
-                    f.baseX = Math.max(50, Math.min(W - 50, f.x));
+                    f.baseX = Math.max(36, Math.min(W - 36, f.x));
                     updateFighterOrientations();
                     addSparks(f.x, groundY - 2, 8, f.color, '#ffffff');
                 }
-            } else if (f.toppleState === 'upright') {
-                // Return to upright stance
-                f.crouch *= 0.88;
+            } else if (f.toppleState === 'upright' && !f.isDragged) {
+                // Smooth momentum friction & boundary preservation
                 f.x += f.vx;
-                f.vx *= 0.84;
-                f.x = Math.max(50, Math.min(W - 50, f.x));
+                f.vx *= 0.85; // Natural kinetic deceleration
+                f.crouch *= 0.88;
+                f.x = Math.max(36, Math.min(W - 36, f.x));
             }
         });
 
-        // ── Autonomous Close-Quarters Blade Combat Choreography ─────
-        // Choreography only progresses if both fighters are upright & not dragged
-        const bothUpright = (blueFighter.toppleState === 'upright' && !blueFighter.isDragged &&
-                             redFighter.toppleState === 'upright' && !redFighter.isDragged);
+        // ── ⚔️ Interactive Aerial Pursuit While A Fighter Is Held ───────────
+        const isOneHeld = (blueFighter.isDragged !== redFighter.isDragged);
+        if (isOneHeld) {
+            const fHeld = blueFighter.isDragged ? blueFighter : redFighter;
+            const fAttacker = blueFighter.isDragged ? redFighter : blueFighter;
 
-        if (bothUpright) {
+            if (fAttacker.toppleState === 'upright' && !fAttacker.isDragged) {
+                fAttacker.dir = (fHeld.x >= fAttacker.x) ? 1 : -1;
+                const dx = fHeld.x - fAttacker.x;
+
+                if (fAttacker.y >= groundY - 2) {
+                    // Running along ground towards held fighter
+                    if (Math.abs(dx) > 36) {
+                        fAttacker.vx = Math.sign(dx) * 5.2;
+                    } else {
+                        // Close enough -> EXECUTE HIGH AERIAL LEAP ATTACK!
+                        fAttacker.vy = -13.5;
+                        fAttacker.action = 'lunge';
+                        fAttacker.swordAngle = fAttacker.dir * 1.35;
+                        addFloatingText(fAttacker.x, fAttacker.y - 35, '⚡ AERIAL STRIKE!', fAttacker.color);
+                    }
+                } else {
+                    // In mid-air leaping towards held fighter
+                    const midAirDist = Math.hypot(fAttacker.x - fHeld.x, fAttacker.y - fHeld.y);
+                    if (midAirDist <= 50) {
+                        // MIDAIR CLASH IMPACT!
+                        const clashX = (fAttacker.x + fHeld.x) * 0.5;
+                        const clashY = (fAttacker.y + fHeld.y) * 0.5;
+                        addSparks(clashX, clashY, 20, fAttacker.color, fHeld.color);
+                        addShockwave(clashX, clashY, '#ffffff');
+                        playAudio('clash');
+                        addFloatingText(clashX, clashY - 20, '⚔️ MIDAIR CLASH!', '#fbbf24');
+                        fAttacker.vx = -fAttacker.dir * 4.5;
+                        fHeld.vx = fAttacker.dir * 3.0; // slight push on held target
+                    }
+                }
+            }
+        }
+
+        // ── ⚔️ Autonomous Acrobatic Combat Choreography (Both Ready) ────────
+        const bothReady = (!blueFighter.isDragged && !redFighter.isDragged &&
+                           blueFighter.toppleState === 'upright' && redFighter.toppleState === 'upright' &&
+                           blueFighter.y >= groundY - 2 && redFighter.y >= groundY - 2);
+
+        if (bothReady) {
             choreographyTimer++;
 
-            // Dynamic left/right fighter detection based on current positions
+            // Gentle center framing so fighters remain centered under the neon headline even after flings
+            const midBaseX = (blueFighter.baseX + redFighter.baseX) * 0.5;
+            const desiredMidX = cssWidth * 0.5;
+            const drift = (desiredMidX - midBaseX) * 0.015;
+            blueFighter.baseX += drift;
+            redFighter.baseX += drift;
+
             const leftF = (blueFighter.baseX <= redFighter.baseX) ? blueFighter : redFighter;
             const rightF = (blueFighter.baseX <= redFighter.baseX) ? redFighter : blueFighter;
             leftF.dir = 1;
             rightF.dir = -1;
 
-            // 4 Distinct High-Impact Combat Sequences with tight punchy timing
-            const phaseDurations = [50, 95, 95, 115];
-            if (choreographyTimer > (phaseDurations[choreographyPhase] || 90)) {
+            const closeCombatDist = 48; // Physical contact spacing where swords cross
+
+            // Paced martial arts rhythm (~35% slower, deliberate, cinematic flow)
+            const phaseDurations = [95, 135, 155, 160];
+            if (choreographyTimer > (phaseDurations[choreographyPhase] || 120)) {
                 choreographyTimer = 0;
                 choreographyPhase = (choreographyPhase + 1) % 4;
+                // Roll new dynamic combat variance and near-miss / whiff chance
+                combatErrorJitter = (Math.random() - 0.5) * 16;
+                combatWhiffRoll = (Math.random() < 0.24);
             }
 
             if (choreographyPhase === 0) {
-                // Sequence 0: Tactical Combat Footwork & Feint Bounces
-                const bounce = Math.sin(choreographyTimer * 0.1) * 2.8;
-                leftF.x += (leftF.baseX + Math.sin(choreographyTimer * 0.06) * 6 - leftF.x) * 0.1;
+                // Sequence 0: Tactical Combat Footwork & Distance Prowling (Wide Arena Sway)
+                const wideSway = Math.sin(choreographyTimer * 0.06) * 45;
+                const bounce = Math.sin(choreographyTimer * 0.08) * 2.2;
+                leftF.x += (leftF.baseX - 40 + wideSway - leftF.x) * 0.06;
                 leftF.y = groundY + bounce;
-                leftF.swordAngle = 0.35 + Math.sin(choreographyTimer * 0.08) * 0.18;
-                leftF.shieldAlpha *= 0.85;
+                leftF.swordAngle = 0.35 + Math.sin(choreographyTimer * 0.06) * 0.18;
+                leftF.shieldAlpha *= 0.88;
 
-                rightF.x += (rightF.baseX - Math.sin(choreographyTimer * 0.06) * 6 - rightF.x) * 0.1;
+                rightF.x += (rightF.baseX + 40 + wideSway - rightF.x) * 0.06;
                 rightF.y = groundY + bounce;
-                rightF.swordAngle = -0.35 - Math.sin(choreographyTimer * 0.08) * 0.18;
-                rightF.shieldAlpha *= 0.85;
+                rightF.swordAngle = -0.35 - Math.sin(choreographyTimer * 0.06) * 0.18;
+                rightF.shieldAlpha *= 0.88;
 
             } else if (choreographyPhase === 1) {
-                // Sequence 1: Left Fighter Overhead Lunge & Physical Cross-Blade Lock
-                const contactDist = 48; // Close-quarters body spacing where 38px blades cross
-                const strikeTargetX = rightF.baseX - contactDist;
-                const clashX = (strikeTargetX + 30 + rightF.baseX - 14) * 0.5;
-                const clashY = groundY - 38;
+                // Sequence 1: Overhead Lunge · Dynamic Whiff or Blade Lock
+                const strikeTargetX = rightF.x - closeCombatDist;
 
-                if (choreographyTimer < 35) {
-                    // Left dashes all the way in to 48px striking contact
-                    const prog = choreographyTimer / 35;
+                if (choreographyTimer < 46) {
+                    const prog = choreographyTimer / 46;
                     leftF.x = leftF.baseX + (strikeTargetX - leftF.baseX) * prog;
-                    leftF.swordAngle = 0.35 + prog * 1.0; // Raising sword high
+                    leftF.swordAngle = 0.35 + prog * 1.0;
                     leftF.action = 'lunge';
 
-                    rightF.swordAngle = -0.35 - prog * 0.5; // High parry guard
-                    rightF.shieldAlpha = prog * 0.95;
-                    rightF.action = 'parry';
+                    if (combatWhiffRoll) {
+                        // 💨 Dynamic Whiff / Dodge Error: Defender ducks beneath swing!
+                        rightF.crouch = prog * 16;
+                        rightF.swordAngle = -0.35 - prog * 0.2;
+                        rightF.action = 'dodge';
+                        if (choreographyTimer === 45) {
+                            const clashX = leftF.x + 18;
+                            addSparks(clashX, groundY - 48, 12, leftF.color, '#ffffff');
+                            addFloatingText(clashX, groundY - 62, '💨 DUCK DODGE!', '#38bdf8');
+                            playAudio('kipup');
+                        }
+                    } else {
+                        // Standard Parry & Lock
+                        rightF.swordAngle = -0.35 - prog * 0.55;
+                        rightF.shieldAlpha = prog * 0.95;
+                        rightF.action = 'parry';
 
-                    if (choreographyTimer === 34) {
-                        // EXACT BLADE COLLISION IMPACT!
-                        addSparks(clashX, clashY, 28, leftF.color, rightF.color);
-                        addShockwave(clashX, clashY, '#ffffff');
-                        playAudio('clash');
-                        addFloatingText(clashX, clashY - 20, '⚔️ BLADE LOCK!', '#fbbf24');
+                        if (choreographyTimer === 45 || Math.abs(rightF.x - leftF.x) <= (closeCombatDist + 4)) {
+                            const clashX = (leftF.x + rightF.x) * 0.5;
+                            const clashY = groundY - 38;
+                            addSparks(clashX, clashY, 26, leftF.color, rightF.color);
+                            addShockwave(clashX, clashY, '#ffffff');
+                            playAudio('clash');
+                            const clashLabels = ['⚔️ BLADE LOCK!', '🛡️ PARRY!', '⚡ COUNTER!'];
+                            addFloatingText(clashX, clashY - 20, clashLabels[Math.floor(Math.random() * clashLabels.length)], '#fbbf24');
+                        }
                     }
-                } else if (choreographyTimer < 68) {
-                    // Physical blade lock struggle (blades physically touching and vibrating with sparks)
-                    leftF.x = strikeTargetX;
-                    const lockJitter = Math.sin(choreographyTimer * 1.6) * 0.09;
+                } else if (choreographyTimer < 90) {
+                    leftF.x = rightF.x - closeCombatDist;
+                    const lockJitter = Math.sin(choreographyTimer * 1.1) * 0.08 + (combatErrorJitter * 0.003);
                     leftF.swordAngle = 1.35 + lockJitter;
                     rightF.swordAngle = -0.85 - lockJitter;
                     leftF.action = 'slash';
-                    rightF.action = 'parry';
-                    rightF.shieldAlpha = 0.85;
-
-                    if (choreographyTimer % 8 === 0) {
-                        addSparks(clashX, clashY, 3, '#fef08a', leftF.color);
+                    if (!combatWhiffRoll) {
+                        rightF.action = 'parry';
+                        rightF.shieldAlpha = 0.85;
+                        if (choreographyTimer % 12 === 0) {
+                            const clashX = (leftF.x + rightF.x) * 0.5;
+                            addSparks(clashX, groundY - 38, 4, '#fef08a', leftF.color);
+                        }
                     }
-                } else if (choreographyTimer === 68) {
-                    // Right fighter pushes back with a shield bash
-                    leftF.vx = -5.2;
+                } else if (choreographyTimer === 90) {
+                    leftF.vx = -4.8 + (combatErrorJitter * 0.08);
+                    rightF.vx = 2.4 - (combatErrorJitter * 0.06);
                     leftF.action = 'recoil';
-                    addSparks(clashX, clashY, 12, rightF.color, '#ffffff');
+                    const clashX = (leftF.x + rightF.x) * 0.5;
+                    addSparks(clashX, groundY - 38, 14, rightF.color, '#ffffff');
                     playAudio('shield');
                 } else {
-                    // Recoil return to base positions
-                    leftF.x += (leftF.baseX - leftF.x) * 0.08;
-                    rightF.x += (rightF.baseX - rightF.x) * 0.08;
-                    leftF.swordAngle += (0.35 - leftF.swordAngle) * 0.08;
-                    rightF.swordAngle += (-0.35 - rightF.swordAngle) * 0.08;
-                    rightF.shieldAlpha *= 0.88;
+                    leftF.x += (leftF.baseX - leftF.x) * 0.05;
+                    rightF.x += (rightF.baseX - rightF.x) * 0.05;
+                    leftF.swordAngle += (0.35 - leftF.swordAngle) * 0.06;
+                    rightF.swordAngle += (-0.35 - rightF.swordAngle) * 0.06;
+                    rightF.shieldAlpha *= 0.9;
+                    rightF.crouch *= 0.88;
                 }
 
             } else if (choreographyPhase === 2) {
-                // Sequence 2: Right Fighter Low Sweep & Left Fighter Aerial Leap Deflect
-                const contactDist = 48;
-                const sweepTargetX = leftF.baseX + contactDist;
-                const clashX = (sweepTargetX + leftF.baseX) * 0.5;
-                const clashY = groundY - 36;
+                // Sequence 2: 🤸 ACROBATIC LEAPFROG VAULT OVER OPPONENT'S HEAD! (Paced & Varied Apex)
+                const midX = (leftF.baseX + rightF.baseX) * 0.5;
+                const vaultApex = 75 + combatErrorJitter; // Natural jump height error/variation
 
-                if (choreographyTimer < 35) {
-                    const prog = choreographyTimer / 35;
-                    // Right dashes low into close range
-                    rightF.x = rightF.baseX - (rightF.baseX - sweepTargetX) * prog;
-                    rightF.crouch = prog * 14;
-                    rightF.swordAngle = -0.35 - prog * 1.1; // Low sweep
+                if (choreographyTimer < 56) {
+                    const prog = choreographyTimer / 56;
+                    // Right dashes low with ground katana sweep
+                    rightF.x = rightF.baseX - (rightF.baseX - (midX - 25)) * prog;
+                    rightF.crouch = prog * 15;
+                    rightF.swordAngle = -0.35 - prog * 1.1;
                     rightF.action = 'lunge';
 
-                    // Left leap-dodges into the air
-                    leftF.y = groundY - Math.sin(prog * Math.PI) * 30;
-                    leftF.swordAngle = 0.35 + prog * 1.1; // Slashes downward from air
+                    // Left vaults completely over Right's head into high air!
+                    leftF.x = leftF.baseX + ((rightF.baseX + 60) - leftF.baseX) * prog;
+                    leftF.y = groundY - Math.sin(prog * Math.PI) * vaultApex;
+                    leftF.swordAngle = 0.35 + prog * (Math.PI * 1.5);
                     leftF.action = 'slash';
 
-                    if (choreographyTimer === 34) {
-                        // Mid-air blade collision
-                        addSparks(clashX, clashY, 28, rightF.color, leftF.color);
-                        addShockwave(clashX, clashY, leftF.color);
+                    // Clashes right at peak mid-air apex!
+                    if (choreographyTimer === 28) {
+                        const clashX = leftF.x;
+                        const clashY = leftF.y + 20;
+                        addSparks(clashX, clashY, 28, leftF.color, rightF.color);
+                        addShockwave(clashX, clashY, '#ffffff');
                         playAudio('clash');
-                        addFloatingText(clashX, clashY - 20, '⚡ AIR DEFLECT!', '#38bdf8');
+                        const jumpTexts = ['🤸 LEAPFROG VAULT!', '⚡ APEX CLASH!', '🥷 MID-AIR STRIKE!'];
+                        addFloatingText(clashX, clashY - 25, jumpTexts[Math.floor(Math.random() * jumpTexts.length)], '#38bdf8');
                     }
-                } else if (choreographyTimer < 70) {
-                    leftF.y += (groundY - leftF.y) * 0.12;
-                    leftF.crouch = 8;
-                    rightF.crouch *= 0.9;
-                    rightF.x = sweepTargetX;
+                } else if (choreographyTimer < 95) {
+                    leftF.y += (groundY - leftF.y) * 0.1;
+                    leftF.crouch = 10;
+                    rightF.crouch *= 0.92;
                     rightF.shieldAlpha = 0.85;
                 } else {
                     leftF.y = groundY;
-                    leftF.x += (leftF.baseX - leftF.x) * 0.08;
-                    rightF.x += (rightF.baseX - rightF.x) * 0.08;
-                    leftF.swordAngle += (0.35 - leftF.swordAngle) * 0.08;
-                    rightF.swordAngle += (-0.35 - rightF.swordAngle) * 0.08;
-                    rightF.shieldAlpha *= 0.88;
+                    leftF.x += (leftF.baseX - leftF.x) * 0.05;
+                    rightF.x += (rightF.baseX - rightF.x) * 0.05;
+                    leftF.swordAngle += (0.35 - leftF.swordAngle) * 0.06;
+                    rightF.swordAngle += (-0.35 - rightF.swordAngle) * 0.06;
+                    rightF.shieldAlpha *= 0.9;
                 }
 
             } else if (choreographyPhase === 3) {
-                // Sequence 3: High-Speed 3-Hit Flurry & Mutual Heavy Recoil
+                // Sequence 3: Cinematic Flurry & Mutual Heavy Cross-Counter Recoil
                 const meetMidX = (leftF.baseX + rightF.baseX) * 0.5;
-                const leftClashX = meetMidX - 24;
-                const rightClashX = meetMidX + 24;
+                const leftClashX = meetMidX - (closeCombatDist * 0.5);
+                const rightClashX = meetMidX + (closeCombatDist * 0.5);
                 const clashX = meetMidX;
 
-                if (choreographyTimer < 25) {
-                    // Both rush directly into 48px body-to-body clash
-                    const prog = choreographyTimer / 25;
+                if (choreographyTimer < 35) {
+                    const prog = choreographyTimer / 35;
                     leftF.x = leftF.baseX + (leftClashX - leftF.baseX) * prog;
                     rightF.x = rightF.baseX - (rightF.baseX - rightClashX) * prog;
                     leftF.swordAngle = 0.35 + prog * 0.9;
                     rightF.swordAngle = -0.35 - prog * 0.9;
 
-                } else if (choreographyTimer < 45) {
-                    // Hit 1: High Clash
+                } else if (choreographyTimer < 65) {
                     leftF.x = leftClashX;
                     rightF.x = rightClashX;
                     leftF.swordAngle = 1.25;
                     rightF.swordAngle = -1.25;
-                    if (choreographyTimer === 26) {
+                    if (choreographyTimer === 36) {
                         addSparks(clashX, groundY - 44, 20, leftF.color, rightF.color);
                         playAudio('clash');
                         addFloatingText(clashX, groundY - 60, '⚔️ CLASH!', '#fbbf24');
                     }
-                } else if (choreographyTimer < 65) {
-                    // Hit 2: Low Counter Parry
+                } else if (choreographyTimer < 95) {
                     leftF.crouch = 8;
                     rightF.crouch = 8;
                     leftF.swordAngle = 0.8;
                     rightF.swordAngle = -0.8;
-                    if (choreographyTimer === 46) {
+                    if (choreographyTimer === 66) {
                         addSparks(clashX, groundY - 26, 20, rightF.color, leftF.color);
                         playAudio('clash');
                         addFloatingText(clashX, groundY - 60, '🛡️ PARRY!', '#f43f5e');
                     }
-                } else if (choreographyTimer < 90) {
-                    // Hit 3: Heavy Mutual Thrust Shockwave
-                    if (choreographyTimer === 66) {
+                } else if (choreographyTimer < 125) {
+                    if (choreographyTimer === 96) {
                         addSparks(clashX, groundY - 36, 36, '#ffffff', '#fbbf24');
                         addShockwave(clashX, groundY - 36, '#ffffff');
                         playAudio('wave');
-                        addFloatingText(clashX, groundY - 60, '💥 CROSS-COUNTER!', '#fbbf24');
+                        const finishText = Math.abs(combatErrorJitter) > 4 ? '💥 GLANCING PARRY!' : '💥 CROSS-COUNTER!';
+                        addFloatingText(clashX, groundY - 60, finishText, '#fbbf24');
 
-                        // Recoil blast blows both fighters backward
-                        leftF.vx = -5.8;
-                        rightF.vx = 5.8;
-                        leftF.shieldAlpha = 0.85;
-                        rightF.shieldAlpha = 0.85;
+                        leftF.vx = -5.5 + (combatErrorJitter * 0.1);
+                        rightF.vx = 5.5 - (combatErrorJitter * 0.1);
+                        leftF.shieldAlpha = 0.9;
+                        rightF.shieldAlpha = 0.9;
                     }
                 } else {
-                    // Return to dynamic base stances
-                    leftF.crouch *= 0.88;
-                    rightF.crouch *= 0.88;
-                    leftF.x += (leftF.baseX - leftF.x) * 0.08;
-                    rightF.x += (rightF.baseX - rightF.x) * 0.08;
-                    leftF.swordAngle += (0.35 - leftF.swordAngle) * 0.08;
-                    rightF.swordAngle += (-0.35 - rightF.swordAngle) * 0.08;
-                    leftF.shieldAlpha *= 0.88;
-                    rightF.shieldAlpha *= 0.88;
+                    leftF.crouch *= 0.9;
+                    rightF.crouch *= 0.9;
+                    leftF.x += (leftF.baseX - leftF.x) * 0.05;
+                    rightF.x += (rightF.baseX - rightF.x) * 0.05;
+                    leftF.swordAngle += (0.35 - leftF.swordAngle) * 0.06;
+                    rightF.swordAngle += (-0.35 - rightF.swordAngle) * 0.06;
+                    leftF.shieldAlpha *= 0.9;
+                    rightF.shieldAlpha *= 0.9;
                 }
             }
         }
 
-        // Draw Shadows below fighters
+        // Draw Dynamic Shadows below fighters
         ctx.save();
         ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
         ctx.beginPath();
-        ctx.ellipse(blueFighter.x, groundY + 2, 16, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(blueFighter.x, groundY + 2, 18, 5, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(redFighter.x, groundY + 2, 16, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(redFighter.x, groundY + 2, 18, 5, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
@@ -1289,7 +1433,7 @@ function initLobbySparringAnimation() {
         // Update & Render Shockwaves
         for (let i = shockwaves.length - 1; i >= 0; i--) {
             const sw = shockwaves[i];
-            sw.radius += 2.4;
+            sw.radius += 2.6;
             sw.alpha *= 0.91;
             if (sw.alpha < 0.02 || sw.radius >= sw.maxRadius) {
                 shockwaves.splice(i, 1);
@@ -1315,7 +1459,7 @@ function initLobbySparringAnimation() {
             s.vy += 0.16;
             s.alpha -= s.decay;
 
-            if (s.alpha <= 0 || s.y > groundY + 5) {
+            if (s.alpha <= 0 || s.y > groundY + 8) {
                 sparks.splice(i, 1);
                 continue;
             }
@@ -1344,9 +1488,9 @@ function initLobbySparringAnimation() {
 
             ctx.save();
             ctx.font = 'bold 12px "DM Sans", -apple-system, sans-serif';
+            ctx.textAlign = 'center';
             ctx.fillStyle = ft.color;
             ctx.globalAlpha = Math.max(0, ft.alpha);
-            ctx.textAlign = 'center';
             ctx.shadowColor = ft.color;
             ctx.shadowBlur = 10;
             ctx.fillText(ft.text, ft.x, ft.y);

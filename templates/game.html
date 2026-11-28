@@ -5,6 +5,12 @@
 <head>
 
     <!-- Google tag (gtag.js) -->
+    <script>
+      // 🛡️ Disable GA4 on localhost/dev to keep production telemetry 100% clean
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        window['ga-disable-G-GR82W4NQE9'] = true;
+      }
+    </script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-GR82W4NQE9"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -33,10 +39,10 @@
 
     <link rel="stylesheet" href="/static/lib/codemirror/dracula.min.css">
 
-    <link rel="stylesheet" href="/static/style.css?v=2.3.21">
+    <link rel="stylesheet" href="/static/style.css?v=2.3.28">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="/static/profile.js?v=2.3.3"></script>
+    <script src="/static/profile.js?v=2.3.5"></script>
 
 </head>
 
@@ -420,17 +426,15 @@
 
     </div>
 
-    <!-- 📁 STRATEGY VAULT: 10 Custom Strategy Slots (Save & Live Quick-Insert) -->
+    <!-- 📁 STRATEGY VAULT: Sleek 1-Row Strategy Selector & Save -->
     <div class="strategy-vault-bar">
         <div class="vault-top-row">
             <div class="vault-slot-group">
-                <button type="button" class="vault-deck-btn" onclick="openStrategyVaultDialog()" title="View and manage all 10 saved strategies in full visual card deck">
-                    📁 10 Strategies Deck
-                </button>
+                <span class="vault-icon-badge" title="Tactical Strategy Loadouts">📁</span>
                 <select id="strategy_slot_select" class="vault-select" aria-label="Select saved strategy slot" onchange="onStrategySlotChange(this.value)">
-                    <option value="1">Slot 1: ⚡ Blitz Rush</option>
-                    <option value="2">Slot 2: 🛡️ Shield Breaker</option>
-                    <option value="3">Slot 3: 🌊 Wave Weaver</option>
+                    <option value="1">Slot 1: [Empty Slot]</option>
+                    <option value="2">Slot 2: [Empty Slot]</option>
+                    <option value="3">Slot 3: [Empty Slot]</option>
                     <option value="4">Slot 4: [Empty Slot]</option>
                     <option value="5">Slot 5: [Empty Slot]</option>
                     <option value="6">Slot 6: [Empty Slot]</option>
@@ -441,9 +445,9 @@
                 </select>
             </div>
             <div class="vault-actions-group">
-                <input type="text" id="strategy_title_input" class="vault-title-input" placeholder="Strategy Title (e.g. Blitz Rush)" maxlength="28" aria-label="Strategy Title">
-                <button type="button" class="vault-btn vault-save-btn" onclick="saveCurrentStrategy()" title="Save current editor code to this slot">💾 Save</button>
-                <button type="button" class="vault-btn vault-insert-btn" onclick="insertCurrentStrategy()" title="Insert this strategy into editor live during match">⚡ Insert</button>
+                <button type="button" id="save_strategy_btn" class="vault-btn vault-save-btn" onclick="saveCurrentStrategy()" title="Save current code with custom name (Ctrl+S)">
+                    💾 Save Strategy
+                </button>
             </div>
         </div>
     </div>
@@ -575,7 +579,7 @@ else:
     </div>
     <div class="editor-toolbar">
 
-        <button id="run_btn" class="button button-primary" onclick="run()" disabled>Run (Waiting for Player...)</button>
+        <button id="run_btn" class="button button-primary hero-run-btn" onclick="run()" disabled>▶ RUN CODE (Ctrl+Enter)</button>
 
         <button class="button button-secondary" onclick="open_commands_dialog()">Commands manual</button>
 
@@ -594,6 +598,26 @@ else:
 </section>
 
 
+
+<!-- 💾 In-Game Cyber Save Strategy Modal (Zero Prompt, Pure Game UI) -->
+<dialog id="save_strategy_dialog" class="save-strategy-dialog">
+    <div class="save-dialog-shell">
+        <form method="dialog" onsubmit="event.preventDefault(); confirmSaveStrategy();" style="margin: 0; padding: 0;">
+            <div class="save-dialog-header">
+                <span class="save-dialog-badge">💾 STRATEGY LOADOUT</span>
+                <h3>Save Tactic to Slot <span id="save_modal_slot_num">1</span></h3>
+                <p class="save-dialog-desc">Give your battle algorithm a memorable name to deploy in future matches:</p>
+            </div>
+            <div class="save-dialog-body">
+                <input type="text" id="save_modal_input" class="save-modal-input" placeholder="e.g. Blitz Rush, Shield Breaker, Anti-Boss..." maxlength="28" autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter'||event.keyCode===13){event.preventDefault();confirmSaveStrategy();}else if(event.key==='Escape'){closeSaveStrategyDialog();}">
+            </div>
+            <div class="save-dialog-actions">
+                <button type="button" class="save-dialog-btn btn-cancel" onclick="closeSaveStrategyDialog()">Cancel (Esc)</button>
+                <button type="button" class="save-dialog-btn btn-confirm" onclick="confirmSaveStrategy()">✓ Save Tactic (Enter)</button>
+            </div>
+        </form>
+    </div>
+</dialog>
 
 <!-- 📁 Strategy Vault Visual Deck Dialog (10 Slots View & Live In-Battle Insert) -->
 <dialog id="strategy_vault_dialog" class="strategy-vault-dialog">
@@ -1476,7 +1500,7 @@ const STAGE_TITLES = {
 const STAGE_INTEL = {
     'turtle': 'Heavy shield · Break with heavy_attack()',
     'beginner': 'Very slow & clumsy · Great for your very first fight · Just attack!',
-    'rusher': 'Direct charges · ~65% error rate · Punish whiffed dashes with sword_slash()',
+    'rusher': 'Direct charges · ~65% error rate · Punish whiffed dashes with attack()',
     'weaver': 'Trig spells (sin/cos) · Crouch or jump to evade, or clash with throw_sword()',
     'duelist': 'Agile dashes · Flips behind player · Turn around quickly or back-dodge',
     'berserker': 'Combos & rapid counters · High aggression · Block early and strike on cooldown',
@@ -1489,6 +1513,7 @@ const STAGE_INTEL = {
 };
 
 let gateDismissed = false;
+window.gateDismissed = gateDismissed;
 
 function showBattleGate(customTitle, customLabel, customDesc, customIntel) {
     if (gateDismissed) return;
@@ -1521,6 +1546,7 @@ function showBattleGateOnMatchStart() {
 
     if (gateDismissed || wasEntered || isReload) {
         gateDismissed = true;
+        window.gateDismissed = true;
         const gate = document.getElementById('battle_start_gate');
         if (gate) gate.style.display = 'none';
         const overlay = document.getElementById('battle_countdown_overlay');
@@ -1547,6 +1573,7 @@ function showBattleGateOnMatchStart() {
 function enterBattleGate(e) {
     if (gateDismissed) return;
     gateDismissed = true;
+    window.gateDismissed = true;
     try {
         const roomKey = typeof ROOM_ID !== 'undefined' ? ROOM_ID : 'default';
         sessionStorage.setItem('sb_gate_entered_' + roomKey, 'true');
@@ -1678,6 +1705,8 @@ function startBattleCountdown() {
     }, 2700);
 }
 
+window.enterBattleGate = enterBattleGate;
+
 // Global keypress listener to enter battle gate
 
 window.addEventListener('keydown', function gateKeyHandler(e) {
@@ -1685,6 +1714,12 @@ window.addEventListener('keydown', function gateKeyHandler(e) {
     const gate = document.getElementById('battle_start_gate');
 
     if (!gateDismissed && gate && gate.style.display === 'flex') {
+
+        if (e.ctrlKey || e.metaKey || e.altKey || ['Shift', 'Control', 'Alt', 'Meta', 'Tab', 'CapsLock', 'F5', 'F12'].includes(e.key)) {
+
+            return;
+
+        }
 
         enterBattleGate(e);
 
@@ -1694,17 +1729,16 @@ window.addEventListener('keydown', function gateKeyHandler(e) {
 
 
 
-// Auto-start match immediately with zero blocking gate or countdown delay
-gateDismissed = true;
-if (typeof socket !== 'undefined' && socket && socket.connected) {
-    socket.emit('start_match');
+// Show Enter Battle gate + 3-2-1 lightning countdown on new bot matches (skips cleanly on page reload)
+if (typeof IS_BOT_ROOM !== 'undefined' && IS_BOT_ROOM) {
+    showBattleGateOnMatchStart();
 }
 
 </script>
 
 <script src="/static/audio.js?v=2.3.8"></script>
 
-<script src="/static/game.js?v=2.3.22"></script>
+<script src="/static/game.js?v=2.3.25"></script>
 
 <script src="/static/lib/codemirror/codemirror.min.js"></script>
 
@@ -1712,7 +1746,7 @@ if (typeof socket !== 'undefined' && socket && socket.connected) {
 
 <script src="/static/lib/codemirror/python.min.js"></script>
 
-<script src="/static/editor.js?v=2.3.21"></script>
+<script src="/static/editor.js?v=2.3.23"></script>
 
 
 

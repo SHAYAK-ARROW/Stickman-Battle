@@ -17,7 +17,30 @@
         'Hacker', 'Ronin', 'Samurai', 'Duelist', 'Knight', 'Wizard'
     ];
 
-    const AVATARS = ['🥋', '🥷', '⚔️', '⚡', '🧙'];
+    const AVATARS = [
+        { id: 'master_ronin', icon: '🥋', name: 'Master Ronin', theme: '#10b981', desc: 'Balanced Martial' },
+        { id: 'shadow_ninja', icon: '🥷', name: 'Cyber Ninja', theme: '#38bdf8', desc: 'Swift & Lethal' },
+        { id: 'iron_aegis', icon: '🛡️', name: 'Iron Aegis', theme: '#0ea5e9', desc: 'Heavy Defense' },
+        { id: 'mystic', icon: '🌊', name: 'Wave Mystic', theme: '#a855f7', desc: 'Trig Fluidity' },
+        { id: 'blade', icon: '🗡️', name: 'Shadow Blade', theme: '#f43f5e', desc: 'Silent Katana' },
+        { id: 'berserker', icon: '🔥', name: 'Flame Ronin', theme: '#f97316', desc: 'Blazing Fury' },
+        { id: 'sovereign', icon: '👑', name: 'Apex Monarch', theme: '#f59e0b', desc: 'Grandmaster Crown' },
+        { id: 'dragon', icon: '🐉', name: 'Dragon Knight', theme: '#14b8a6', desc: 'Mythic Scales' },
+        { id: 'mecha', icon: '🤖', name: 'Cyber Mecha', theme: '#6366f1', desc: 'Silicon Automaton' },
+        { id: 'hacker', icon: '🧠', name: 'Neural Hacker', theme: '#ec4899', desc: 'Deep Heuristic' },
+        { id: 'ranger', icon: '🏹', name: 'Phantom Ranger', theme: '#84cc16', desc: 'Piercing Bow' },
+        { id: 'mage', icon: '🔮', name: 'Cosmic Archmage', theme: '#d946ef', desc: 'Arcane Void' },
+        { id: 'wolf', icon: '🐺', name: 'Dire Wolf', theme: '#94a3b8', desc: 'Pack Hunter' },
+        { id: 'skull', icon: '💀', name: 'Skull Phantom', theme: '#e2e8f0', desc: 'Grim Reaver' },
+        { id: 'kitsune', icon: '🦊', name: 'Cyber Kitsune', theme: '#fb923c', desc: 'Spirit Trickster' },
+        { id: 'tiger', icon: '🐯', name: 'Tiger Claw', theme: '#facc15', desc: 'Ferocious Leap' },
+        { id: 'viper', icon: '🐍', name: 'Viper Fang', theme: '#22c55e', desc: 'Venom Strike' },
+        { id: 'eagle', icon: '🦅', name: 'Storm Eagle', theme: '#38bdf8', desc: 'Aerial Dominance' },
+        { id: 'coder', icon: '💻', name: 'Python Scribe', theme: '#38bdf8', desc: 'Algorithmic Mastery' },
+        { id: 'champion', icon: '⭐', name: 'Galactic Champion', theme: '#fbbf24', desc: 'Cosmic Ascendant' }
+    ];
+
+    const VALID_AVATAR_ICONS = AVATARS.map(a => a.icon).concat(['⚔️', '⚡', '🧙']);
 
     const STAGE_RANKS = {
         1: { rank: 'Novice Coder', badge: 'LVL 1', color: '#10b981', stageName: 'Beginner' },
@@ -66,7 +89,15 @@
     function getPlayerAvatar() {
         try {
             let av = localStorage.getItem('sb_player_avatar');
-            if (!av || !AVATARS.includes(av)) {
+            if (!av || !VALID_AVATAR_ICONS.includes(av)) {
+                // Check if wardrobe avatar exists
+                const custom = localStorage.getItem('stickman_custom_avatar');
+                if (custom) {
+                    const parsed = JSON.parse(custom);
+                    if (parsed && parsed.icon) av = parsed.icon;
+                }
+            }
+            if (!av || !VALID_AVATAR_ICONS.includes(av)) {
                 av = '🥋';
             }
             return av;
@@ -76,16 +107,32 @@
     }
 
     function setPlayerAvatar(av) {
-        if (!AVATARS.includes(av)) return;
+        if (!VALID_AVATAR_ICONS.includes(av)) return;
         try {
             localStorage.setItem('sb_player_avatar', av);
+            // Sync with wardrobe namespace
+            const matched = AVATARS.find(a => a.icon === av);
+            if (matched) {
+                localStorage.setItem('stickman_custom_avatar', JSON.stringify({
+                    id: matched.id,
+                    icon: matched.icon,
+                    name: matched.name,
+                    color: matched.theme
+                }));
+            }
+            if (typeof window.trackGameEvent === 'function') {
+                window.trackGameEvent('avatar_equipped', {
+                    avatar_icon: av,
+                    role_name: matched ? matched.name : 'Unknown'
+                });
+            }
         } catch (e) {
             console.warn('LocalStorage unavailable for profile avatar:', e);
         }
 
         // Live visual highlight on clicked avatar in modal
         document.querySelectorAll('.profile-avatar-choice').forEach(btn => {
-            btn.classList.toggle('is-active', btn.textContent.trim() === av);
+            btn.classList.toggle('is-active', btn.getAttribute('data-icon') === av);
         });
 
         updateProfileUI();
@@ -177,13 +224,17 @@
                 </div>
 
                 <div class="profile-modal-body">
-                    <!-- Avatar Selection Row -->
+                    <!-- Avatar Selection Row (20 Fighter Roles) -->
                     <div class="profile-section">
-                        <label class="profile-section-label">CHOOSE FIGHTER AVATAR</label>
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 4px;">
+                            <label class="profile-section-label" style="margin:0;">CHOOSE FIGHTER AVATAR (20 COMBAT ROLES)</label>
+                            <a href="/wardrobe" style="font-size: 11px; color: #38bdf8; text-decoration: none; font-weight: 700;">Open Studio ➔</a>
+                        </div>
                         <div class="profile-avatar-selector" id="profile_avatar_selector">
                             ${AVATARS.map(av => `
-                                <button type="button" class="profile-avatar-choice ${av === getPlayerAvatar() ? 'is-active' : ''}" onclick="window.PlayerProfile.setAvatar('${av}')" title="Pick ${av}">
-                                    ${av}
+                                <button type="button" class="profile-avatar-choice ${av.icon === getPlayerAvatar() ? 'is-active' : ''}" data-icon="${av.icon}" onclick="window.PlayerProfile.setAvatar('${av.icon}')" title="${av.name} (${av.desc})">
+                                    <span class="avatar-icon-glyph">${av.icon}</span>
+                                    <span class="avatar-choice-name">${av.name.split(' ')[0]}</span>
                                 </button>
                             `).join('')}
                         </div>

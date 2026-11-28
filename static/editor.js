@@ -333,6 +333,32 @@ function initCodeMirror() {
                         closeOnUnfocus: true
                     });
                 },
+                "Ctrl-Enter": function(cm) {
+                    if (typeof run === 'function') {
+                        run();
+                    } else {
+                        const runBtn = document.getElementById('run_btn');
+                        if (runBtn) runBtn.click();
+                    }
+                },
+                "Cmd-Enter": function(cm) {
+                    if (typeof run === 'function') {
+                        run();
+                    } else {
+                        const runBtn = document.getElementById('run_btn');
+                        if (runBtn) runBtn.click();
+                    }
+                },
+                "Ctrl-S": function(cm) {
+                    if (typeof saveCurrentStrategy === 'function') {
+                        saveCurrentStrategy();
+                    }
+                },
+                "Cmd-S": function(cm) {
+                    if (typeof saveCurrentStrategy === 'function') {
+                        saveCurrentStrategy();
+                    }
+                },
                 "Esc": function(cm) {
                     if (cm.state.completionActive) {
                         cm.state.completionActive.close();
@@ -484,29 +510,11 @@ if (document.readyState === "loading") {
 }
 
 // ==============================================================================
-// 📁 STRATEGY VAULT - 10 SLOTS MANAGER & LIVE IN-BATTLE PRESET INSERTION
+// 📁 STRATEGY VAULT - 10 SLOTS CLEAN ARCHITECTURE (100% USER-CREATED LOADOUTS)
 // ==============================================================================
-const DEFAULT_PRESET_STRATEGIES = [
-    {
-        id: 1,
-        title: "⚡ Blitz Rush",
-        code: "# Slot 1: Blitz Rush - Fast gap-close and strike\nif get_enemy_distance() > 110:\n    dash(3)\nelse:\n    attack()\n"
-    },
-    {
-        id: 2,
-        title: "🛡️ Shield Breaker",
-        code: "# Slot 2: Shield Breaker - Counter heavy defenders\nif get_enemy_distance() > 130:\n    dash(3)\nelif is_enemy_blocking():\n    heavy_attack()\nelse:\n    swing()\n"
-    },
-    {
-        id: 3,
-        title: "🌊 Wave Weaver",
-        code: "# Slot 3: Wave Weaver - Ranged sine harassment\nif get_enemy_distance() > 200:\n    math.sin(50)\nelif get_enemy_distance() > 100:\n    dash(3)\nelse:\n    attack()\n"
-    }
-];
-
 function getStrategyVault() {
     try {
-        const raw = localStorage.getItem('stickman_strategy_vault_v1');
+        const raw = localStorage.getItem('stickman_strategy_vault_v2');
         if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length === 10) return parsed;
@@ -515,14 +523,15 @@ function getStrategyVault() {
         console.warn("Strategy Vault parse failed:", e);
     }
 
+    // 10 Blank Custom Strategy Slots for Player-Crafted Tactics
     const slots = [];
     for (let i = 1; i <= 10; i++) {
-        const preset = DEFAULT_PRESET_STRATEGIES.find(d => d.id === i);
-        if (preset) {
-            slots.push({ id: i, title: preset.title, code: preset.code, updated: Date.now() });
-        } else {
-            slots.push({ id: i, title: `Slot ${i}: [Empty]`, code: `# Slot ${i}: Custom Strategy\n# Write your Python combat logic here\n`, updated: null });
-        }
+        slots.push({
+            id: i,
+            title: `[Empty Slot]`,
+            code: `# Slot ${i}: [Empty Slot]\n# Write your Python battle logic here and click '💾 Save Strategy' (Ctrl+S)!\n`,
+            updated: null
+        });
     }
     saveStrategyVault(slots);
     return slots;
@@ -530,7 +539,7 @@ function getStrategyVault() {
 
 function saveStrategyVault(slots) {
     try {
-        localStorage.setItem('stickman_strategy_vault_v1', JSON.stringify(slots));
+        localStorage.setItem('stickman_strategy_vault_v2', JSON.stringify(slots));
     } catch (e) {
         console.warn("Strategy Vault save failed:", e);
     }
@@ -547,7 +556,6 @@ function setActiveSlotId(slotId) {
 
 function initStrategyVault() {
     const select = document.getElementById('strategy_slot_select');
-    const titleInput = document.getElementById('strategy_title_input');
     if (!select) return;
 
     const slots = getStrategyVault();
@@ -557,18 +565,16 @@ function initStrategyVault() {
     slots.forEach(s => {
         const opt = document.createElement("option");
         opt.value = s.id;
-        opt.textContent = `Slot ${s.id}: ${s.title}`;
+        const displayTitle = (s.title && s.title !== `[Empty Slot]`) ? s.title : `[Empty Slot]`;
+        opt.textContent = `Slot ${s.id}: ${displayTitle}`;
         select.appendChild(opt);
     });
 
     select.value = activeSlotId;
     const current = slots.find(s => s.id === activeSlotId) || slots[0];
-    if (titleInput) {
-        titleInput.value = current.title.replace(/^Slot \d+:\s*/, "");
-    }
 
-    // Populate active slot's saved code into editor
-    if (codeMirrorInstance && current.code) {
+    // Populate active slot's saved code into editor if editor empty or default
+    if (codeMirrorInstance && current.code && (!codeMirrorInstance.getValue() || codeMirrorInstance.getValue().startsWith("# Slot"))) {
         codeMirrorInstance.setValue(current.code);
         codeMirrorInstance.save();
     }
@@ -581,29 +587,79 @@ function onStrategySlotChange(slotId) {
     const slot = slots.find(s => s.id === id);
     if (!slot) return;
 
-    const titleInput = document.getElementById('strategy_title_input');
-    if (titleInput) {
-        titleInput.value = slot.title.replace(/^Slot \d+:\s*/, "");
-    }
-
-    // Live insert into editor on slot change
-    if (codeMirrorInstance && slot.code) {
-        codeMirrorInstance.setValue(slot.code);
+    // Instant live load into editor on slot change
+    if (codeMirrorInstance) {
+        codeMirrorInstance.setValue(slot.code || `# Slot ${id}: [Empty Slot]\n`);
         codeMirrorInstance.save();
         codeMirrorInstance.focus();
+
+        const wrapper = codeMirrorInstance.getWrapperElement();
+        if (wrapper) {
+            wrapper.classList.remove("cm-insert-pulse");
+            void wrapper.offsetWidth;
+            wrapper.classList.add("cm-insert-pulse");
+            setTimeout(() => wrapper.classList.remove("cm-insert-pulse"), 1000);
+        }
+    } else if (ide) {
+        ide.value = slot.code || "";
+        ide.focus();
+    }
+
+    if (typeof showToast === 'function') {
+        const displayTitle = (slot.title && slot.title !== "[Empty Slot]") ? slot.title : `[Empty Slot]`;
+        showToast({
+            title: "Strategy Loaded",
+            message: `Loaded Slot ${id}: "${displayTitle}"`,
+            type: "info",
+            duration: 1800
+        });
     }
 }
 
-function saveCurrentStrategy() {
+function openSaveStrategyDialog() {
     const activeId = getActiveSlotId();
     const slots = getStrategyVault();
     const slot = slots.find(s => s.id === activeId);
     if (!slot) return;
 
-    const titleInput = document.getElementById('strategy_title_input');
-    let newTitle = titleInput ? titleInput.value.trim() : "";
+    const slotNumEl = document.getElementById('save_modal_slot_num');
+    if (slotNumEl) slotNumEl.textContent = activeId.toString();
+
+    const input = document.getElementById('save_modal_input');
+    const currentClean = (slot.title && slot.title !== "[Empty Slot]") ? slot.title : "";
+    if (input) {
+        input.value = currentClean || `Custom Tactic ${activeId}`;
+    }
+
+    const dialog = document.getElementById('save_strategy_dialog');
+    if (dialog && typeof dialog.showModal === 'function') {
+        dialog.showModal();
+        if (input) {
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 60);
+        }
+    }
+}
+
+function closeSaveStrategyDialog() {
+    const dialog = document.getElementById('save_strategy_dialog');
+    if (dialog && typeof dialog.close === 'function') {
+        dialog.close();
+    }
+}
+
+function confirmSaveStrategy() {
+    const activeId = getActiveSlotId();
+    const slots = getStrategyVault();
+    const slot = slots.find(s => s.id === activeId);
+    if (!slot) return;
+
+    const input = document.getElementById('save_modal_input');
+    let newTitle = input ? input.value.trim() : "";
     if (!newTitle) {
-        newTitle = `Custom Strat ${activeId}`;
+        newTitle = `Custom Tactic ${activeId}`;
     }
 
     slot.title = newTitle;
@@ -616,6 +672,13 @@ function saveCurrentStrategy() {
 
     saveStrategyVault(slots);
 
+    if (typeof window.trackGameEvent === 'function') {
+        window.trackGameEvent('strategy_vault_saved', {
+            slot_id: activeId,
+            title: newTitle
+        });
+    }
+
     // Update select dropdown option label
     const select = document.getElementById('strategy_slot_select');
     if (select) {
@@ -625,14 +688,20 @@ function saveCurrentStrategy() {
         }
     }
 
+    closeSaveStrategyDialog();
+
     if (typeof showToast === 'function') {
         showToast({
-            title: "Strategy Saved!",
+            title: "Strategy Saved! 💾",
             message: `Saved to Slot ${activeId}: "${newTitle}"`,
             type: "success",
-            duration: 2200
+            duration: 2500
         });
     }
+}
+
+function saveCurrentStrategy() {
+    openSaveStrategyDialog();
 }
 
 function insertCurrentStrategy(explicitSlotId = null) {
@@ -761,6 +830,9 @@ function escapeStrategyHtml(str) {
 
 // Global exposure
 window.saveCurrentStrategy = saveCurrentStrategy;
+window.openSaveStrategyDialog = openSaveStrategyDialog;
+window.closeSaveStrategyDialog = closeSaveStrategyDialog;
+window.confirmSaveStrategy = confirmSaveStrategy;
 window.insertCurrentStrategy = insertCurrentStrategy;
 window.onStrategySlotChange = onStrategySlotChange;
 window.initStrategyVault = initStrategyVault;
