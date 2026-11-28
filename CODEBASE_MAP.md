@@ -158,12 +158,12 @@ python game.py
 ## 📚 6. Master Function & Symbol Dictionary
 
 > **Instant Lookup Reference for Agents & Developers**  
-> Total indexed functions: **~325 functions** (155 Python backend + 170 JavaScript frontend).  
+> Total indexed functions: **~328 functions** (158 Python backend + 170 JavaScript frontend).  
 > *How to inspect:* Search symbol with `Select-String` / `grep` to find exact line, then read with `read_file(StartLine, EndLine)`.
 
 ### 🐍 Python Backend & AI Modules
 
-#### `game.py` — Flask Routes, Sockets & State (38 functions)
+#### `game.py` — Flask Routes, Sockets & State (41 functions)
 
 | Function / Method | Baseline Line | Description / Purpose |
 | :--- | :---: | :--- |
@@ -176,7 +176,8 @@ python game.py
 | `create_private_room()` | L226 | Creates a private room with a unique invite code |
 | `get_player_for_token(room, token)` | L236 | Resolves player slot (P1 or P2) based on session token |
 | `lobby_menu()` | L245 | Flask GET `/`: Serves main lobby `index.html` |
-| `favicon()` | L261 | Flask GET `/favicon.ico` or `/favicon.png`: Serves game favicon |
+| `health_check()` | L296 | Flask GET `/health` or `/ping`: 2-byte keep-alive endpoint for Cloudflare Cron / monitors |
+| `favicon()` | L304 | Flask GET `/favicon.ico` or `/favicon.png`: Serves game favicon |
 | `robots_txt()` | L266 | Flask GET `/robots.txt`: Search crawler directives |
 | `llms_txt()` | L271 | Flask GET `/llms.txt`: Machine-readable overview for AI agents |
 | `llms_full_txt()` | L276 | Flask GET `/llms-full.txt`: Full API specifications for LLMs |
@@ -201,8 +202,10 @@ python game.py
 | `handle_restart_game(data)` | L842 | Socket.IO `restart`: Resets arena state for rematch |
 | `handle_reply_input(data)` | L864 | Socket.IO `reply_input`: Processes interactive chatbot/SACE replies |
 | `handle_disconnect()` | L884 | Socket.IO `disconnect`: Handles player disconnect & cleanup |
-| `_get_public_speech(player)` | L904 | Generates contextual taunts/remarks from AI boss personality |
-| `game_loop()` | L912 | Core 60 FPS tick loop updating physics, collisions, and state sync |
+| `_get_public_speech(player)` | L949 | Generates contextual taunts/remarks from AI boss personality |
+| `_serialize_player_state(player)` | L957 | Builds rounded GUI fighter state payload for Socket.IO sync |
+| `_should_emit_gui_state(room, data_to_send, now)` | L987 | Emits 60 FPS during active combat/fadeouts and throttles idle/paused rooms |
+| `game_loop()` | L1009 | Core 60 FPS tick loop updating physics, collisions, and throttled state sync |
 | `ensure_game_loop()` | L1111 | Guarantees background room tick thread is alive and running |
 | `handle_connect()` | L1118 | Socket.IO `connect`: Client socket connection handler |
 

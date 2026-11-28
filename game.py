@@ -7,6 +7,7 @@ from bot import BattleBot
 from sace import SaceBattleBot
 import os
 import json
+import gzip
 import time 
 import threading
 import re
@@ -24,7 +25,17 @@ logger = logging.getLogger("stickman_battle.game")
 ROOM_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{3,24}$')
 MAX_ROOMS = 100
 
+COMPRESSIBLE_MIMETYPES = (
+    'text/',
+    'application/javascript',
+    'application/x-javascript',
+    'application/json',
+    'application/xml',
+    'image/svg+xml',
+)
+
 app = Flask(__name__)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 86400
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "stickman_battle_sace_v2_anti_cheat_secret_2026")
 SECRET_KEY_BYTES = app.secret_key.encode('utf-8')
 
@@ -62,6 +73,31 @@ def add_security_and_cors_headers(response):
         response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
     # Prevent X-Frame-Options from blocking Itch.io iframe embed
     response.headers.pop('X-Frame-Options', None)
+
+    # Long browser caching for static assets (versioned files cached for 1 year)
+    if request.path.startswith('/static/') or request.path == '/favicon.ico':
+        if request.args.get('v'):
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        else:
+            response.headers.setdefault('Cache-Control', 'public, max-age=86400')
+
+    # Built-in Gzip compression to cut HTML/CSS/JS bandwidth by ~70-80%
+    if (
+        response.status_code == 200
+        and 'Content-Encoding' not in response.headers
+        and 'gzip' in request.headers.get('Accept-Encoding', '').lower()
+        and any((response.mimetype or '').startswith(m) for m in COMPRESSIBLE_MIMETYPES)
+    ):
+        response.direct_passthrough = False
+        raw_body = response.get_data()
+        if len(raw_body) >= 512:
+            compressed = gzip.compress(raw_body, compresslevel=6)
+            if len(compressed) < len(raw_body):
+                response.set_data(compressed)
+                response.headers['Content-Encoding'] = 'gzip'
+                response.headers['Content-Length'] = str(len(compressed))
+                response.vary.add('Accept-Encoding')
+
     return response
 
 class GameRoom:
@@ -256,6 +292,14 @@ def lobby_menu():
     locked_diff = request.args.get('locked', '')
     req_stage = request.args.get('required_stage', '')
     return render_template('index.html', arcade_unlocked=unlocked, locked_diff=locked_diff, req_stage=req_stage)
+
+@app.route('/health')
+@app.route('/ping')
+def health_check():
+    return "ok", 200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store'
+    }
 
 @app.route('/favicon.ico')
 def favicon():
@@ -495,6 +539,7 @@ def handle_player_join(data):
     room.sid_to_player[request.sid] = player_id
     room.connected_players.add(player_id)
     room.last_activity = time.time()
+    room._last_gui_payload = None  # Force immediate fresh state frame for newly connected client
     
     if player_id in room.pending_disconnects:
         del room.pending_disconnects[player_id]
@@ -909,6 +954,59 @@ def _get_public_speech(player):
         return "" # Keep private in-editor diagnostics; do not broadcast error stack to opponent
     return text
 
+def _serialize_player_state(player):
+    """Build compact GUI state payload for a fighter with rounded coordinates."""
+    return {
+        'x': round(player.x, 1),
+        'y': round(player.y, 1),
+        'direction': player.direction,
+        'sword_angle': round(player.sword.sword_angle, 1),
+        'sword_length': getattr(player.sword, 'sword_length', 50),
+        'shield_angle': round(player.shield.shield_angel, 1),
+        'shield_length': getattr(player.shield, 'shield_length', 40),
+        'is_blocking': player.shield.block_timer > 0,
+        'is_crouching': getattr(player, 'crouch_timer', 0) > 0,
+        'has_barrier': getattr(player, 'barrier_timer', 0) > 0,
+        'has_dome': getattr(player, 'dome_timer', 0) > 0,
+        'barrier_power': getattr(player, 'barrier_power', 1),
+        'dome_power': getattr(player, 'dome_power', 1),
+        'has_sword': getattr(player, 'has_sword', True),
+        'is_heavy': getattr(player.sword, 'is_heavy', False),
+        'is_swing': getattr(player.sword, 'is_swing', False),
+        'attack_state': getattr(player.sword, 'attack_state', 0),
+        'heart': player.heart,
+        'max_health': MAX_HEALTH,
+        'energy': round(getattr(player, 'energy', 100), 1),
+        'max_energy': getattr(player, 'max_energy', 100),
+        'speech': _get_public_speech(player),
+        'body_color': getattr(player, 'body_color', None),
+        'shield_color': getattr(player, 'shield_color', None),
+        'sword_color': getattr(player, 'sword_color', None),
+        'actions_count': len(getattr(player, 'action_queue', []))
+    }
+
+def _should_emit_gui_state(room, data_to_send, now):
+    """Emit at 60 FPS during active combat/fadeouts; throttle idle/paused rooms to save bandwidth."""
+    last_payload = getattr(room, '_last_gui_payload', None)
+    last_change_at = getattr(room, '_last_gui_change_at', 0.0)
+    last_emit_at = getattr(room, '_last_gui_emit_at', 0.0)
+
+    if last_payload != data_to_send:
+        room._last_gui_payload = data_to_send
+        room._last_gui_change_at = now
+        room._last_gui_emit_at = now
+        return True
+
+    if not data_to_send.get('is_paused') and (now - last_change_at) < 1.2:
+        room._last_gui_emit_at = now
+        return True
+
+    if (now - last_emit_at) >= 5.0:
+        room._last_gui_emit_at = now
+        return True
+
+    return False
+
 def game_loop():
     last_cleanup_time = time.time()
     while True:
@@ -1029,62 +1127,8 @@ def game_loop():
                             'is_paused': getattr(room, 'is_paused', False),
                             'paused_by': getattr(room, 'paused_by', None),
                             'pause_seconds_left': pause_secs_left,
-                            'player1': {
-                                'x': room.player1.x,
-                                'y': room.player1.y,
-                                'direction': room.player1.direction,
-                                'sword_angle': room.player1.sword.sword_angle,
-                                'sword_length': getattr(room.player1.sword, 'sword_length', 50),
-                                'shield_angle': room.player1.shield.shield_angel,
-                                'shield_length': getattr(room.player1.shield, 'shield_length', 40),
-                                'is_blocking': room.player1.shield.block_timer > 0,
-                                'is_crouching': getattr(room.player1, 'crouch_timer', 0) > 0,
-                                'has_barrier': getattr(room.player1, 'barrier_timer', 0) > 0,
-                                'has_dome': getattr(room.player1, 'dome_timer', 0) > 0,
-                                'barrier_power': getattr(room.player1, 'barrier_power', 1),
-                                'dome_power': getattr(room.player1, 'dome_power', 1),
-                                'has_sword': getattr(room.player1, 'has_sword', True),
-                                'is_heavy': getattr(room.player1.sword, 'is_heavy', False),
-                                'is_swing': getattr(room.player1.sword, 'is_swing', False),
-                                'attack_state': getattr(room.player1.sword, 'attack_state', 0),
-                                'heart': room.player1.heart,
-                                'max_health': MAX_HEALTH,
-                                'energy': round(getattr(room.player1, 'energy', 100), 1),
-                                'max_energy': getattr(room.player1, 'max_energy', 100),
-                                'speech': _get_public_speech(room.player1),
-                                'body_color': getattr(room.player1, 'body_color', None),
-                                'shield_color': getattr(room.player1, 'shield_color', None),
-                                'sword_color': getattr(room.player1, 'sword_color', None),
-                                'actions_count': len(getattr(room.player1, 'action_queue', []))
-                            },
-                            'player2': {
-                                'x': room.player2.x,
-                                'y': room.player2.y,
-                                'direction': room.player2.direction,
-                                'sword_angle': room.player2.sword.sword_angle,
-                                'sword_length': getattr(room.player2.sword, 'sword_length', 50),
-                                'shield_angle': room.player2.shield.shield_angel,
-                                'shield_length': getattr(room.player2.shield, 'shield_length', 40),
-                                'is_blocking': room.player2.shield.block_timer > 0,
-                                'is_crouching': getattr(room.player2, 'crouch_timer', 0) > 0,
-                                'has_barrier': getattr(room.player2, 'barrier_timer', 0) > 0,
-                                'has_dome': getattr(room.player2, 'dome_timer', 0) > 0,
-                                'barrier_power': getattr(room.player2, 'barrier_power', 1),
-                                'dome_power': getattr(room.player2, 'dome_power', 1),
-                                'has_sword': getattr(room.player2, 'has_sword', True),
-                                'is_heavy': getattr(room.player2.sword, 'is_heavy', False),
-                                'is_swing': getattr(room.player2.sword, 'is_swing', False),
-                                'attack_state': getattr(room.player2.sword, 'attack_state', 0),
-                                'heart': room.player2.heart,
-                                'max_health': MAX_HEALTH,
-                                'energy': round(getattr(room.player2, 'energy', 100), 1),
-                                'max_energy': getattr(room.player2, 'max_energy', 100),
-                                'speech': _get_public_speech(room.player2),
-                                'body_color': getattr(room.player2, 'body_color', None),
-                                'shield_color': getattr(room.player2, 'shield_color', None),
-                                'sword_color': getattr(room.player2, 'sword_color', None),
-                                'actions_count': len(getattr(room.player2, 'action_queue', []))
-                            },
+                            'player1': _serialize_player_state(room.player1),
+                            'player2': _serialize_player_state(room.player2),
                             'spells': [
                                 {
                                     'type': s['type'],
@@ -1101,7 +1145,8 @@ def game_loop():
                             'combat_events': list(getattr(room.engine, 'combat_events', [])),
                             'clash': getattr(room.engine, 'clash_event', False)
                         }
-                        socketio.emit('update_game_gui', data_to_send, to=room.room_id)
+                        if _should_emit_gui_state(room, data_to_send, now):
+                            socketio.emit('update_game_gui', data_to_send, to=room.room_id)
                 except Exception as re:
                     logger.error(f"Error updating room {getattr(room, 'room_id', 'unknown')}: {re}", exc_info=True)
         except Exception:
