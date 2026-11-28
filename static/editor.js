@@ -468,20 +468,9 @@ function initCodeMirror() {
             }
         });
 
-        let autoSaveDebounce = null;
         codeMirrorInstance.on("change", function() {
+            // Sync textarea for live RUN CODE without overwriting saved Strategy Vault slots
             codeMirrorInstance.save();
-            clearTimeout(autoSaveDebounce);
-            autoSaveDebounce = setTimeout(() => {
-                const activeId = getActiveSlotId();
-                const slots = getStrategyVault();
-                const slot = slots.find(s => s.id === activeId);
-                if (slot && codeMirrorInstance) {
-                    slot.code = codeMirrorInstance.getValue();
-                    slot.updated = Date.now();
-                    saveStrategyVault(slots);
-                }
-            }, 400);
         });
 
         // Live Character Counter & Limit Indicator

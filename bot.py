@@ -378,7 +378,35 @@ class BattleBot:
                         bot.attack()
                         return
 
-        # --- STANDARD / RUSHER / BERSERKER / APEX BEHAVIOR ---
+        # --- STYLE: RUSHER (Stage 1: Direct melee charges, no ranged spell spam) ---
+        if style == "rusher":
+            if dx <= 90:
+                if is_enemy_attacking and not make_mistake and hasattr(bot, 'block'):
+                    bot.block()
+                    return
+                roll = random.random()
+                if roll < 0.55 and hasattr(bot, 'attack'):
+                    bot.attack()
+                elif roll < 0.80 and hasattr(bot, 'swing') and getattr(bot, 'energy', 100) >= 15:
+                    bot.swing()
+                elif hasattr(bot, 'move'):
+                    bot.move(-1 if roll < 0.90 else 1)
+                return
+            if dx > 220:
+                if random.random() < 0.50 and hasattr(bot, 'dash') and getattr(bot, 'energy', 100) >= 15 and not make_mistake:
+                    bot.dash(3)
+                elif hasattr(bot, 'run'):
+                    bot.run(3)
+                else:
+                    bot.move(2)
+                return
+            if random.random() < 0.45 and hasattr(bot, 'dash') and getattr(bot, 'energy', 100) >= 15 and not make_mistake:
+                bot.dash(2)
+            elif hasattr(bot, 'move'):
+                bot.move(2)
+            return
+
+        # --- STANDARD / BERSERKER / APEX BEHAVIOR ---
         # 1. Close Range Combat (dx <= 90px)
         if dx <= 90:
             if is_enemy_attacking and not make_mistake:
