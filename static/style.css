@@ -1981,15 +1981,17 @@ button { color: inherit; }
 /* ── Arena Header Actions ─────────────────────────────────── */
 #battle_stage .panel-heading {
     gap: 8px;
+    flex-wrap: wrap;
 }
 .heading-controls-row {
     display: flex;
     align-items: center;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 5px;
     padding: 2px 0;
     min-width: 0;
-    overflow-x: auto;
+    overflow-x: visible;
     scrollbar-width: none;
 }
 .heading-controls-row::-webkit-scrollbar {

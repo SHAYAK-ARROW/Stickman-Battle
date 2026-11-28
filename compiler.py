@@ -758,8 +758,11 @@ def eval_wardrobe_code(code: str) -> dict:
     try:
         # Step 1: Syntax Analysis (IDLE filename strategy)
         parsed = ast.parse(code, filename="<wardrobe.py>")
-        validator = SecurityValidator()
-        validator.visit(parsed)
+        try:
+            validator = SecurityValidator()
+            validator.visit(parsed)
+        except ValueError as ve:
+            return {"success": False, "error": f"Security: {ve}"}
         
         # Step 2: Build Wardrobe Execution Scope
         fighter_obj = _WardrobeItem("fighter")
